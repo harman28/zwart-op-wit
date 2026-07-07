@@ -4,8 +4,9 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "prisma generate && tsc -p tsconfig.json",
     "start": "node dist/index.js",
+    "postinstall": "prisma generate",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint src",
