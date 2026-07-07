@@ -20,6 +20,7 @@ export default function SettingsPage() {
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [showPasswords, setShowPasswords] = useState(false);
 
   function loadSeason() {
     seasonsApi
@@ -198,20 +199,28 @@ export default function SettingsPage() {
           <div style={{ width: '100%' }}>
             <div className="label">Admin password</div>
             <div className="help">Shared by all admins. Changing it signs out other sessions.</div>
-            <div className="field-row" style={{ marginTop: 10 }}>
+            <div className="field-row" style={{ marginTop: 10, alignItems: 'flex-end' }}>
               <div className="field">
                 <label htmlFor="current-password">Current</label>
                 <input
                   id="current-password"
-                  type="password"
+                  type={showPasswords ? 'text' : 'password'}
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                 />
               </div>
               <div className="field">
                 <label htmlFor="new-password">New</label>
-                <input id="new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                <input
+                  id="new-password"
+                  type={showPasswords ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
               </div>
+              <button type="button" className="link-add" style={{ marginTop: 0 }} onClick={() => setShowPasswords((v) => !v)}>
+                {showPasswords ? 'Hide' : 'Show'}
+              </button>
               <button className="btn btn-ghost" onClick={handleChangePassword} disabled={!currentPassword || !newPassword}>
                 Change password
               </button>
