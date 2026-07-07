@@ -1,0 +1,23 @@
+/*
+  Every color/spacing decision the frontend makes lives here, and only here.
+  Re-theming Zwart op Wit (new palette, light mode, etc.) means editing this
+  file — components below reference these custom properties, never literals.
+  Carried over 1:1 from the agreed mockup for now.
+*/
+:root {
+  --bg: #09080a;
+  --card: #130f08;
+  --card-raised: #1a1409;
+  --border: #2e2610;
+  --accent: #d4a853;
+  --accent-dim: #8a6f39;
+  --muted: #7a6440;
+  --text: #f8f0dd;
+
+  --win: #7c9a6b;
+  --loss: #b0524a;
+  --draw: #a89566;
+
+  --font-ui: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'SFMono-Regular', ui-monospace, Menlo, Consolas, monospace;
+}
