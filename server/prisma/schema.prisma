@@ -1,0 +1,150 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum MembershipType {
+  FULL
+  INTERNAL_ONLY
+  GUEST
+}
+
+enum EntryKind {
+  GAME
+  PAIRING_BYE
+  REGULAR_BYE
+  EXTERNAL_BYE
+}
+
+enum GameResult {
+  WHITE_WIN
+  BLACK_WIN
+  DRAW
+  WHITE_WIN_FORFEIT
+  BLACK_WIN_FORFEIT
+}
+
+enum ExternalOutcome {
+  WIN
+  DRAW
+  LOSS
+}
+
+// Club-wide identity. Never deleted — referenced by historical RoundEntry
+// rows across seasons forever. Fix typos with an update, not a delete+recreate.
+model Player {
+  id             Int            @id @default(autoincrement())
+  name           String
+  membershipType MembershipType @default(FULL)
+  createdAt      DateTime       @default(now())
+
+  enrollments  SeasonEnrollment[]
+  signups      RoundSignup[]
+  whiteEntries RoundEntry[]       @relation("WhitePlayer")
+  blackEntries RoundEntry[]       @relation("BlackPlayer")
+  soloEntries  RoundEntry[]       @relation("SoloPlayer")
+
+  @@index([name])
+}
+
+model Season {
+  id         Int       @id @default(autoincrement())
+  name       String
+  startedAt  DateTime  @default(now())
+  endedAt    DateTime?
+  isArchived Boolean   @default(false)
+
+  // Snapshotted at creation, not read from a live "current settings" table:
+  // topValue alone determines every historical score, so it must never
+  // silently shift for an archived season. repeatPairingWindow and
+  // countExternalMatches only affect which entries get created going
+  // forward, so they're safe to edit on the active season at any time.
+  topValue             Int
+  repeatPairingWindow  Int
+  countExternalMatches Boolean
+
+  enrollments SeasonEnrollment[]
+  rounds      Round[]
+}
+
+model SeasonEnrollment {
+  id       Int    @id @default(autoincrement())
+  seasonId Int
+  season   Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  playerId Int
+  player   Player @relation(fields: [playerId], references: [id])
+  // Admin-entered estimate, or seeded from the prior season's final rank. Used as-is.
+  startingValue Int
+
+  @@unique([seasonId, playerId])
+}
+
+model Round {
+  id       Int      @id @default(autoincrement())
+  seasonId Int
+  season   Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  number   Int
+  date     DateTime
+  // Gates PUBLIC visibility only — never gates whether entries can be edited.
+  isPublished Boolean @default(false)
+
+  signups RoundSignup[]
+  entries RoundEntry[]
+
+  @@unique([seasonId, number])
+}
+
+// The literal "Who's playing?" chip list at round-creation time, kept as its
+// own audit row so "who was absent" (-> regular byes) is a plain diff against
+// the season's enrolled players, not something inferred after the fact.
+model RoundSignup {
+  id       Int    @id @default(autoincrement())
+  roundId  Int
+  round    Round  @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  playerId Int
+  player   Player @relation(fields: [playerId], references: [id])
+
+  @@unique([roundId, playerId])
+}
+
+model RoundEntry {
+  id      Int       @id @default(autoincrement())
+  roundId Int
+  round   Round     @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  kind    EntryKind
+
+  // GAME only
+  tableNumber    Int?
+  whitePlayerId  Int?
+  whitePlayer    Player?     @relation("WhitePlayer", fields: [whitePlayerId], references: [id])
+  blackPlayerId  Int?
+  blackPlayer    Player?     @relation("BlackPlayer", fields: [blackPlayerId], references: [id])
+  result         GameResult?
+  isSelfArranged Boolean     @default(false)
+
+  // PAIRING_BYE / REGULAR_BYE / EXTERNAL_BYE only
+  soloPlayerId    Int?
+  soloPlayer      Player?          @relation("SoloPlayer", fields: [soloPlayerId], references: [id])
+  externalOutcome ExternalOutcome?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Singleton row (id always 1): concerns that are NOT season-scoped.
+model ClubSettings {
+  id                 Int    @id @default(1)
+  adminPasswordHash  String
+  defaultTopValue    Int    @default(120)
+  defaultRepeatPairingWindow  Int     @default(6)
+  defaultCountExternalMatches Boolean @default(true)
+}
+
+model AdminSession {
+  token     String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+}
