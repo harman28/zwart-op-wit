@@ -1,6 +1,8 @@
 import cookie from '@fastify/cookie';
+import cors from '@fastify/cors';
 import Fastify from 'fastify';
 import { ZodError } from 'zod';
+import { env } from './env.js';
 import { HttpError } from './lib/errors.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { backupRoutes } from './modules/backup/backup.routes.js';
@@ -14,6 +16,24 @@ export function buildApp() {
   const app = Fastify({ logger: false });
 
   app.register(cookie);
+  app.register(cors, { origin: env.CORS_ORIGIN, credentials: true });
+
+  // A bodyless request (e.g. POST .../publish) that still claims a JSON
+  // content-type — a perfectly normal thing for a generic fetch wrapper to
+  // send — would otherwise hit Fastify's default JSON parser trying to
+  // JSON.parse('') and surface as a raw 500. Treat an empty body as "no body"
+  // instead of a parse error.
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, done) => {
+    if (typeof body === 'string' && body.length === 0) {
+      done(null, undefined);
+      return;
+    }
+    try {
+      done(null, JSON.parse(body as string));
+    } catch (err) {
+      done(err as Error, undefined);
+    }
+  });
 
   app.setErrorHandler((error, _request, reply) => {
     if (error instanceof HttpError) {

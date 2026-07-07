@@ -78,9 +78,18 @@ export async function updateSeasonSettings(
   return prisma.season.update({ where: { id }, data });
 }
 
-/** The live leaderboard: replayed from this season's *published* rounds only. */
+/**
+ * The live leaderboard: replayed from this season's *published* rounds only.
+ * This is a public, no-auth endpoint, so — unlike the round-pairing views,
+ * which already carry full player relations — standings need player
+ * name/membershipType enriched in here rather than requiring visitors to
+ * hit the admin-only players list to resolve a bare playerId.
+ */
 export async function getLiveLeaderboard(seasonId: number) {
-  const season = await prisma.season.findUnique({ where: { id: seasonId }, include: { enrollments: true } });
+  const season = await prisma.season.findUnique({
+    where: { id: seasonId },
+    include: { enrollments: { include: { player: true } } },
+  });
   if (!season) throw new HttpError(404, `Season ${seasonId} not found`);
 
   const publishedRounds = await prisma.round.findMany({
@@ -95,7 +104,14 @@ export async function getLiveLeaderboard(seasonId: number) {
     rounds: publishedRounds.map(mapRoundToEngine),
   });
 
-  return replay.current;
+  const playerById = new Map(season.enrollments.map((e) => [e.playerId, e.player]));
+  return {
+    ...replay.current,
+    standings: replay.current.standings.map((s) => {
+      const player = playerById.get(s.playerId);
+      return { ...s, name: player?.name ?? `#${s.playerId}`, membershipType: player?.membershipType ?? 'FULL' };
+    }),
+  };
 }
 
 /**
