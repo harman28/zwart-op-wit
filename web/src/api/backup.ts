@@ -5,9 +5,5 @@ export function exportBackup(seasonId: number) {
 }
 
 export function importBackupReplace(seasonId: number, file: unknown) {
-  return api.post(`/admin/backup/import?mode=replace&seasonId=${seasonId}`, file);
-}
-
-export function importBackupNewSeason(file: unknown) {
-  return api.post('/admin/backup/import?mode=new-season', file);
+  return api.post(`/admin/backup/import?seasonId=${seasonId}`, file);
 }

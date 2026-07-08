@@ -35,7 +35,8 @@ export interface RegularByeEntry {
 export interface ExternalByeEntry {
   kind: 'EXTERNAL_BYE';
   playerId: number;
-  outcome: ExternalOutcome;
+  /** null while the external result hasn't been entered yet — contributes 0, same convention as GameEntry.result. */
+  outcome: ExternalOutcome | null;
 }
 
 export type RoundEntryInput = GameEntry | PairingByeEntry | RegularByeEntry | ExternalByeEntry;

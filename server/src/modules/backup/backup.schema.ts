@@ -17,7 +17,7 @@ const backupEntrySchema = z.discriminatedUnion('kind', [
   }),
   z.object({ kind: z.literal('PAIRING_BYE'), player: z.string() }),
   z.object({ kind: z.literal('REGULAR_BYE'), player: z.string() }),
-  z.object({ kind: z.literal('EXTERNAL_BYE'), player: z.string(), outcome: externalOutcomeSchema }),
+  z.object({ kind: z.literal('EXTERNAL_BYE'), player: z.string(), outcome: externalOutcomeSchema.nullable() }),
 ]);
 
 const backupRoundSchema = z.object({

@@ -10,6 +10,9 @@ export function createPlayer(name: string, membershipType?: MembershipType) {
 export function importPlayers(players: { name: string; membershipType?: MembershipType }[]) {
   return api.post<Player[]>('/admin/players/import', { players });
 }
-export function updatePlayer(id: number, data: { name?: string; membershipType?: MembershipType }) {
+export function updatePlayer(
+  id: number,
+  data: { name?: string; membershipType?: MembershipType; notes?: string | null },
+) {
   return api.patch<Player>(`/admin/players/${id}`, data);
 }

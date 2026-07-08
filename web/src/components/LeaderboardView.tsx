@@ -53,11 +53,18 @@ export default function LeaderboardView({ standings }: { standings: Standing[] }
             <div className="lb-card-top">
               <span className={s.rank === 1 ? 'rank-num rank-1' : 'rank-num'}>{s.rank}</span>
               <span className="player-name">{s.name}</span>
+              <span className="lb-card-record">
+                <span className="rec-w">{s.wins}W</span>
+                <span className="rec-sep">/</span>
+                <span className="rec-d">{s.draws}D</span>
+                <span className="rec-sep">/</span>
+                <span className="rec-l">{s.losses}L</span>
+              </span>
               <span className="lb-points">{formatNumber(s.score)}</span>
             </div>
             <div className="lb-card-stats">
-              Value {s.value} · Played {s.played} · W{s.wins} D{s.draws} L{s.losses} · {formatNumber(s.winPercent)}% ·
-              Color {s.colorNumber} · Odd {s.pairingByeUsed ? 1 : 0}
+              Value {s.value} · Played {s.played} · {formatNumber(s.winPercent)}% · Color {s.colorNumber} · Odd{' '}
+              {s.pairingByeUsed ? 1 : 0}
             </div>
           </div>
         ))}

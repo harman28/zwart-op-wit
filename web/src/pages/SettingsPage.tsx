@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as authApi from '../api/auth.js';
+import * as backupApi from '../api/backup.js';
 import * as playersApi from '../api/players.js';
 import * as seasonsApi from '../api/seasons.js';
 import * as settingsApi from '../api/settings.js';
 import type { Player, Season } from '../api/types.js';
+import PasswordVisibilityToggle from '../components/PasswordVisibilityToggle.js';
 import { errorMessage } from '../lib/format.js';
 
 export default function SettingsPage() {
@@ -18,14 +20,26 @@ export default function SettingsPage() {
   const [newSeasonName, setNewSeasonName] = useState('');
   const [rosterText, setRosterText] = useState('');
 
+  const [windowDraft, setWindowDraft] = useState('');
+
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPasswords, setShowPasswords] = useState(false);
+
+  const [showImportForm, setShowImportForm] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importBusy, setImportBusy] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   function loadSeason() {
     seasonsApi
       .getCurrentSeason()
-      .then(setSeason)
+      .then((s) => {
+        setSeason(s);
+        setWindowDraft(String(s.repeatPairingWindow));
+      })
       .catch(() => setSeason(null))
       .finally(() => setSeasonLoaded(true));
   }
@@ -48,10 +62,16 @@ export default function SettingsPage() {
     setSeason(updated);
   }
 
-  async function handleWindowChange(value: number) {
+  async function applyWindow() {
     if (!season) return;
+    const value = Number(windowDraft);
+    if (!Number.isFinite(value) || value < 0) {
+      setWindowDraft(String(season.repeatPairingWindow));
+      return;
+    }
     const updated = await seasonsApi.updateSeasonSettings(season.id, { repeatPairingWindow: value });
     setSeason(updated);
+    setWindowDraft(String(updated.repeatPairingWindow));
   }
 
   async function handleEndSeason() {
@@ -91,16 +111,85 @@ export default function SettingsPage() {
     }
   }
 
+  function resetPasswordForm() {
+    setShowPasswordForm(false);
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+  }
+
   async function handleChangePassword() {
     setError(null);
     setNotice(null);
+    if (newPassword !== confirmPassword) {
+      setError("New password and confirmation don't match.");
+      return;
+    }
     try {
       await authApi.changePassword(currentPassword, newPassword);
-      setCurrentPassword('');
-      setNewPassword('');
+      resetPasswordForm();
       setNotice('Password changed. Other sessions have been signed out.');
     } catch (err) {
       setError(errorMessage(err));
+    }
+  }
+
+  const canSavePassword = currentPassword && newPassword && confirmPassword;
+
+  async function handleExportBackup() {
+    if (!season) return;
+    setError(null);
+    try {
+      const data = await backupApi.exportBackup(season.id);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const slug = season.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const now = new Date();
+      const stamp = [now.getFullYear(), now.getMonth() + 1, now.getDate()]
+        .map((n) => String(n).padStart(2, '0'))
+        .join('-') +
+        '-' +
+        [now.getHours(), now.getMinutes()].map((n) => String(n).padStart(2, '0')).join('');
+      a.href = url;
+      a.download = `${slug || 'season'}-backup-${stamp}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
+
+  async function handleImportBackup() {
+    if (!importFile || !season) return;
+    setError(null);
+    setNotice(null);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(await importFile.text());
+    } catch {
+      setError('That file is not valid JSON.');
+      return;
+    }
+    if (
+      !window.confirm(
+        `Replace the current season "${season.name}" with this backup? Everything currently in it will be gone — this can't be undone.`,
+      )
+    ) {
+      return;
+    }
+    setImportBusy(true);
+    try {
+      await backupApi.importBackupReplace(season.id, parsed);
+      setNotice('Backup imported.');
+      setImportFile(null);
+      setShowImportForm(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      loadSeason();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setImportBusy(false);
     }
   }
 
@@ -132,9 +221,12 @@ export default function SettingsPage() {
               </div>
               <input
                 className="settings-num"
-                type="number"
-                value={season.repeatPairingWindow}
-                onChange={(e) => handleWindowChange(Number(e.target.value))}
+                type="text"
+                inputMode="numeric"
+                value={windowDraft}
+                onChange={(e) => setWindowDraft(e.target.value.replace(/[^0-9]/g, ''))}
+                onBlur={applyWindow}
+                onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
               />
             </div>
           </>
@@ -196,37 +288,102 @@ export default function SettingsPage() {
           <button className="switch" disabled style={{ opacity: 0.45, cursor: 'default' }} />
         </div>
         <div className="settings-row">
-          <div style={{ width: '100%' }}>
+          <div>
             <div className="label">Admin password</div>
             <div className="help">Shared by all admins. Changing it signs out other sessions.</div>
-            <div className="field-row" style={{ marginTop: 10, alignItems: 'flex-end' }}>
+          </div>
+          <button className="btn btn-ghost" onClick={() => setShowPasswordForm((v) => !v)}>
+            Change password
+          </button>
+        </div>
+        {showPasswordForm && (
+          <div style={{ marginTop: -6, marginBottom: 8 }}>
+            <div className="field-row" style={{ alignItems: 'flex-end' }}>
               <div className="field">
                 <label htmlFor="current-password">Current</label>
-                <input
-                  id="current-password"
-                  type={showPasswords ? 'text' : 'password'}
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                />
+                <div className="password-field-wrap">
+                  <input
+                    id="current-password"
+                    type={showPasswords ? 'text' : 'password'}
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    autoFocus
+                  />
+                  <PasswordVisibilityToggle visible={showPasswords} onToggle={() => setShowPasswords((v) => !v)} />
+                </div>
               </div>
               <div className="field">
                 <label htmlFor="new-password">New</label>
-                <input
-                  id="new-password"
-                  type={showPasswords ? 'text' : 'password'}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                />
+                <div className="password-field-wrap">
+                  <input
+                    id="new-password"
+                    type={showPasswords ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                  />
+                </div>
               </div>
-              <button type="button" className="link-add" style={{ marginTop: 0 }} onClick={() => setShowPasswords((v) => !v)}>
-                {showPasswords ? 'Hide' : 'Show'}
+              <div className="field">
+                <label htmlFor="confirm-password">Confirm new</label>
+                <div className="password-field-wrap">
+                  <input
+                    id="confirm-password"
+                    type={showPasswords ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && canSavePassword && handleChangePassword()}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="btn-row" style={{ justifyContent: 'flex-start', marginTop: 12 }}>
+              <button className="btn btn-primary" onClick={handleChangePassword} disabled={!canSavePassword}>
+                Save new password
               </button>
-              <button className="btn btn-ghost" onClick={handleChangePassword} disabled={!currentPassword || !newPassword}>
-                Change password
+              <button className="btn btn-ghost" onClick={resetPasswordForm}>
+                Cancel
               </button>
             </div>
           </div>
+        )}
+
+        <div className="section-label">Backup</div>
+        <div className="settings-row">
+          <div>
+            <div className="label">Export this season</div>
+            <div className="help">Everything — players, rounds, results — as one JSON file you can keep or hand off.</div>
+          </div>
+          <button className="btn btn-ghost" onClick={handleExportBackup} disabled={!season}>
+            Export backup
+          </button>
         </div>
+        <div className="settings-row">
+          <div>
+            <div className="label">Replace with a backup</div>
+            <div className="help">Restore the current season from a previously exported file.</div>
+          </div>
+          <button className="btn btn-ghost" onClick={() => setShowImportForm((v) => !v)} disabled={!season}>
+            Replace with backup…
+          </button>
+        </div>
+        {showImportForm && (
+          <div style={{ marginTop: -6, marginBottom: 8 }}>
+            <div className="field-row" style={{ alignItems: 'center' }}>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/json"
+                onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+              />
+              <button className="btn btn-primary" onClick={handleImportBackup} disabled={!importFile || importBusy}>
+                Replace current season
+              </button>
+              <button className="btn btn-ghost" onClick={() => setShowImportForm(false)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="section-label">KNSB export</div>
         <div className="settings-row">

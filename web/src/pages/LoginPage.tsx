@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router';
+import PasswordVisibilityToggle from '../components/PasswordVisibilityToggle.js';
 import { useAdmin } from '../context/AdminContext.js';
 import { errorMessage } from '../lib/format.js';
 
@@ -33,36 +34,15 @@ export default function LoginPage() {
           <div className="field-row" style={{ marginBottom: 14 }}>
             <div className="field" style={{ width: '100%' }}>
               <label htmlFor="password">Password</label>
-              <div style={{ position: 'relative' }}>
+              <div className="password-field-wrap">
                 <input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   autoFocus
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  style={{ width: '100%', paddingRight: 56 }}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  style={{
-                    position: 'absolute',
-                    right: 6,
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--muted)',
-                    fontSize: 11,
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.04em',
-                    cursor: 'pointer',
-                    padding: '4px 6px',
-                  }}
-                >
-                  {showPassword ? 'Hide' : 'Show'}
-                </button>
+                <PasswordVisibilityToggle visible={showPassword} onToggle={() => setShowPassword((v) => !v)} />
               </div>
             </div>
           </div>

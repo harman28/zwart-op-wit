@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router';
 import * as seasonsApi from '../api/seasons.js';
 import type { Leaderboard } from '../api/types.js';
 import LeaderboardView from '../components/LeaderboardView.js';
@@ -41,16 +40,6 @@ export default function LeaderboardPage() {
 
   return (
     <div className="app">
-      <div className="site-nav">
-        <div className="links">
-          <Link to="/" className="link">
-            Rounds
-          </Link>
-          <Link to="/leaderboard" className="link current">
-            Leaderboard
-          </Link>
-        </div>
-      </div>
       <h1 className="page-title">Standings — {season.name}</h1>
       {error && <div className="error-banner">{error}</div>}
       {leaderboard && <LeaderboardView standings={leaderboard.standings} />}

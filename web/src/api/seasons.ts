@@ -18,6 +18,17 @@ export function getCurrentSeason() {
   return api.get<Season>('/admin/seasons/current');
 }
 
+export function getNextRoundNumber(seasonId: number) {
+  return api.get<{ number: number; existingDraft: { id: number; number: number } | null }>(
+    `/admin/seasons/${seasonId}/next-round-number`,
+  );
+}
+
+/** Same published rounds as the public feed, but every entry kind (incl. REGULAR_BYE). */
+export function getAdminRounds(id: number) {
+  return api.get<Round[]>(`/admin/seasons/${id}/rounds`);
+}
+
 export interface RosterEntryInput {
   playerId?: number;
   newPlayerName?: string;

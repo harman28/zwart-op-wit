@@ -8,7 +8,11 @@ const createBody = z.object({ name: z.string().min(1), membershipType: membershi
 const importBody = z.object({
   players: z.array(z.object({ name: z.string().min(1), membershipType: membershipTypeSchema.default('FULL') })),
 });
-const updateBody = z.object({ name: z.string().min(1).optional(), membershipType: membershipTypeSchema.optional() });
+const updateBody = z.object({
+  name: z.string().min(1).optional(),
+  membershipType: membershipTypeSchema.optional(),
+  notes: z.string().nullable().optional(),
+});
 const idParams = z.object({ id: z.coerce.number().int() });
 
 // No DELETE — players are historical identities referenced by RoundEntry

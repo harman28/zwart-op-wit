@@ -39,6 +39,7 @@ model Player {
   id             Int            @id @default(autoincrement())
   name           String
   membershipType MembershipType @default(FULL)
+  notes          String?
   createdAt      DateTime       @default(now())
 
   enrollments  SeasonEnrollment[]

@@ -131,6 +131,7 @@ function contributionsFor(
     case 'REGULAR_BYE':
       return [[entry.playerId, valueOf(entry.playerId) * REGULAR_BYE_FRACTION]];
     case 'EXTERNAL_BYE':
+      if (entry.outcome === null) return [[entry.playerId, 0]];
       return [[entry.playerId, valueOf(entry.playerId) * EXTERNAL_BYE_FRACTION[entry.outcome]]];
   }
   throw new Error('unreachable');

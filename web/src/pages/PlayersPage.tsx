@@ -8,11 +8,6 @@ const MEMBERSHIP_LABEL: Record<MembershipType, string> = {
   INTERNAL_ONLY: 'Internal only',
   GUEST: 'Guest',
 };
-const MEMBERSHIP_PILL_CLASS: Record<MembershipType, string> = {
-  FULL: 'full',
-  INTERNAL_ONLY: 'internal',
-  GUEST: 'guest',
-};
 
 export default function PlayersPage() {
   const [players, setPlayers] = useState<Player[]>([]);
@@ -62,6 +57,17 @@ export default function PlayersPage() {
     load();
   }
 
+  async function handleMembershipChange(id: number, membershipType: MembershipType) {
+    await playersApi.updatePlayer(id, { membershipType });
+    load();
+  }
+
+  async function handleNotesSave(player: Player, notes: string) {
+    if (notes === (player.notes ?? '')) return;
+    await playersApi.updatePlayer(player.id, { notes: notes.trim() || null });
+    load();
+  }
+
   return (
     <div className="app">
       <h1 className="page-title">Admin · Players</h1>
@@ -107,7 +113,13 @@ export default function PlayersPage() {
           <div className="field-row">
             <div className="field">
               <label htmlFor="name">Name</label>
-              <input id="name" value={newName} onChange={(e) => setNewName(e.target.value)} autoFocus />
+              <input
+                id="name"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+                autoFocus
+              />
             </div>
             <div className="field">
               <label htmlFor="membership">Membership</label>
@@ -131,7 +143,7 @@ export default function PlayersPage() {
       {loading ? (
         <p style={{ color: 'var(--muted)' }}>Loading…</p>
       ) : (
-        <div className="card" style={{ padding: '0 22px' }}>
+        <div className="card" style={{ padding: '16px 22px 6px' }}>
           <table className="roster">
             <thead>
               <tr>
@@ -145,12 +157,36 @@ export default function PlayersPage() {
                 <tr key={p.id}>
                   <td>{p.name}</td>
                   <td>
-                    <span className={`pill ${MEMBERSHIP_PILL_CLASS[p.membershipType]}`}>
-                      {MEMBERSHIP_LABEL[p.membershipType]}
-                    </span>
+                    <select
+                      className={`roster-select roster-select-${p.membershipType.toLowerCase()}`}
+                      value={p.membershipType}
+                      onChange={(e) => handleMembershipChange(p.id, e.target.value as MembershipType)}
+                    >
+                      {(Object.keys(MEMBERSHIP_LABEL) as MembershipType[]).map((mt) => (
+                        <option key={mt} value={mt}>
+                          {MEMBERSHIP_LABEL[mt]}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                   <td className="note-cell">
-                    {p.membershipType === 'GUEST' ? `${p.roundsThisSeason ?? 0} round(s) played this season` : '—'}
+                    <input
+                      className="notes-input"
+                      defaultValue={p.notes ?? ''}
+                      onBlur={(e) => handleNotesSave(p, e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                    />
+                    {p.membershipType === 'GUEST' &&
+                      (() => {
+                        const rounds = p.roundsThisSeason ?? 0;
+                        const dueForUpgrade = rounds >= 3;
+                        return (
+                          <div className={dueForUpgrade ? 'guest-count-hint due' : 'guest-count-hint'}>
+                            {rounds} round(s) played this season
+                            {dueForUpgrade && ' — consider upgrading'}
+                          </div>
+                        );
+                      })()}
                   </td>
                 </tr>
               ))}

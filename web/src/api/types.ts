@@ -7,6 +7,7 @@ export interface Player {
   id: number;
   name: string;
   membershipType: MembershipType;
+  notes: string | null;
   createdAt: string;
   roundsThisSeason?: number;
 }

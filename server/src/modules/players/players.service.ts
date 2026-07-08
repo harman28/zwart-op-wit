@@ -35,6 +35,9 @@ export async function importPlayers(entries: { name: string; membershipType: Mem
   return prisma.$transaction(entries.map((e) => prisma.player.create({ data: e })));
 }
 
-export async function updatePlayer(id: number, data: { name?: string; membershipType?: MembershipType }) {
+export async function updatePlayer(
+  id: number,
+  data: { name?: string; membershipType?: MembershipType; notes?: string | null },
+) {
   return prisma.player.update({ where: { id }, data });
 }

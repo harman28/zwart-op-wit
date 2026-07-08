@@ -4,8 +4,10 @@ import { requireAdmin } from '../../lib/requireAdmin.js';
 import {
   createSeason,
   endSeason,
+  getAdminRounds,
   getCurrentSeason,
   getLiveLeaderboard,
+  getNextRoundNumber,
   getPublicRounds,
   getSeason,
   listSeasons,
@@ -44,12 +46,20 @@ export async function seasonsRoutes(app: FastifyInstance): Promise<void> {
   // Admin
   app.get('/api/admin/seasons/current', { preHandler: requireAdmin }, async () => getCurrentSeason());
 
+  app.get('/api/admin/seasons/:id/rounds', { preHandler: requireAdmin }, async (request) =>
+    getAdminRounds(idParams.parse(request.params).id),
+  );
+
   app.post('/api/admin/seasons', { preHandler: requireAdmin }, async (request, reply) => {
     const body = createSeasonBody.parse(request.body);
     const season = await createSeason(body);
     reply.code(201);
     return season;
   });
+
+  app.get('/api/admin/seasons/:id/next-round-number', { preHandler: requireAdmin }, async (request) =>
+    getNextRoundNumber(idParams.parse(request.params).id),
+  );
 
   app.post('/api/admin/seasons/:id/end', { preHandler: requireAdmin }, async (request) =>
     endSeason(idParams.parse(request.params).id),

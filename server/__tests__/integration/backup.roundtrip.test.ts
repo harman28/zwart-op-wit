@@ -111,7 +111,7 @@ describe('backup export -> wipe -> import round-trip (real Postgres)', () => {
 
       const importRes = await app.inject({
         method: 'POST',
-        url: `/api/admin/backup/import?mode=replace&seasonId=${seasonId}`,
+        url: `/api/admin/backup/import?seasonId=${seasonId}`,
         headers: { cookie },
         payload: backup,
       });

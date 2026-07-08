@@ -13,14 +13,15 @@ export function resultLabel(result: GameResult): string {
   }
 }
 
-export function resultClass(result: GameResult): 'win' | 'loss' | 'draw' {
+// Named after which piece color won, never "win/loss" — black winning isn't a bad outcome.
+export function resultClass(result: GameResult): 'white-win' | 'black-win' | 'draw' {
   switch (result) {
     case 'WHITE_WIN':
     case 'WHITE_WIN_FORFEIT':
-      return 'win';
+      return 'white-win';
     case 'BLACK_WIN':
     case 'BLACK_WIN_FORFEIT':
-      return 'loss';
+      return 'black-win';
     case 'DRAW':
       return 'draw';
   }

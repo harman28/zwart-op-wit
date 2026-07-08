@@ -29,9 +29,11 @@ export function mapEntryToEngine(entry: PrismaRoundEntry): RoundEntryInput {
       return { kind: entry.kind, playerId: entry.soloPlayerId };
     }
     case 'EXTERNAL_BYE': {
-      if (entry.soloPlayerId == null || entry.externalOutcome == null) {
-        throw new Error(`EXTERNAL_BYE entry ${entry.id} is missing soloPlayerId/externalOutcome`);
+      if (entry.soloPlayerId == null) {
+        throw new Error(`EXTERNAL_BYE entry ${entry.id} is missing soloPlayerId`);
       }
+      // externalOutcome is null while the result hasn't been entered yet — a legitimate
+      // in-between state (player is marked as playing externally before it's known).
       return { kind: 'EXTERNAL_BYE', playerId: entry.soloPlayerId, outcome: entry.externalOutcome };
     }
   }

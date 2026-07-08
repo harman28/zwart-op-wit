@@ -44,25 +44,46 @@ export async function createSeason(input: CreateSeasonInput) {
   const repeatPairingWindow = input.repeatPairingWindow ?? clubSettings.defaultRepeatPairingWindow;
   const countExternalMatches = input.countExternalMatches ?? clubSettings.defaultCountExternalMatches;
 
-  return prisma.$transaction(async (tx) => {
-    const season = await tx.season.create({
-      data: { name: input.name, topValue, repeatPairingWindow, countExternalMatches },
-    });
-    for (const entry of input.roster) {
-      let playerId = entry.playerId;
-      if (playerId == null) {
-        if (!entry.newPlayerName) throw new HttpError(400, 'Each roster entry needs a playerId or a newPlayerName');
-        const player = await tx.player.create({
-          data: { name: entry.newPlayerName, membershipType: entry.membershipType ?? 'FULL' },
-        });
-        playerId = player.id;
-      }
-      await tx.seasonEnrollment.create({
-        data: { seasonId: season.id, playerId, startingValue: entry.startingValue },
+  return prisma.$transaction(
+    async (tx) => {
+      const season = await tx.season.create({
+        data: { name: input.name, topValue, repeatPairingWindow, countExternalMatches },
       });
-    }
-    return season;
-  });
+      // One create per genuinely new player (usually few or none), then a single
+      // bulk insert for all enrollments — N sequential round trips here was
+      // enough to blow the transaction timeout on a full-size roster.
+      const enrollments: { seasonId: number; playerId: number; startingValue: number }[] = [];
+      for (const entry of input.roster) {
+        let playerId = entry.playerId;
+        if (playerId == null) {
+          if (!entry.newPlayerName) throw new HttpError(400, 'Each roster entry needs a playerId or a newPlayerName');
+          const player = await tx.player.create({
+            data: { name: entry.newPlayerName, membershipType: entry.membershipType ?? 'FULL' },
+          });
+          playerId = player.id;
+        }
+        enrollments.push({ seasonId: season.id, playerId, startingValue: entry.startingValue });
+      }
+      await tx.seasonEnrollment.createMany({ data: enrollments });
+      return season;
+    },
+    { timeout: 15000 },
+  );
+}
+
+/** The round number a newly created round should use — never admin-editable, just computed. */
+/**
+ * The next round number, plus whichever unpublished (draft) round already
+ * occupies it, if any — round numbers are unique per season regardless of
+ * publish state, so an abandoned draft silently bumps the "next" number
+ * unless the admin is told it's there and given the chance to resume or
+ * discard it.
+ */
+export async function getNextRoundNumber(seasonId: number) {
+  const last = await prisma.round.findFirst({ where: { seasonId }, orderBy: { number: 'desc' } });
+  const number = (last?.number ?? 0) + 1;
+  const existingDraft = last && !last.isPublished ? { id: last.id, number: last.number } : null;
+  return { number, existingDraft };
 }
 
 export async function endSeason(id: number) {
@@ -117,14 +138,40 @@ export async function getLiveLeaderboard(seasonId: number) {
 /**
  * Published rounds only, most recent first. REGULAR_BYE entries are excluded
  * here — server-side, not just hidden client-side — because absent players
- * are never named in the round view at all.
+ * are never named in the round view at all. EXTERNAL_BYE is included: it's a
+ * real result (counts toward standings), so it's shown publicly too.
  */
 export async function getPublicRounds(seasonId: number) {
+  const season = await prisma.season.findUnique({ where: { id: seasonId } });
+  const kinds: string[] = ['GAME', 'PAIRING_BYE'];
+  if (season?.countExternalMatches) kinds.push('EXTERNAL_BYE');
   return prisma.round.findMany({
     where: { seasonId, isPublished: true },
     include: {
       entries: {
-        where: { kind: { in: ['GAME', 'PAIRING_BYE'] } },
+        where: { kind: { in: kinds as ('GAME' | 'PAIRING_BYE' | 'EXTERNAL_BYE')[] } },
+        include: { whitePlayer: true, blackPlayer: true, soloPlayer: true },
+      },
+    },
+    orderBy: { number: 'desc' },
+  });
+}
+
+/**
+ * Same published-rounds scope, but every entry kind — the admin preview also
+ * needs REGULAR_BYE. EXTERNAL_BYE is excluded when the season has external
+ * matches turned off — same "disappears entirely, not just hidden" treatment
+ * as REGULAR_BYE gets on the public feed.
+ */
+export async function getAdminRounds(seasonId: number) {
+  const season = await prisma.season.findUnique({ where: { id: seasonId } });
+  const kinds: string[] = ['GAME', 'PAIRING_BYE', 'REGULAR_BYE'];
+  if (season?.countExternalMatches) kinds.push('EXTERNAL_BYE');
+  return prisma.round.findMany({
+    where: { seasonId, isPublished: true },
+    include: {
+      entries: {
+        where: { kind: { in: kinds as ('GAME' | 'PAIRING_BYE' | 'REGULAR_BYE' | 'EXTERNAL_BYE')[] } },
         include: { whitePlayer: true, blackPlayer: true, soloPlayer: true },
       },
     },

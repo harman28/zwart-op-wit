@@ -53,8 +53,12 @@ export async function createRound(seasonId: number, input: CreateRoundInput) {
 
   // "Add an unregistered player" — creates the club-wide identity and this
   // season's enrollment in the same step, then folds them into signups.
+  // Defaults to GUEST (not FULL) — an admin who hasn't classified them yet
+  // shouldn't have them silently counted as a full member; the players page's
+  // "rounds played this season" hint on guests is what surfaces "they should
+  // probably be upgraded now" once they've turned up a few times.
   for (const np of input.newPlayers ?? []) {
-    const player = await prisma.player.create({ data: { name: np.name, membershipType: np.membershipType ?? 'FULL' } });
+    const player = await prisma.player.create({ data: { name: np.name, membershipType: np.membershipType ?? 'GUEST' } });
     const enrollment = await prisma.seasonEnrollment.create({
       data: { seasonId, playerId: player.id, startingValue: np.startingValue },
     });

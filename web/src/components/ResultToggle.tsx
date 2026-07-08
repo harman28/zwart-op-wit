@@ -1,9 +1,9 @@
 import type { GameResult } from '../api/types.js';
 
 const OPTIONS: { result: GameResult; label: string; cls: string }[] = [
-  { result: 'WHITE_WIN', label: '1–0', cls: 'win' },
+  { result: 'WHITE_WIN', label: '1–0', cls: 'white-win' },
   { result: 'DRAW', label: '½–½', cls: 'draw' },
-  { result: 'BLACK_WIN', label: '0–1', cls: 'loss' },
+  { result: 'BLACK_WIN', label: '0–1', cls: 'black-win' },
 ];
 
 export default function ResultToggle({

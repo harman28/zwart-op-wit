@@ -14,9 +14,19 @@
   --muted: #7a6440;
   --text: #f8f0dd;
 
+  /* Generic positive/negative status colors — membership pills, error banners.
+     Not used for chess results (see below): black winning isn't a "loss". */
   --win: #7c9a6b;
   --loss: #b0524a;
   --draw: #a89566;
+
+  /* Result colors read as "which piece color won" (white/black), never as
+     good/bad — black winning isn't a loss, it's just black's turn to win. */
+  --result-white-bg: #efe6cf;
+  --result-white-text: #17130a;
+  --result-black-bg: #241f16;
+  --result-black-text: #f8f0dd;
+  --result-black-border: #4a3f28;
 
   --font-ui: system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'SFMono-Regular', ui-monospace, Menlo, Consolas, monospace;

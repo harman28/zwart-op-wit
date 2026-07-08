@@ -240,6 +240,15 @@ describe('replaySeason — general correctness', () => {
     expect(standingOf(round1.standings, 3).score).toBe(125);
   });
 
+  it("20b. an EXTERNAL_BYE with outcome: null (result not entered yet) contributes 0, like an unplayed GAME", () => {
+    const result = replaySeason({
+      topValue: 100,
+      baselines: [{ playerId: 1, startingValue: 100 }],
+      rounds: [{ number: 1, entries: [{ kind: 'EXTERNAL_BYE', playerId: 1, outcome: null }] }],
+    });
+    expect(standingOf(result.byRound[0]!.standings, 1).score).toBe(100);
+  });
+
   it('21. a self-arranged GAME scores identically to a normal one; isSelfArranged only affects its own counter', () => {
     const baselines = [
       { playerId: 1, startingValue: 100 },
