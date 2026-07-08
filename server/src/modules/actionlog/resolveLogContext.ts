@@ -15,6 +15,8 @@ export interface LogContext {
   newWhiteName?: string;
   newBlackName?: string;
   newSoloName?: string;
+  newPlayerAName?: string;
+  newPlayerBName?: string;
 }
 
 /**
@@ -66,14 +68,21 @@ export async function resolveLogContext(path: string): Promise<LogContext> {
   return {};
 }
 
-/** Resolves whichever new whitePlayerId/blackPlayerId/soloPlayerId the request body is
- * setting (a swap, assign-opponent, or add-entry) into names — runs post-mutation
- * (onResponse), once the body is available, unlike the round/table/old-player lookup above. */
-export async function resolveNewPlayerNames(
-  body: unknown,
-): Promise<{ newWhiteName?: string; newBlackName?: string; newSoloName?: string }> {
+/** Resolves whichever new whitePlayerId/blackPlayerId/soloPlayerId/playerAId/playerBId
+ * the request body is setting (a swap, assign-opponent, add-entry, or add-matchup) into
+ * names — runs post-mutation (onResponse), once the body is available, unlike the
+ * round/table/old-player lookup above. */
+export async function resolveNewPlayerNames(body: unknown): Promise<{
+  newWhiteName?: string;
+  newBlackName?: string;
+  newSoloName?: string;
+  newPlayerAName?: string;
+  newPlayerBName?: string;
+}> {
   const b = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>;
-  const ids = [b.whitePlayerId, b.blackPlayerId, b.soloPlayerId].filter((v): v is number => typeof v === 'number');
+  const ids = [b.whitePlayerId, b.blackPlayerId, b.soloPlayerId, b.playerAId, b.playerBId].filter(
+    (v): v is number => typeof v === 'number',
+  );
   if (ids.length === 0) return {};
   try {
     const players = await prisma.player.findMany({ where: { id: { in: ids } } });
@@ -82,6 +91,8 @@ export async function resolveNewPlayerNames(
       newWhiteName: typeof b.whitePlayerId === 'number' ? byId.get(b.whitePlayerId) : undefined,
       newBlackName: typeof b.blackPlayerId === 'number' ? byId.get(b.blackPlayerId) : undefined,
       newSoloName: typeof b.soloPlayerId === 'number' ? byId.get(b.soloPlayerId) : undefined,
+      newPlayerAName: typeof b.playerAId === 'number' ? byId.get(b.playerAId) : undefined,
+      newPlayerBName: typeof b.playerBId === 'number' ? byId.get(b.playerBId) : undefined,
     };
   } catch {
     return {};

@@ -22,7 +22,7 @@ export default function RoundsPage() {
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [editingCell, setEditingCell] = useState<{ entryId: number; side: 'white' | 'black' } | null>(null);
   const [assigningByeId, setAssigningByeId] = useState<number | null>(null);
-  // key = roundId; value = null while picking White, or the chosen White player while picking Black.
+  // key = roundId; value = null while picking the first player, or the chosen first player while picking the second.
   const [addMatchupState, setAddMatchupState] = useState<Map<number, Player | null>>(new Map());
 
   useEffect(() => {
@@ -157,15 +157,10 @@ export default function RoundsPage() {
       return next;
     });
   }
-  async function finishAddMatchup(round: Round, whitePlayer: Player, blackPlayer: Player) {
-    const games = round.entries.filter((e) => e.kind === 'GAME');
-    const nextTable = Math.max(0, ...games.map((g) => g.tableNumber ?? 0)) + 1;
-    await roundsApi.addEntry(round.id, {
-      kind: 'GAME',
-      whitePlayerId: whitePlayer.id,
-      blackPlayerId: blackPlayer.id,
-      tableNumber: nextTable,
-    });
+  async function finishAddMatchup(round: Round, playerA: Player, playerB: Player) {
+    // Colors aren't an admin choice — the server assigns them the same way
+    // pairing generation does, off each player's current color balance.
+    await roundsApi.addMatchup(round.id, playerA.id, playerB.id);
     cancelAddMatchup(round.id);
     await refreshRounds();
   }
@@ -300,19 +295,19 @@ export default function RoundsPage() {
                           players={allPlayers.filter((p) => !pairedIds.has(p.id))}
                           onSelect={(p) => setAddMatchupState((prev) => new Map(prev).set(round.id, p))}
                           inputClassName="editable-name-input"
-                          placeholder="White player…"
+                          placeholder="First player…"
                           autoFocus
                         />
                       ) : (
                         <>
-                          <span className="txt">{addMatchupState.get(round.id)!.name} (White) vs</span>
+                          <span className="txt">{addMatchupState.get(round.id)!.name} vs</span>
                           <PlayerAutocomplete
                             players={allPlayers.filter(
                               (p) => !pairedIds.has(p.id) && p.id !== addMatchupState.get(round.id)!.id,
                             )}
                             onSelect={(p) => finishAddMatchup(round, addMatchupState.get(round.id)!, p)}
                             inputClassName="editable-name-input"
-                            placeholder="Black player…"
+                            placeholder="Second player…"
                             autoFocus
                           />
                         </>

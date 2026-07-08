@@ -1,5 +1,6 @@
 import type { EntryKind, ExternalOutcome, GameResult, MembershipType, Round, RoundEntry } from '@prisma/client';
 import { prisma } from '../../db/client.js';
+import { assignColors } from '../../engine/color.js';
 import { REGULAR_BYE_CAP } from '../../engine/constants.js';
 import { generatePairings } from '../../engine/pairing.js';
 import { replaySeason } from '../../engine/standings.js';
@@ -31,6 +32,52 @@ function countByKind(rounds: RoundWithEntries[], kind: EntryKind): Record<number
     }
   }
   return counts;
+}
+
+/**
+ * Ranks every enrolled player by current standings value (raw enrollment
+ * startingValue for anyone who hasn't played yet) — the same temporary,
+ * never-persisted ordering used both to feed the pairing algorithm at round
+ * creation and to decide colors when an admin manually adds a matchup later.
+ */
+async function computeCurrentCandidates(seasonId: number): Promise<{
+  candidatesByPlayer: Map<number, PairingCandidate>;
+  allRounds: RoundWithEntries[];
+}> {
+  const season = await prisma.season.findUnique({ where: { id: seasonId }, include: { enrollments: true } });
+  if (!season) throw new HttpError(404, `Season ${seasonId} not found`);
+
+  // Admin operates on the full truth (published + draft rounds), unlike the
+  // public leaderboard which only ever reflects published rounds.
+  const allRounds = await prisma.round.findMany({
+    where: { seasonId },
+    include: { entries: true },
+    orderBy: { number: 'asc' },
+  });
+
+  // Same rule as the live leaderboard: when external matches are switched off
+  // for this season, they must not affect scoring at all, not just visibility.
+  const roundsForReplay = season.countExternalMatches
+    ? allRounds
+    : allRounds.map((r) => ({ ...r, entries: r.entries.filter((e) => e.kind !== 'EXTERNAL_BYE') }));
+
+  const replay = replaySeason({
+    topValue: season.topValue,
+    baselines: mapEnrollmentsToBaselines(season.enrollments),
+    rounds: roundsForReplay.map(mapRoundToEngine),
+  });
+  const standingsByPlayer = new Map(replay.current.standings.map((s) => [s.playerId, s]));
+
+  const withValue = season.enrollments.map((e) => {
+    const standing = standingsByPlayer.get(e.playerId);
+    if (standing) return { playerId: e.playerId, value: standing.value, colorNumber: standing.colorNumber };
+    return { playerId: e.playerId, value: e.startingValue, colorNumber: 0 };
+  });
+  withValue.sort((a, b) => b.value - a.value);
+  const candidatesByPlayer = new Map<number, PairingCandidate>(
+    withValue.map((w, idx) => [w.playerId, { playerId: w.playerId, rank: idx + 1, colorNumber: w.colorNumber }]),
+  );
+  return { candidatesByPlayer, allRounds };
 }
 
 export interface CreateRoundInput {
@@ -72,36 +119,17 @@ export async function createRound(seasonId: number, input: CreateRoundInput) {
     }
   }
 
-  // Admin operates on the full truth (published + draft rounds), unlike the
-  // public leaderboard which only ever reflects published rounds.
-  const allRounds = await prisma.round.findMany({
-    where: { seasonId },
-    include: { entries: true },
-    orderBy: { number: 'asc' },
-  });
-
-  // Same rule as the live leaderboard: when external matches are switched off
-  // for this season, they must not affect scoring at all, not just visibility.
-  const roundsForReplay = season.countExternalMatches
-    ? allRounds
-    : allRounds.map((r) => ({ ...r, entries: r.entries.filter((e) => e.kind !== 'EXTERNAL_BYE') }));
-
-  const replay = replaySeason({
-    topValue: season.topValue,
-    baselines: mapEnrollmentsToBaselines(season.enrollments),
-    rounds: roundsForReplay.map(mapRoundToEngine),
-  });
-  const standingsByPlayer = new Map(replay.current.standings.map((s) => [s.playerId, s]));
-
-  // Rank candidates for pairing purposes: current standings value if they've
-  // played before, else their raw enrollment startingValue for a debutant.
-  // This temporary rank only orders *this round's* pairing — it's never persisted.
+  const { candidatesByPlayer, allRounds } = await computeCurrentCandidates(seasonId);
+  // Newly-added-this-request players (the "add an unregistered player" case
+  // above) have an enrollment but never went through the replay, so they're
+  // absent from candidatesByPlayer — fall back to their raw startingValue,
+  // ranked last, same as computeCurrentCandidates would for any debutant.
   const withValue = signedUpPlayerIds.map((playerId) => {
-    const standing = standingsByPlayer.get(playerId);
-    if (standing) return { playerId, value: standing.value, colorNumber: standing.colorNumber };
-    return { playerId, value: enrollmentByPlayer.get(playerId)!.startingValue, colorNumber: 0 };
+    const candidate = candidatesByPlayer.get(playerId);
+    if (candidate) return candidate;
+    return { playerId, rank: Number.MAX_SAFE_INTEGER, colorNumber: 0 };
   });
-  withValue.sort((a, b) => b.value - a.value);
+  withValue.sort((a, b) => a.rank - b.rank);
   const candidates: PairingCandidate[] = withValue.map((w, idx) => ({
     playerId: w.playerId,
     rank: idx + 1,
@@ -202,6 +230,36 @@ export async function addEntry(
   },
 ) {
   return prisma.roundEntry.create({ data: { roundId, ...data } });
+}
+
+/**
+ * Adds a brand-new matchup to an existing round from just two players — who
+ * plays which color is never an admin choice, so this computes it the same
+ * way pairing generation does (`assignColors`, off each player's current
+ * color balance and standing) rather than accepting whitePlayerId/blackPlayerId.
+ */
+export async function addMatchup(roundId: number, playerAId: number, playerBId: number) {
+  const round = await prisma.round.findUnique({ where: { id: roundId } });
+  if (!round) throw new HttpError(404, `Round ${roundId} not found`);
+
+  const { candidatesByPlayer } = await computeCurrentCandidates(round.seasonId);
+  const a = candidatesByPlayer.get(playerAId);
+  const b = candidatesByPlayer.get(playerBId);
+  if (!a || !b) throw new HttpError(400, 'Both players must be enrolled in this season');
+
+  const colors = assignColors(a, b);
+  const existingGames = await prisma.roundEntry.findMany({ where: { roundId, kind: 'GAME' } });
+  const nextTable = Math.max(0, ...existingGames.map((g) => g.tableNumber ?? 0)) + 1;
+
+  return prisma.roundEntry.create({
+    data: {
+      roundId,
+      kind: 'GAME',
+      whitePlayerId: colors.whitePlayerId,
+      blackPlayerId: colors.blackPlayerId,
+      tableNumber: nextTable,
+    },
+  });
 }
 
 export async function deleteEntry(id: number) {

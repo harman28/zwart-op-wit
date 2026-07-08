@@ -83,6 +83,9 @@ export function describeAction(method: string, path: string, body: unknown, ctx:
         return `Updated an entry on ${location}`;
       }
     }
+    if (segs[2] === 'matchups' && method === 'POST') {
+      return `Added ${ctx.newPlayerAName ?? '?'} vs ${ctx.newPlayerBName ?? '?'} to ${roundLabel}`;
+    }
     if (segs[2] === 'table-numbers') return `Renumbered tables on ${roundLabel} (starting at ${String(b.startAt)})`;
     if (segs[2] === 'publish') return `Published ${roundLabel}`;
   }

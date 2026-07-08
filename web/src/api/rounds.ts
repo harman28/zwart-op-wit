@@ -56,6 +56,11 @@ export function deleteEntry(roundId: number, entryId: number) {
   return api.delete(`/admin/rounds/${roundId}/entries/${entryId}`);
 }
 
+/** Colors are never an admin choice — the server computes who plays white/black. */
+export function addMatchup(roundId: number, playerAId: number, playerBId: number) {
+  return api.post(`/admin/rounds/${roundId}/matchups`, { playerAId, playerBId });
+}
+
 export function renumberTables(roundId: number, startAt: number) {
   return api.patch(`/admin/rounds/${roundId}/table-numbers`, { startAt });
 }

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAdmin } from '../../lib/requireAdmin.js';
 import {
   addEntry,
+  addMatchup,
   createRound,
   deleteEntry,
   deleteRound,
@@ -63,6 +64,8 @@ const addEntryBody = z.object({
 
 const tableNumbersBody = z.object({ startAt: z.number().int() });
 
+const addMatchupBody = z.object({ playerAId: z.number().int(), playerBId: z.number().int() });
+
 export async function roundsRoutes(app: FastifyInstance): Promise<void> {
   app.post('/api/admin/seasons/:id/rounds', { preHandler: requireAdmin }, async (request, reply) => {
     const params = seasonIdParams.parse(request.params);
@@ -92,6 +95,14 @@ export async function roundsRoutes(app: FastifyInstance): Promise<void> {
     const params = roundIdParams.parse(request.params);
     const body = addEntryBody.parse(request.body);
     const entry = await addEntry(params.id, body);
+    reply.code(201);
+    return entry;
+  });
+
+  app.post('/api/admin/rounds/:id/matchups', { preHandler: requireAdmin }, async (request, reply) => {
+    const params = roundIdParams.parse(request.params);
+    const body = addMatchupBody.parse(request.body);
+    const entry = await addMatchup(params.id, body.playerAId, body.playerBId);
     reply.code(201);
     return entry;
   });
