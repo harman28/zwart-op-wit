@@ -5,9 +5,11 @@ import * as backupApi from '../api/backup.js';
 import * as playersApi from '../api/players.js';
 import * as seasonsApi from '../api/seasons.js';
 import * as settingsApi from '../api/settings.js';
-import type { ClubSettings, Player, Season } from '../api/types.js';
+import type { ClubSettings, Player, Round, Season } from '../api/types.js';
+import CustomSelect from '../components/CustomSelect.js';
+import Modal from '../components/Modal.js';
 import PasswordVisibilityToggle from '../components/PasswordVisibilityToggle.js';
-import { errorMessage } from '../lib/format.js';
+import { errorMessage, formatDate } from '../lib/format.js';
 
 export default function SettingsPage() {
   const [season, setSeason] = useState<Season | null>(null);
@@ -28,6 +30,8 @@ export default function SettingsPage() {
   const [arbiterEmailDraft, setArbiterEmailDraft] = useState('');
   const [tournamentNameDraft, setTournamentNameDraft] = useState('');
   const [plannedEndDateDraft, setPlannedEndDateDraft] = useState('');
+  const [showKnsbModal, setShowKnsbModal] = useState(false);
+  const [knsbRounds, setKnsbRounds] = useState<Round[]>([]);
   const [knsbFromRound, setKnsbFromRound] = useState('');
   const [knsbThroughRound, setKnsbThroughRound] = useState('');
   const [knsbBusy, setKnsbBusy] = useState(false);
@@ -136,12 +140,23 @@ export default function SettingsPage() {
     setClubSettings(updated);
   }
 
+  function openKnsbModal() {
+    if (!season) return;
+    setError(null);
+    setKnsbFromRound('');
+    setKnsbThroughRound('');
+    seasonsApi.getAdminRounds(season.id).then((rounds) => {
+      setKnsbRounds([...rounds].sort((a, b) => a.number - b.number));
+    });
+    setShowKnsbModal(true);
+  }
+
   async function handleExportKnsb() {
     if (!season) return;
     const from = Number(knsbFromRound);
     const through = Number(knsbThroughRound);
-    if (!Number.isFinite(from) || !Number.isFinite(through) || from < 1 || through < from) {
-      setError('Enter a valid round range (from ≤ through).');
+    if (!Number.isFinite(from) || !Number.isFinite(through) || !knsbFromRound || !knsbThroughRound || through < from) {
+      setError('Pick both a "from" and "through" round (from ≤ through).');
       return;
     }
     setError(null);
@@ -155,6 +170,7 @@ export default function SettingsPage() {
       a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
+      setShowKnsbModal(false);
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -491,91 +507,87 @@ export default function SettingsPage() {
         <div className="section-label">KNSB export</div>
         <div className="settings-row">
           <div>
-            <div className="label">Arbiter name</div>
-            <div className="help">Prefilled on every export — you're always the submitter.</div>
+            <div className="label">Rapid rating export</div>
+            <div className="help">Submit a batch of rounds to the KNSB rating list.</div>
           </div>
-          <input
-            style={{ width: 220 }}
-            value={arbiterNameDraft}
-            onChange={(e) => setArbiterNameDraft(e.target.value)}
-            onBlur={applyArbiterName}
-            onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-            placeholder={clubSettings ? 'Not set' : 'Loading…'}
-          />
+          <button className="btn btn-ghost" onClick={openKnsbModal} disabled={!season}>
+            Export…
+          </button>
         </div>
-        <div className="settings-row">
-          <div>
-            <div className="label">Arbiter email</div>
-          </div>
-          <input
-            style={{ width: 220 }}
-            value={arbiterEmailDraft}
-            onChange={(e) => setArbiterEmailDraft(e.target.value)}
-            onBlur={applyArbiterEmail}
-            onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-            placeholder={clubSettings ? 'Not set' : 'Loading…'}
-          />
-        </div>
-        {season && (
-          <>
-            <div className="settings-row">
-              <div>
-                <div className="label">Tournament name</div>
-                <div className="help">Reported as this season's event name — defaults to the season's own name.</div>
-              </div>
-              <input
-                style={{ width: 260 }}
-                value={tournamentNameDraft}
-                onChange={(e) => setTournamentNameDraft(e.target.value)}
-                onBlur={applyTournamentName}
-                onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-              />
-            </div>
-            <div className="settings-row">
-              <div>
-                <div className="label">Planned end date</div>
-                <div className="help">Reported on every export even mid-season, per real submitted files.</div>
-              </div>
-              <input
-                type="date"
-                value={plannedEndDateDraft}
-                onChange={(e) => setPlannedEndDateDraft(e.target.value)}
-                onBlur={applyPlannedEndDate}
-              />
-            </div>
-            <div className="settings-row">
-              <div>
-                <div className="label">Export a batch (Rapid)</div>
-                <div className="help">One reporting range at a time — matches Jim's actual monthly submission workflow.</div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <input
-                  className="settings-num"
-                  style={{ width: 56 }}
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="from"
-                  value={knsbFromRound}
-                  onChange={(e) => setKnsbFromRound(e.target.value.replace(/[^0-9]/g, ''))}
-                />
-                <span style={{ color: 'var(--muted)' }}>–</span>
-                <input
-                  className="settings-num"
-                  style={{ width: 56 }}
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="through"
-                  value={knsbThroughRound}
-                  onChange={(e) => setKnsbThroughRound(e.target.value.replace(/[^0-9]/g, ''))}
-                />
-                <button className="btn btn-ghost" onClick={handleExportKnsb} disabled={knsbBusy}>
-                  {knsbBusy ? 'Exporting…' : 'Export…'}
-                </button>
-              </div>
-            </div>
-          </>
-        )}
       </div>
+
+      {showKnsbModal && season && (
+        <Modal title="KNSB rating export" onClose={() => setShowKnsbModal(false)}>
+          <div className="field">
+            <label htmlFor="knsb-arbiter-name">Arbiter name</label>
+            <input
+              id="knsb-arbiter-name"
+              value={arbiterNameDraft}
+              onChange={(e) => setArbiterNameDraft(e.target.value)}
+              onBlur={applyArbiterName}
+              placeholder={clubSettings ? 'Not set' : 'Loading…'}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="knsb-arbiter-email">Arbiter email</label>
+            <input
+              id="knsb-arbiter-email"
+              value={arbiterEmailDraft}
+              onChange={(e) => setArbiterEmailDraft(e.target.value)}
+              onBlur={applyArbiterEmail}
+              placeholder={clubSettings ? 'Not set' : 'Loading…'}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="knsb-tournament-name">Tournament name</label>
+            <input
+              id="knsb-tournament-name"
+              value={tournamentNameDraft}
+              onChange={(e) => setTournamentNameDraft(e.target.value)}
+              onBlur={applyTournamentName}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="knsb-end-date">Planned end date</label>
+            <input
+              id="knsb-end-date"
+              type="date"
+              value={plannedEndDateDraft}
+              onChange={(e) => setPlannedEndDateDraft(e.target.value)}
+              onBlur={applyPlannedEndDate}
+            />
+          </div>
+          <div className="field-row" style={{ marginBottom: 0 }}>
+            <div className="field">
+              <label>From round</label>
+              <CustomSelect
+                value={knsbFromRound}
+                options={[
+                  { value: '', label: 'Select…' },
+                  ...knsbRounds.map((r) => ({ value: String(r.number), label: `Round ${r.number} — ${formatDate(r.date)}` })),
+                ]}
+                onChange={setKnsbFromRound}
+                triggerClassName="roster-select"
+              />
+            </div>
+            <div className="field">
+              <label>Through round</label>
+              <CustomSelect
+                value={knsbThroughRound}
+                options={[
+                  { value: '', label: 'Select…' },
+                  ...knsbRounds.map((r) => ({ value: String(r.number), label: `Round ${r.number} — ${formatDate(r.date)}` })),
+                ]}
+                onChange={setKnsbThroughRound}
+                triggerClassName="roster-select"
+              />
+            </div>
+          </div>
+          <button className="btn btn-primary" onClick={handleExportKnsb} disabled={knsbBusy} style={{ marginTop: 4 }}>
+            {knsbBusy ? 'Exporting…' : 'Export'}
+          </button>
+        </Modal>
+      )}
 
       <div style={{ textAlign: 'center', marginTop: 8 }}>
         <Link to="/admin/activity-log" style={{ fontSize: 11, color: 'var(--muted)' }}>

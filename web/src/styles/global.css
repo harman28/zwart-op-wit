@@ -363,8 +363,87 @@ table.board tr:last-child td {
 @media (prefers-reduced-motion: reduce) {
   .round-body,
   .chip,
-  .autocomplete {
+  .autocomplete,
+  .modal-backdrop,
+  .modal-panel {
     animation: none;
+  }
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(9, 8, 10, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+  animation: modal-fade-in 0.15s ease;
+}
+.modal-panel {
+  background: var(--card-raised);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  width: 100%;
+  max-width: 460px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  animation: modal-panel-in 0.18s ease;
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--card-raised);
+}
+.modal-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+.modal-close {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  transition: color 0.12s ease, background-color 0.12s ease;
+}
+.modal-close:hover {
+  color: var(--accent);
+  background: rgba(212, 168, 83, 0.12);
+}
+.modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+@keyframes modal-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes modal-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -1018,6 +1097,8 @@ table.roster tr:last-child td {
 }
 .custom-select-menu {
   min-width: 140px;
+  max-height: 220px;
+  overflow-y: auto;
 }
 .custom-select-menu div.sel {
   background: rgba(212, 168, 83, 0.12);
