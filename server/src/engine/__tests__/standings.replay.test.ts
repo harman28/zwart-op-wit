@@ -246,7 +246,40 @@ describe('replaySeason — general correctness', () => {
       baselines: [{ playerId: 1, startingValue: 100 }],
       rounds: [{ number: 1, entries: [{ kind: 'EXTERNAL_BYE', playerId: 1, outcome: null }] }],
     });
-    expect(standingOf(result.byRound[0]!.standings, 1).score).toBe(100);
+    const standing = standingOf(result.byRound[0]!.standings, 1);
+    expect(standing.score).toBe(100);
+    expect(standing.played).toBe(0);
+  });
+
+  it('20c. a resolved EXTERNAL_BYE counts toward played and wins/draws/losses, same as a GAME result', () => {
+    const result = replaySeason({
+      topValue: 100,
+      baselines: [
+        { playerId: 1, startingValue: 100 },
+        { playerId: 2, startingValue: 100 },
+        { playerId: 3, startingValue: 100 },
+      ],
+      rounds: [
+        {
+          number: 1,
+          entries: [
+            { kind: 'EXTERNAL_BYE', playerId: 1, outcome: 'WIN' },
+            { kind: 'EXTERNAL_BYE', playerId: 2, outcome: 'DRAW' },
+            { kind: 'EXTERNAL_BYE', playerId: 3, outcome: 'LOSS' },
+          ],
+        },
+      ],
+    });
+    const standings = result.byRound[0]!.standings;
+    const winner = standingOf(standings, 1);
+    const drawer = standingOf(standings, 2);
+    const loser = standingOf(standings, 3);
+    expect(winner.played).toBe(1);
+    expect(winner.wins).toBe(1);
+    expect(drawer.played).toBe(1);
+    expect(drawer.draws).toBe(1);
+    expect(loser.played).toBe(1);
+    expect(loser.losses).toBe(1);
   });
 
   it('21. a self-arranged GAME scores identically to a normal one; isSelfArranged only affects its own counter', () => {

@@ -85,8 +85,23 @@ function applyCounters(entry: RoundEntryInput, counters: Map<number, Counters>):
     case 'REGULAR_BYE':
       counters.get(entry.playerId)!.regularByesUsed += 1;
       return;
-    case 'EXTERNAL_BYE':
+    case 'EXTERNAL_BYE': {
+      if (entry.outcome === null) return;
+      const c = counters.get(entry.playerId)!;
+      c.played += 1;
+      switch (entry.outcome) {
+        case 'WIN':
+          c.wins += 1;
+          break;
+        case 'LOSS':
+          c.losses += 1;
+          break;
+        case 'DRAW':
+          c.draws += 1;
+          break;
+      }
       return;
+    }
   }
 }
 
