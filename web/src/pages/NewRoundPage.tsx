@@ -4,8 +4,10 @@ import * as playersApi from '../api/players.js';
 import * as roundsApi from '../api/rounds.js';
 import * as seasonsApi from '../api/seasons.js';
 import type { MembershipType, Player } from '../api/types.js';
+import CustomSelect from '../components/CustomSelect.js';
 import PlayerAutocomplete from '../components/PlayerAutocomplete.js';
 import { errorMessage } from '../lib/format.js';
+import { MEMBERSHIP_OPTIONS } from '../lib/membership.js';
 
 interface NewPlayerDraft {
   name: string;
@@ -259,16 +261,13 @@ export default function NewRoundPage() {
                 />
               </div>
               <div className="field">
-                <label htmlFor="unreg-membership">Membership</label>
-                <select
-                  id="unreg-membership"
+                <label>Membership</label>
+                <CustomSelect
                   value={unregMembership}
-                  onChange={(e) => setUnregMembership(e.target.value as MembershipType)}
-                >
-                  <option value="GUEST">Guest</option>
-                  <option value="FULL">Full member</option>
-                  <option value="INTERNAL_ONLY">Internal only</option>
-                </select>
+                  options={MEMBERSHIP_OPTIONS}
+                  onChange={(v) => setUnregMembership(v as MembershipType)}
+                  triggerClassName="roster-select"
+                />
               </div>
               <div className="field">
                 <label htmlFor="unreg-value">Estimated starting value</label>

@@ -1,13 +1,9 @@
 import { useEffect, useState } from 'react';
 import * as playersApi from '../api/players.js';
 import type { MembershipType, Player } from '../api/types.js';
+import CustomSelect from '../components/CustomSelect.js';
 import { errorMessage } from '../lib/format.js';
-
-const MEMBERSHIP_LABEL: Record<MembershipType, string> = {
-  FULL: 'Full member',
-  INTERNAL_ONLY: 'Internal only',
-  GUEST: 'Guest',
-};
+import { MEMBERSHIP_OPTIONS } from '../lib/membership.js';
 
 export default function PlayersPage() {
   const [players, setPlayers] = useState<Player[]>([]);
@@ -123,15 +119,12 @@ export default function PlayersPage() {
             </div>
             <div className="field">
               <label htmlFor="membership">Membership</label>
-              <select
-                id="membership"
+              <CustomSelect
                 value={newMembership}
-                onChange={(e) => setNewMembership(e.target.value as MembershipType)}
-              >
-                <option value="FULL">Full member</option>
-                <option value="INTERNAL_ONLY">Internal only</option>
-                <option value="GUEST">Guest</option>
-              </select>
+                options={MEMBERSHIP_OPTIONS}
+                onChange={(v) => setNewMembership(v as MembershipType)}
+                triggerClassName="roster-select"
+              />
             </div>
             <button className="btn btn-primary" onClick={handleAdd}>
               Add
@@ -157,17 +150,12 @@ export default function PlayersPage() {
                 <tr key={p.id}>
                   <td>{p.name}</td>
                   <td>
-                    <select
-                      className={`roster-select roster-select-${p.membershipType.toLowerCase()}`}
+                    <CustomSelect
                       value={p.membershipType}
-                      onChange={(e) => handleMembershipChange(p.id, e.target.value as MembershipType)}
-                    >
-                      {(Object.keys(MEMBERSHIP_LABEL) as MembershipType[]).map((mt) => (
-                        <option key={mt} value={mt}>
-                          {MEMBERSHIP_LABEL[mt]}
-                        </option>
-                      ))}
-                    </select>
+                      options={MEMBERSHIP_OPTIONS}
+                      onChange={(v) => handleMembershipChange(p.id, v as MembershipType)}
+                      triggerClassName="roster-select"
+                    />
                   </td>
                   <td className="note-cell">
                     <input

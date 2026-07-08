@@ -477,7 +477,18 @@ tr.unpaired-row td:last-child {
   min-width: 90px;
 }
 .external-remove {
-  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 13px;
+  line-height: 1;
+  padding: 2px 4px;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+  opacity: 0.75;
+}
+.external-remove:hover {
+  opacity: 1;
 }
 .external-tag,
 .external-tag-btn {
@@ -992,6 +1003,24 @@ table.roster tr:last-child td {
 .roster-select:focus {
   outline: none;
   border-color: var(--accent);
+}
+
+.custom-select {
+  position: relative;
+  display: inline-block;
+}
+.custom-select-trigger {
+  padding-right: 26px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237a6440' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  text-align: left;
+}
+.custom-select-menu {
+  min-width: 140px;
+}
+.custom-select-menu div.sel {
+  background: rgba(212, 168, 83, 0.12);
 }
 .roster-select-full {
   color: var(--win);
