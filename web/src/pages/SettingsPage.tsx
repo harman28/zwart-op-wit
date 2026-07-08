@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router';
 import * as authApi from '../api/auth.js';
 import * as backupApi from '../api/backup.js';
 import * as playersApi from '../api/players.js';
@@ -395,6 +396,12 @@ export default function SettingsPage() {
             Export…
           </button>
         </div>
+      </div>
+
+      <div style={{ textAlign: 'center', marginTop: 8 }}>
+        <Link to="/admin/activity-log" style={{ fontSize: 11, color: 'var(--muted)' }}>
+          Activity log
+        </Link>
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import * as authApi from '../api/auth.js';
 interface AdminContextValue {
   isAdmin: boolean;
   loading: boolean;
-  login: (password: string) => Promise<void>;
+  login: (password: string, name?: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -21,8 +21,8 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
-  async function login(password: string) {
-    await authApi.login(password);
+  async function login(password: string, name?: string) {
+    await authApi.login(password, name);
     setIsAdmin(true);
   }
 

@@ -14,12 +14,16 @@ export async function ensureClubSettings(): Promise<void> {
   });
 }
 
-export async function login(password: string): Promise<{ token: string; expiresAt: Date } | null> {
+export async function login(
+  password: string,
+  actorName?: string,
+): Promise<{ token: string; expiresAt: Date; actorName: string | null } | null> {
   const settings = await prisma.clubSettings.findUniqueOrThrow({ where: { id: 1 } });
   if (!verifyPassword(password, settings.adminPasswordHash)) return null;
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
-  const session = await prisma.adminSession.create({ data: { expiresAt } });
-  return { token: session.token, expiresAt };
+  const cleanName = actorName?.trim() || null;
+  const session = await prisma.adminSession.create({ data: { expiresAt, actorName: cleanName } });
+  return { token: session.token, expiresAt, actorName: cleanName };
 }
 
 export async function logout(token: string | undefined): Promise<void> {
@@ -27,15 +31,20 @@ export async function logout(token: string | undefined): Promise<void> {
   await prisma.adminSession.delete({ where: { token } }).catch(() => {});
 }
 
-export async function isValidSession(token: string | undefined): Promise<boolean> {
-  if (!token) return false;
+/** Returns the session's actor name if the token is valid, or null (also used as the validity check). */
+export async function getSession(token: string | undefined): Promise<{ actorName: string | null } | null> {
+  if (!token) return null;
   const session = await prisma.adminSession.findUnique({ where: { token } });
-  if (!session) return false;
+  if (!session) return null;
   if (session.expiresAt < new Date()) {
     await prisma.adminSession.delete({ where: { token } }).catch(() => {});
-    return false;
+    return null;
   }
-  return true;
+  return { actorName: session.actorName };
+}
+
+export async function isValidSession(token: string | undefined): Promise<boolean> {
+  return (await getSession(token)) != null;
 }
 
 export async function changePassword(

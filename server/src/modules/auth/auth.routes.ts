@@ -2,9 +2,10 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { env } from '../../env.js';
 import { requireAdmin } from '../../lib/requireAdmin.js';
+import { recordAction } from '../actionlog/actionlog.service.js';
 import { SESSION_COOKIE_NAME, changePassword, isValidSession, login, logout } from './auth.service.js';
 
-const loginBody = z.object({ password: z.string().min(1) });
+const loginBody = z.object({ password: z.string().min(1), name: z.string().optional() });
 const changePasswordBody = z.object({
   currentPassword: z.string().min(1),
   newPassword: z.string().min(1),
@@ -13,7 +14,7 @@ const changePasswordBody = z.object({
 export async function authRoutes(app: FastifyInstance): Promise<void> {
   app.post('/api/auth/login', async (request, reply) => {
     const body = loginBody.parse(request.body);
-    const result = await login(body.password);
+    const result = await login(body.password, body.name);
     if (!result) {
       return reply.code(401).send({ error: 'Incorrect password' });
     }
@@ -24,6 +25,12 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       path: '/',
       expires: result.expiresAt,
     });
+    await recordAction({
+      actorName: result.actorName,
+      method: 'POST',
+      path: '/api/auth/login',
+      summary: result.actorName ? `${result.actorName} logged in` : 'Logged in (no name given)',
+    }).catch(() => {});
     return { isAdmin: true };
   });
 

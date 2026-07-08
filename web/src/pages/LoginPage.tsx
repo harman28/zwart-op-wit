@@ -4,9 +4,12 @@ import PasswordVisibilityToggle from '../components/PasswordVisibilityToggle.js'
 import { useAdmin } from '../context/AdminContext.js';
 import { errorMessage } from '../lib/format.js';
 
+const NAME_STORAGE_KEY = 'zow:login-name';
+
 export default function LoginPage() {
   const { login } = useAdmin();
   const navigate = useNavigate();
+  const [name, setName] = useState(() => localStorage.getItem(NAME_STORAGE_KEY) ?? '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -17,7 +20,8 @@ export default function LoginPage() {
     setSubmitting(true);
     setError(null);
     try {
-      await login(password);
+      await login(password, name.trim() || undefined);
+      if (name.trim()) localStorage.setItem(NAME_STORAGE_KEY, name.trim());
       navigate('/');
     } catch (err) {
       setError(errorMessage(err));
@@ -33,12 +37,24 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit}>
           <div className="field-row" style={{ marginBottom: 14 }}>
             <div className="field" style={{ width: '100%' }}>
+              <label htmlFor="name">Name (optional)</label>
+              <input
+                id="name"
+                autoFocus
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="So we know who made a change"
+                style={{ width: '100%' }}
+              />
+            </div>
+          </div>
+          <div className="field-row" style={{ marginBottom: 14 }}>
+            <div className="field" style={{ width: '100%' }}>
               <label htmlFor="password">Password</label>
               <div className="password-field-wrap">
                 <input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
-                  autoFocus
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />

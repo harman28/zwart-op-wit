@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import NavBar from './components/NavBar.js';
 import { AdminProvider, useAdmin } from './context/AdminContext.js';
+import ActivityLogPage from './pages/ActivityLogPage.js';
 import LeaderboardPage from './pages/LeaderboardPage.js';
 import LoginPage from './pages/LoginPage.js';
 import NewRoundPage from './pages/NewRoundPage.js';
@@ -54,6 +55,14 @@ function AppRoutes() {
           element={
             <RequireAdmin>
               <SettingsPage />
+            </RequireAdmin>
+          }
+        />
+        <Route
+          path="/admin/activity-log"
+          element={
+            <RequireAdmin>
+              <ActivityLogPage />
             </RequireAdmin>
           }
         />

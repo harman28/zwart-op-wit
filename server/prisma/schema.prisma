@@ -148,4 +148,15 @@ model AdminSession {
   token     String   @id @default(cuid())
   createdAt DateTime @default(now())
   expiresAt DateTime
+  actorName String?
+}
+
+/** Append-only audit trail of admin actions — who did what, and when. */
+model AdminActionLog {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  actorName String?
+  method    String
+  path      String
+  summary   String
 }

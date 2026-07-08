@@ -1,7 +1,7 @@
 import { api } from './client.js';
 
-export function login(password: string) {
-  return api.post<{ isAdmin: boolean }>('/auth/login', { password });
+export function login(password: string, name?: string) {
+  return api.post<{ isAdmin: boolean }>('/auth/login', { password, name });
 }
 export function logout() {
   return api.post<{ ok: boolean }>('/auth/logout');

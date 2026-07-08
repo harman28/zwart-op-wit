@@ -4,6 +4,9 @@ import Fastify from 'fastify';
 import { ZodError } from 'zod';
 import { env } from './env.js';
 import { HttpError } from './lib/errors.js';
+import { actionLogRoutes } from './modules/actionlog/actionlog.routes.js';
+import { recordAction } from './modules/actionlog/actionlog.service.js';
+import { describeAction } from './modules/actionlog/describeAction.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { backupRoutes } from './modules/backup/backup.routes.js';
 import { knsbRoutes } from './modules/knsb/knsb.routes.js';
@@ -11,6 +14,8 @@ import { playersRoutes } from './modules/players/players.routes.js';
 import { roundsRoutes } from './modules/rounds/rounds.routes.js';
 import { seasonsRoutes } from './modules/seasons/seasons.routes.js';
 import { settingsRoutes } from './modules/settings/settings.routes.js';
+
+const LOGGED_METHODS = new Set(['POST', 'PATCH', 'DELETE']);
 
 export function buildApp() {
   const app = Fastify({ logger: false });
@@ -49,6 +54,18 @@ export function buildApp() {
 
   app.get('/health', async () => ({ ok: true }));
 
+  // Admin action log: one generic hook covers every mutating admin route
+  // (and the differently-prefixed change-password route) rather than
+  // threading a log call into each individual handler.
+  app.addHook('onResponse', async (request, reply) => {
+    if (!LOGGED_METHODS.has(request.method) || reply.statusCode >= 400) return;
+    const path = request.raw.url?.split('?')[0] ?? '';
+    const isAdminAction = path.startsWith('/api/admin/') || path === '/api/auth/change-password';
+    if (!isAdminAction) return;
+    const summary = describeAction(request.method, path, request.body);
+    await recordAction({ actorName: request.actorName ?? null, method: request.method, path, summary }).catch(() => {});
+  });
+
   app.register(authRoutes);
   app.register(playersRoutes);
   app.register(seasonsRoutes);
@@ -56,6 +73,7 @@ export function buildApp() {
   app.register(backupRoutes);
   app.register(settingsRoutes);
   app.register(knsbRoutes);
+  app.register(actionLogRoutes);
 
   return app;
 }
