@@ -1,7 +1,6 @@
 import type { EntryKind, ExternalOutcome, GameResult, MembershipType, Round, RoundEntry } from '@prisma/client';
 import { prisma } from '../../db/client.js';
 import { assignColors } from '../../engine/color.js';
-import { REGULAR_BYE_CAP } from '../../engine/constants.js';
 import { generatePairings } from '../../engine/pairing.js';
 import { replaySeason } from '../../engine/standings.js';
 import type { PairingCandidate, PastPairing } from '../../engine/types.js';
@@ -149,7 +148,7 @@ export async function createRound(seasonId: number, input: CreateRoundInput) {
   const regularByeCounts = countByKind(allRounds, 'REGULAR_BYE');
   const absentUnderCap = [...enrollmentByPlayer.keys()]
     .filter((playerId) => !signedUpPlayerIds.includes(playerId))
-    .filter((playerId) => (regularByeCounts[playerId] ?? 0) < REGULAR_BYE_CAP);
+    .filter((playerId) => (regularByeCounts[playerId] ?? 0) < season.regularByeCap);
 
   return prisma.round.create({
     data: {

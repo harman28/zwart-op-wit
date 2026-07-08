@@ -7,6 +7,8 @@ export function getClubSettings() {
 export function updateClubSettings(data: Partial<ClubSettings>) {
   return api.patch<ClubSettings>('/admin/settings', data);
 }
-export function getKnsbExportStatus() {
-  return api.get<{ status: string; message: string }>('/admin/knsb-export');
+export function getKnsbExport(seasonId: number, fromRound: number, throughRound: number) {
+  return api.get<{ content: string; filename: string }>(
+    `/admin/seasons/${seasonId}/knsb-export?fromRound=${fromRound}&throughRound=${throughRound}`,
+  );
 }

@@ -50,7 +50,13 @@ export function endSeason(id: number) {
 }
 export function updateSeasonSettings(
   id: number,
-  data: { repeatPairingWindow?: number; countExternalMatches?: boolean },
+  data: {
+    repeatPairingWindow?: number;
+    countExternalMatches?: boolean;
+    regularByeCap?: number;
+    knsbTournamentName?: string;
+    knsbPlannedEndDate?: string | null;
+  },
 ) {
   return api.patch<Season>(`/admin/seasons/${id}/settings`, data);
 }

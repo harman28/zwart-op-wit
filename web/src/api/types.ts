@@ -2,12 +2,16 @@ export type MembershipType = 'FULL' | 'INTERNAL_ONLY' | 'GUEST';
 export type EntryKind = 'GAME' | 'PAIRING_BYE' | 'REGULAR_BYE' | 'EXTERNAL_BYE';
 export type GameResult = 'WHITE_WIN' | 'BLACK_WIN' | 'DRAW' | 'WHITE_WIN_FORFEIT' | 'BLACK_WIN_FORFEIT';
 export type ExternalOutcome = 'WIN' | 'DRAW' | 'LOSS';
+export type Gender = 'M' | 'V' | 'X';
 
 export interface Player {
   id: number;
   name: string;
   membershipType: MembershipType;
   notes: string | null;
+  gender: Gender | null;
+  knsbId: string | null;
+  federation: string;
   createdAt: string;
   roundsThisSeason?: number;
 }
@@ -21,6 +25,9 @@ export interface Season {
   topValue: number;
   repeatPairingWindow: number;
   countExternalMatches: boolean;
+  regularByeCap: number;
+  knsbTournamentName: string | null;
+  knsbPlannedEndDate: string | null;
 }
 
 export interface Standing {
@@ -89,4 +96,7 @@ export interface ClubSettings {
   defaultTopValue: number;
   defaultRepeatPairingWindow: number;
   defaultCountExternalMatches: boolean;
+  defaultRegularByeCap: number;
+  defaultKnsbArbiterName: string | null;
+  defaultKnsbArbiterEmail: string | null;
 }

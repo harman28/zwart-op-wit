@@ -33,6 +33,12 @@ enum ExternalOutcome {
   LOSS
 }
 
+enum Gender {
+  M
+  V
+  X
+}
+
 // Club-wide identity. Never deleted — referenced by historical RoundEntry
 // rows across seasons forever. Fix typos with an update, not a delete+recreate.
 model Player {
@@ -41,6 +47,17 @@ model Player {
   membershipType MembershipType @default(FULL)
   notes          String?
   createdAt      DateTime       @default(now())
+
+  // KNSB rating-list submission fields. Always admin-editable regardless of
+  // whether a player self-reports them — "some people don't know their own
+  // number" (Jim). No birthdate field: the real submissions always use a
+  // dummy 1900.01.01, nobody bothers entering real DOBs.
+  gender      Gender?
+  knsbId      String?
+  // 3-letter federation code (NED/ESP/HUN/ENG/...), required per the KNSB
+  // spec's "Federatie" field — defaults to NED since nearly every player is,
+  // but must be editable for the club's foreign members.
+  federation  String  @default("NED")
 
   enrollments  SeasonEnrollment[]
   signups      RoundSignup[]
@@ -60,12 +77,21 @@ model Season {
 
   // Snapshotted at creation, not read from a live "current settings" table:
   // topValue alone determines every historical score, so it must never
-  // silently shift for an archived season. repeatPairingWindow and
-  // countExternalMatches only affect which entries get created going
-  // forward, so they're safe to edit on the active season at any time.
+  // silently shift for an archived season. repeatPairingWindow,
+  // countExternalMatches, and regularByeCap only affect which entries get
+  // created going forward, so they're safe to edit on the active season at
+  // any time.
   topValue             Int
   repeatPairingWindow  Int
   countExternalMatches Boolean
+  regularByeCap        Int
+
+  // KNSB rating-list submission metadata for this season's internal
+  // (Rapid, 25+10) competition. knsbPlannedEndDate is deliberately distinct
+  // from endedAt — real submissions report the season's nominal end date
+  // even mid-season, well before the season actually ends.
+  knsbTournamentName String?
+  knsbPlannedEndDate DateTime?
 
   enrollments SeasonEnrollment[]
   rounds      Round[]
@@ -137,11 +163,17 @@ model RoundEntry {
 
 // Singleton row (id always 1): concerns that are NOT season-scoped.
 model ClubSettings {
-  id                 Int    @id @default(1)
-  adminPasswordHash  String
-  defaultTopValue    Int    @default(120)
+  id                          Int     @id @default(1)
+  adminPasswordHash           String
+  defaultTopValue             Int     @default(120)
   defaultRepeatPairingWindow  Int     @default(6)
   defaultCountExternalMatches Boolean @default(true)
+  defaultRegularByeCap        Int     @default(3)
+
+  // Jim is always the arbiter/submitter in practice — defaults prefilled
+  // into every new season's KNSB metadata rather than retyped each time.
+  defaultKnsbArbiterName  String?
+  defaultKnsbArbiterEmail String?
 }
 
 model AdminSession {

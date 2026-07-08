@@ -7,6 +7,9 @@ const updateBody = z.object({
   defaultTopValue: z.number().int().optional(),
   defaultRepeatPairingWindow: z.number().int().optional(),
   defaultCountExternalMatches: z.boolean().optional(),
+  defaultRegularByeCap: z.number().int().optional(),
+  defaultKnsbArbiterName: z.string().min(1).optional(),
+  defaultKnsbArbiterEmail: z.string().min(1).optional(),
 });
 
 export async function settingsRoutes(app: FastifyInstance): Promise<void> {

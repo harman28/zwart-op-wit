@@ -27,11 +27,17 @@ const createSeasonBody = z.object({
   topValue: z.number().int().optional(),
   repeatPairingWindow: z.number().int().optional(),
   countExternalMatches: z.boolean().optional(),
+  regularByeCap: z.number().int().optional(),
+  knsbTournamentName: z.string().min(1).optional(),
+  knsbPlannedEndDate: z.coerce.date().optional(),
   roster: z.array(rosterEntrySchema),
 });
 const updateSettingsBody = z.object({
   repeatPairingWindow: z.number().int().optional(),
   countExternalMatches: z.boolean().optional(),
+  regularByeCap: z.number().int().optional(),
+  knsbTournamentName: z.string().min(1).optional(),
+  knsbPlannedEndDate: z.coerce.date().nullable().optional(),
 });
 
 export async function seasonsRoutes(app: FastifyInstance): Promise<void> {

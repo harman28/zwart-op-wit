@@ -1,4 +1,4 @@
-import type { MembershipType } from '@prisma/client';
+import type { Gender, MembershipType } from '@prisma/client';
 import { prisma } from '../../db/client.js';
 
 /**
@@ -37,7 +37,14 @@ export async function importPlayers(entries: { name: string; membershipType: Mem
 
 export async function updatePlayer(
   id: number,
-  data: { name?: string; membershipType?: MembershipType; notes?: string | null },
+  data: {
+    name?: string;
+    membershipType?: MembershipType;
+    notes?: string | null;
+    gender?: Gender | null;
+    knsbId?: string | null;
+    federation?: string;
+  },
 ) {
   return prisma.player.update({ where: { id }, data });
 }

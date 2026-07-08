@@ -5,7 +5,7 @@ import * as backupApi from '../api/backup.js';
 import * as playersApi from '../api/players.js';
 import * as seasonsApi from '../api/seasons.js';
 import * as settingsApi from '../api/settings.js';
-import type { Player, Season } from '../api/types.js';
+import type { ClubSettings, Player, Season } from '../api/types.js';
 import PasswordVisibilityToggle from '../components/PasswordVisibilityToggle.js';
 import { errorMessage } from '../lib/format.js';
 
@@ -14,7 +14,6 @@ export default function SettingsPage() {
   const [seasonLoaded, setSeasonLoaded] = useState(false);
   const [existingPlayers, setExistingPlayers] = useState<Player[]>([]);
   const [existingPlayersLoaded, setExistingPlayersLoaded] = useState(false);
-  const [knsb, setKnsb] = useState<{ status: string; message: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -22,6 +21,16 @@ export default function SettingsPage() {
   const [rosterText, setRosterText] = useState('');
 
   const [windowDraft, setWindowDraft] = useState('');
+  const [byeCapDraft, setByeCapDraft] = useState('');
+
+  const [clubSettings, setClubSettings] = useState<ClubSettings | null>(null);
+  const [arbiterNameDraft, setArbiterNameDraft] = useState('');
+  const [arbiterEmailDraft, setArbiterEmailDraft] = useState('');
+  const [tournamentNameDraft, setTournamentNameDraft] = useState('');
+  const [plannedEndDateDraft, setPlannedEndDateDraft] = useState('');
+  const [knsbFromRound, setKnsbFromRound] = useState('');
+  const [knsbThroughRound, setKnsbThroughRound] = useState('');
+  const [knsbBusy, setKnsbBusy] = useState(false);
 
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
@@ -40,6 +49,9 @@ export default function SettingsPage() {
       .then((s) => {
         setSeason(s);
         setWindowDraft(String(s.repeatPairingWindow));
+        setByeCapDraft(String(s.regularByeCap));
+        setTournamentNameDraft(s.knsbTournamentName ?? '');
+        setPlannedEndDateDraft(s.knsbPlannedEndDate ? s.knsbPlannedEndDate.slice(0, 10) : '');
       })
       .catch(() => setSeason(null))
       .finally(() => setSeasonLoaded(true));
@@ -47,7 +59,11 @@ export default function SettingsPage() {
 
   useEffect(() => {
     loadSeason();
-    settingsApi.getKnsbExportStatus().then(setKnsb).catch(() => {});
+    settingsApi.getClubSettings().then((cs) => {
+      setClubSettings(cs);
+      setArbiterNameDraft(cs.defaultKnsbArbiterName ?? '');
+      setArbiterEmailDraft(cs.defaultKnsbArbiterEmail ?? '');
+    });
     playersApi
       .listPlayers()
       .then(setExistingPlayers)
@@ -73,6 +89,77 @@ export default function SettingsPage() {
     const updated = await seasonsApi.updateSeasonSettings(season.id, { repeatPairingWindow: value });
     setSeason(updated);
     setWindowDraft(String(updated.repeatPairingWindow));
+  }
+
+  async function applyByeCap() {
+    if (!season) return;
+    const value = Number(byeCapDraft);
+    if (!Number.isFinite(value) || value < 0) {
+      setByeCapDraft(String(season.regularByeCap));
+      return;
+    }
+    const updated = await seasonsApi.updateSeasonSettings(season.id, { regularByeCap: value });
+    setSeason(updated);
+    setByeCapDraft(String(updated.regularByeCap));
+  }
+
+  async function applyTournamentName() {
+    if (!season) return;
+    const value = tournamentNameDraft.trim();
+    if (!value) {
+      setTournamentNameDraft(season.knsbTournamentName ?? '');
+      return;
+    }
+    const updated = await seasonsApi.updateSeasonSettings(season.id, { knsbTournamentName: value });
+    setSeason(updated);
+  }
+
+  async function applyPlannedEndDate() {
+    if (!season) return;
+    const updated = await seasonsApi.updateSeasonSettings(season.id, {
+      knsbPlannedEndDate: plannedEndDateDraft || null,
+    });
+    setSeason(updated);
+  }
+
+  async function applyArbiterName() {
+    const value = arbiterNameDraft.trim();
+    if (!value) return;
+    const updated = await settingsApi.updateClubSettings({ defaultKnsbArbiterName: value });
+    setClubSettings(updated);
+  }
+
+  async function applyArbiterEmail() {
+    const value = arbiterEmailDraft.trim();
+    if (!value) return;
+    const updated = await settingsApi.updateClubSettings({ defaultKnsbArbiterEmail: value });
+    setClubSettings(updated);
+  }
+
+  async function handleExportKnsb() {
+    if (!season) return;
+    const from = Number(knsbFromRound);
+    const through = Number(knsbThroughRound);
+    if (!Number.isFinite(from) || !Number.isFinite(through) || from < 1 || through < from) {
+      setError('Enter a valid round range (from ≤ through).');
+      return;
+    }
+    setError(null);
+    setKnsbBusy(true);
+    try {
+      const { content, filename } = await settingsApi.getKnsbExport(season.id, from, through);
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setKnsbBusy(false);
+    }
   }
 
   async function handleEndSeason() {
@@ -227,6 +314,21 @@ export default function SettingsPage() {
                 value={windowDraft}
                 onChange={(e) => setWindowDraft(e.target.value.replace(/[^0-9]/g, ''))}
                 onBlur={applyWindow}
+                onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+              />
+            </div>
+            <div className="settings-row">
+              <div>
+                <div className="label">Regular bye cap</div>
+                <div className="help">Max regular byes an absent player can rack up in a season.</div>
+              </div>
+              <input
+                className="settings-num"
+                type="text"
+                inputMode="numeric"
+                value={byeCapDraft}
+                onChange={(e) => setByeCapDraft(e.target.value.replace(/[^0-9]/g, ''))}
+                onBlur={applyByeCap}
                 onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
               />
             </div>
@@ -389,13 +491,90 @@ export default function SettingsPage() {
         <div className="section-label">KNSB export</div>
         <div className="settings-row">
           <div>
-            <div className="label">Rapid rating export</div>
-            <div className="help">{knsb?.message ?? 'Loading…'}</div>
+            <div className="label">Arbiter name</div>
+            <div className="help">Prefilled on every export — you're always the submitter.</div>
           </div>
-          <button className="btn btn-ghost" disabled style={{ opacity: 0.45, cursor: 'default' }}>
-            Export…
-          </button>
+          <input
+            style={{ width: 220 }}
+            value={arbiterNameDraft}
+            onChange={(e) => setArbiterNameDraft(e.target.value)}
+            onBlur={applyArbiterName}
+            onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+            placeholder={clubSettings ? 'Not set' : 'Loading…'}
+          />
         </div>
+        <div className="settings-row">
+          <div>
+            <div className="label">Arbiter email</div>
+          </div>
+          <input
+            style={{ width: 220 }}
+            value={arbiterEmailDraft}
+            onChange={(e) => setArbiterEmailDraft(e.target.value)}
+            onBlur={applyArbiterEmail}
+            onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+            placeholder={clubSettings ? 'Not set' : 'Loading…'}
+          />
+        </div>
+        {season && (
+          <>
+            <div className="settings-row">
+              <div>
+                <div className="label">Tournament name</div>
+                <div className="help">Reported as this season's event name — defaults to the season's own name.</div>
+              </div>
+              <input
+                style={{ width: 260 }}
+                value={tournamentNameDraft}
+                onChange={(e) => setTournamentNameDraft(e.target.value)}
+                onBlur={applyTournamentName}
+                onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+              />
+            </div>
+            <div className="settings-row">
+              <div>
+                <div className="label">Planned end date</div>
+                <div className="help">Reported on every export even mid-season, per real submitted files.</div>
+              </div>
+              <input
+                type="date"
+                value={plannedEndDateDraft}
+                onChange={(e) => setPlannedEndDateDraft(e.target.value)}
+                onBlur={applyPlannedEndDate}
+              />
+            </div>
+            <div className="settings-row">
+              <div>
+                <div className="label">Export a batch (Rapid)</div>
+                <div className="help">One reporting range at a time — matches Jim's actual monthly submission workflow.</div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input
+                  className="settings-num"
+                  style={{ width: 56 }}
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="from"
+                  value={knsbFromRound}
+                  onChange={(e) => setKnsbFromRound(e.target.value.replace(/[^0-9]/g, ''))}
+                />
+                <span style={{ color: 'var(--muted)' }}>–</span>
+                <input
+                  className="settings-num"
+                  style={{ width: 56 }}
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="through"
+                  value={knsbThroughRound}
+                  onChange={(e) => setKnsbThroughRound(e.target.value.replace(/[^0-9]/g, ''))}
+                />
+                <button className="btn btn-ghost" onClick={handleExportKnsb} disabled={knsbBusy}>
+                  {knsbBusy ? 'Exporting…' : 'Export…'}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       <div style={{ textAlign: 'center', marginTop: 8 }}>

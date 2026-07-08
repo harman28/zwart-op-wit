@@ -41,6 +41,7 @@ describe('mappers — DB round-trip (real Postgres)', () => {
         topValue: 90,
         repeatPairingWindow: 6,
         countExternalMatches: true,
+        regularByeCap: 3,
         enrollments: {
           create: players.map((p, idx) => ({ playerId: p.id, startingValue: startingValues[idx]! })),
         },

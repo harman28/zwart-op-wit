@@ -11,6 +11,7 @@ export const EXTERNAL_BYE_FRACTION: Record<ExternalOutcome, number> = {
   LOSS: 0.25,
 };
 
-export const REGULAR_BYE_CAP = 3;
+// REGULAR_BYE_CAP lives on Season.regularByeCap now (admin-configurable per
+// Jim's request), not here — this file only holds true engine-wide constants.
 export const PAIRING_BYE_CAP = 1;
 export const SELF_ARRANGED_CAP = 3;

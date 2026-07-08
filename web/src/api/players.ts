@@ -1,5 +1,5 @@
 import { api } from './client.js';
-import type { MembershipType, Player } from './types.js';
+import type { Gender, MembershipType, Player } from './types.js';
 
 export function listPlayers() {
   return api.get<Player[]>('/admin/players');
@@ -12,7 +12,14 @@ export function importPlayers(players: { name: string; membershipType?: Membersh
 }
 export function updatePlayer(
   id: number,
-  data: { name?: string; membershipType?: MembershipType; notes?: string | null },
+  data: {
+    name?: string;
+    membershipType?: MembershipType;
+    notes?: string | null;
+    gender?: Gender | null;
+    knsbId?: string | null;
+    federation?: string;
+  },
 ) {
   return api.patch<Player>(`/admin/players/${id}`, data);
 }

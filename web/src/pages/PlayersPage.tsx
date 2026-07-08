@@ -1,9 +1,18 @@
 import { useEffect, useState } from 'react';
 import * as playersApi from '../api/players.js';
-import type { MembershipType, Player } from '../api/types.js';
+import type { Gender, MembershipType, Player } from '../api/types.js';
 import CustomSelect from '../components/CustomSelect.js';
 import { errorMessage } from '../lib/format.js';
 import { MEMBERSHIP_OPTIONS } from '../lib/membership.js';
+
+// KNSB reporting fields — gender left unset ('') until an admin sets it, since
+// it's not something to guess. Values match the KNSB submission format exactly.
+const GENDER_OPTIONS = [
+  { value: '', label: '—' },
+  { value: 'M', label: 'M' },
+  { value: 'V', label: 'V' },
+  { value: 'X', label: 'X' },
+];
 
 export default function PlayersPage() {
   const [players, setPlayers] = useState<Player[]>([]);
@@ -55,6 +64,24 @@ export default function PlayersPage() {
 
   async function handleMembershipChange(id: number, membershipType: MembershipType) {
     await playersApi.updatePlayer(id, { membershipType });
+    load();
+  }
+
+  async function handleGenderChange(id: number, gender: string) {
+    await playersApi.updatePlayer(id, { gender: (gender || null) as Gender | null });
+    load();
+  }
+
+  async function handleKnsbIdSave(player: Player, knsbId: string) {
+    if (knsbId === (player.knsbId ?? '')) return;
+    await playersApi.updatePlayer(player.id, { knsbId: knsbId.trim() || null });
+    load();
+  }
+
+  async function handleFederationSave(player: Player, federation: string) {
+    const trimmed = federation.trim().toUpperCase();
+    if (!trimmed || trimmed === player.federation) return;
+    await playersApi.updatePlayer(player.id, { federation: trimmed });
     load();
   }
 
@@ -142,6 +169,9 @@ export default function PlayersPage() {
               <tr>
                 <th>Name</th>
                 <th>Membership</th>
+                <th>Gender</th>
+                <th>KNSB ID</th>
+                <th>Federation</th>
                 <th>Notes</th>
               </tr>
             </thead>
@@ -155,6 +185,33 @@ export default function PlayersPage() {
                       options={MEMBERSHIP_OPTIONS}
                       onChange={(v) => handleMembershipChange(p.id, v as MembershipType)}
                       triggerClassName="roster-select"
+                    />
+                  </td>
+                  <td>
+                    <CustomSelect
+                      value={p.gender ?? ''}
+                      options={GENDER_OPTIONS}
+                      onChange={(v) => handleGenderChange(p.id, v)}
+                      triggerClassName="roster-select"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      className="notes-input"
+                      style={{ width: 110 }}
+                      defaultValue={p.knsbId ?? ''}
+                      placeholder="unknown"
+                      onBlur={(e) => handleKnsbIdSave(p, e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      className="notes-input"
+                      style={{ width: 56 }}
+                      defaultValue={p.federation}
+                      onBlur={(e) => handleFederationSave(p, e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
                     />
                   </td>
                   <td className="note-cell">

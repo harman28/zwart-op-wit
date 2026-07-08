@@ -32,6 +32,9 @@ export interface CreateSeasonInput {
   topValue?: number;
   repeatPairingWindow?: number;
   countExternalMatches?: boolean;
+  regularByeCap?: number;
+  knsbTournamentName?: string;
+  knsbPlannedEndDate?: Date;
   roster: RosterEntryInput[];
 }
 
@@ -43,11 +46,20 @@ export async function createSeason(input: CreateSeasonInput) {
   const topValue = input.topValue ?? clubSettings.defaultTopValue;
   const repeatPairingWindow = input.repeatPairingWindow ?? clubSettings.defaultRepeatPairingWindow;
   const countExternalMatches = input.countExternalMatches ?? clubSettings.defaultCountExternalMatches;
+  const regularByeCap = input.regularByeCap ?? clubSettings.defaultRegularByeCap;
 
   return prisma.$transaction(
     async (tx) => {
       const season = await tx.season.create({
-        data: { name: input.name, topValue, repeatPairingWindow, countExternalMatches },
+        data: {
+          name: input.name,
+          topValue,
+          repeatPairingWindow,
+          countExternalMatches,
+          regularByeCap,
+          knsbTournamentName: input.knsbTournamentName ?? input.name,
+          knsbPlannedEndDate: input.knsbPlannedEndDate,
+        },
       });
       // One create per genuinely new player (usually few or none), then a single
       // bulk insert for all enrollments — N sequential round trips here was
@@ -94,7 +106,13 @@ export async function endSeason(id: number) {
 
 export async function updateSeasonSettings(
   id: number,
-  data: { repeatPairingWindow?: number; countExternalMatches?: boolean },
+  data: {
+    repeatPairingWindow?: number;
+    countExternalMatches?: boolean;
+    regularByeCap?: number;
+    knsbTournamentName?: string;
+    knsbPlannedEndDate?: Date | null;
+  },
 ) {
   return prisma.season.update({ where: { id }, data });
 }
