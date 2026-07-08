@@ -5,7 +5,10 @@ import { requireAdmin } from '../../lib/requireAdmin.js';
 import { recordAction } from '../actionlog/actionlog.service.js';
 import { SESSION_COOKIE_NAME, changePassword, isValidSession, login, logout } from './auth.service.js';
 
-const loginBody = z.object({ password: z.string().min(1), name: z.string().optional() });
+const loginBody = z.object({
+  password: z.string().min(1),
+  name: z.string().trim().min(1, 'Name is required'),
+});
 const changePasswordBody = z.object({
   currentPassword: z.string().min(1),
   newPassword: z.string().min(1),
@@ -29,7 +32,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       actorName: result.actorName,
       method: 'POST',
       path: '/api/auth/login',
-      summary: result.actorName ? `${result.actorName} logged in` : 'Logged in (no name given)',
+      summary: `${result.actorName} logged in`,
     }).catch(() => {});
     return { isAdmin: true };
   });

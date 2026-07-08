@@ -16,14 +16,13 @@ export async function ensureClubSettings(): Promise<void> {
 
 export async function login(
   password: string,
-  actorName?: string,
-): Promise<{ token: string; expiresAt: Date; actorName: string | null } | null> {
+  actorName: string,
+): Promise<{ token: string; expiresAt: Date; actorName: string } | null> {
   const settings = await prisma.clubSettings.findUniqueOrThrow({ where: { id: 1 } });
   if (!verifyPassword(password, settings.adminPasswordHash)) return null;
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
-  const cleanName = actorName?.trim() || null;
-  const session = await prisma.adminSession.create({ data: { expiresAt, actorName: cleanName } });
-  return { token: session.token, expiresAt, actorName: cleanName };
+  const session = await prisma.adminSession.create({ data: { expiresAt, actorName } });
+  return { token: session.token, expiresAt, actorName };
 }
 
 export async function logout(token: string | undefined): Promise<void> {

@@ -17,11 +17,12 @@ export default function LoginPage() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!name.trim()) return;
     setSubmitting(true);
     setError(null);
     try {
-      await login(password, name.trim() || undefined);
-      if (name.trim()) localStorage.setItem(NAME_STORAGE_KEY, name.trim());
+      await login(password, name.trim());
+      localStorage.setItem(NAME_STORAGE_KEY, name.trim());
       navigate('/');
     } catch (err) {
       setError(errorMessage(err));
@@ -37,10 +38,11 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit}>
           <div className="field-row" style={{ marginBottom: 14 }}>
             <div className="field" style={{ width: '100%' }}>
-              <label htmlFor="name">Name (optional)</label>
+              <label htmlFor="name">Name</label>
               <input
                 id="name"
                 autoFocus
+                required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="So we know who made a change"
@@ -63,7 +65,12 @@ export default function LoginPage() {
             </div>
           </div>
           {error && <div className="error-banner">{error}</div>}
-          <button className="btn btn-primary" type="submit" disabled={submitting || !password} style={{ width: '100%' }}>
+          <button
+            className="btn btn-primary"
+            type="submit"
+            disabled={submitting || !password || !name.trim()}
+            style={{ width: '100%' }}
+          >
             Log in
           </button>
         </form>
