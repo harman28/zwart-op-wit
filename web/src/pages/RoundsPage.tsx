@@ -22,6 +22,8 @@ export default function RoundsPage() {
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [editingCell, setEditingCell] = useState<{ entryId: number; side: 'white' | 'black' } | null>(null);
   const [assigningByeId, setAssigningByeId] = useState<number | null>(null);
+  // key = roundId; value = null while picking White, or the chosen White player while picking Black.
+  const [addMatchupState, setAddMatchupState] = useState<Map<number, Player | null>>(new Map());
 
   useEffect(() => {
     if (!season) {
@@ -125,6 +127,49 @@ export default function RoundsPage() {
     await refreshRounds();
   }
 
+  async function handleDeleteMatchup(round: Round, entry: RoundEntry) {
+    if (!window.confirm(`Remove ${entry.whitePlayer?.name ?? '?'} vs ${entry.blackPlayer?.name ?? '?'} from Round ${round.number}?`)) {
+      return;
+    }
+    await roundsApi.deleteEntry(round.id, entry.id);
+    await refreshRounds();
+  }
+
+  async function handleDeleteRound(round: Round) {
+    if (
+      !window.confirm(
+        `Delete Round ${round.number} entirely? This removes all its pairings and results and can't be undone.`,
+      )
+    ) {
+      return;
+    }
+    await roundsApi.deleteRound(round.id);
+    await refreshRounds();
+  }
+
+  function startAddMatchup(roundId: number) {
+    setAddMatchupState((prev) => new Map(prev).set(roundId, null));
+  }
+  function cancelAddMatchup(roundId: number) {
+    setAddMatchupState((prev) => {
+      const next = new Map(prev);
+      next.delete(roundId);
+      return next;
+    });
+  }
+  async function finishAddMatchup(round: Round, whitePlayer: Player, blackPlayer: Player) {
+    const games = round.entries.filter((e) => e.kind === 'GAME');
+    const nextTable = Math.max(0, ...games.map((g) => g.tableNumber ?? 0)) + 1;
+    await roundsApi.addEntry(round.id, {
+      kind: 'GAME',
+      whitePlayerId: whitePlayer.id,
+      blackPlayerId: blackPlayer.id,
+      tableNumber: nextTable,
+    });
+    cancelAddMatchup(round.id);
+    await refreshRounds();
+  }
+
   if (seasonLoading || loading) {
     return (
       <div className="app">
@@ -184,6 +229,7 @@ export default function RoundsPage() {
                       <th>White</th>
                       <th style={{ textAlign: 'center' }}>Result</th>
                       <th>Black</th>
+                      {adminMode && <th style={{ width: 24 }} />}
                     </tr>
                   </thead>
                   <tbody>
@@ -231,10 +277,55 @@ export default function RoundsPage() {
                             g.blackPlayer?.name
                           )}
                         </td>
+                        {adminMode && (
+                          <td>
+                            <button
+                              className="external-remove"
+                              onClick={() => handleDeleteMatchup(round, g)}
+                              aria-label="Remove matchup"
+                            >
+                              ✕
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                {adminMode &&
+                  (addMatchupState.has(round.id) ? (
+                    <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {addMatchupState.get(round.id) == null ? (
+                        <PlayerAutocomplete
+                          players={allPlayers.filter((p) => !pairedIds.has(p.id))}
+                          onSelect={(p) => setAddMatchupState((prev) => new Map(prev).set(round.id, p))}
+                          inputClassName="editable-name-input"
+                          placeholder="White player…"
+                          autoFocus
+                        />
+                      ) : (
+                        <>
+                          <span className="txt">{addMatchupState.get(round.id)!.name} (White) vs</span>
+                          <PlayerAutocomplete
+                            players={allPlayers.filter(
+                              (p) => !pairedIds.has(p.id) && p.id !== addMatchupState.get(round.id)!.id,
+                            )}
+                            onSelect={(p) => finishAddMatchup(round, addMatchupState.get(round.id)!, p)}
+                            inputClassName="editable-name-input"
+                            placeholder="Black player…"
+                            autoFocus
+                          />
+                        </>
+                      )}
+                      <button className="link-add" onClick={() => cancelAddMatchup(round.id)}>
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button className="link-add" style={{ marginTop: 8 }} onClick={() => startAddMatchup(round.id)}>
+                      + Add matchup
+                    </button>
+                  ))}
                 {pairingBye && (
                   <>
                     {adminMode && assigningByeId === pairingBye.id ? (
@@ -264,6 +355,13 @@ export default function RoundsPage() {
                     onSetOutcome={(entry, outcome) => handleSetExternalOutcome(round, entry, outcome)}
                     onRemove={(entry) => handleRemoveExternal(round, entry)}
                   />
+                )}
+                {adminMode && (
+                  <div className="not-playing" style={{ textAlign: 'right' }}>
+                    <button className="link-add" onClick={() => handleDeleteRound(round)}>
+                      Delete round
+                    </button>
+                  </div>
                 )}
               </div>
             )}

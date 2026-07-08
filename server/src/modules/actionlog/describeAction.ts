@@ -44,7 +44,15 @@ export function describeAction(method: string, path: string, body: unknown, ctx:
   if (segs[0] === 'rounds') {
     if (segs.length === 2 && method === 'PATCH') return `Updated ${roundLabel}`;
     if (segs.length === 2 && method === 'DELETE') return `Deleted ${roundLabel}`;
-    if (segs[2] === 'entries' && segs.length === 3 && method === 'POST') return `Added an entry to ${roundLabel}`;
+    if (segs[2] === 'entries' && segs.length === 3 && method === 'POST') {
+      if (b.kind === 'GAME' && ctx.newWhiteName && ctx.newBlackName) {
+        return `Added ${ctx.newWhiteName} vs ${ctx.newBlackName} to ${roundLabel}${b.tableNumber != null ? `, Table ${String(b.tableNumber)}` : ''}`;
+      }
+      if (b.kind === 'EXTERNAL_BYE' && ctx.newSoloName) {
+        return `Added an external result slot for ${ctx.newSoloName} on ${roundLabel}`;
+      }
+      return `Added an entry to ${roundLabel}`;
+    }
     if (segs[2] === 'entries' && segs.length === 4) {
       if (method === 'DELETE') {
         const who = ctx.soloName ?? matchup;
@@ -56,9 +64,21 @@ export function describeAction(method: string, path: string, body: unknown, ctx:
           return `Set external result ${String(b.externalOutcome ?? '(pending)')} for ${ctx.soloName ?? 'a player'} on ${roundLabel}`;
         }
         if (b.kind === 'GAME' && (b.whitePlayerId != null || b.blackPlayerId != null)) {
-          return `Assigned an opponent on ${location}`;
+          // Assign-opponent: one side is the player who had the pairing bye, the other is new.
+          const opponentName =
+            ctx.soloPlayerId != null && ctx.soloPlayerId === b.whitePlayerId
+              ? ctx.newBlackName
+              : ctx.soloPlayerId != null && ctx.soloPlayerId === b.blackPlayerId
+                ? ctx.newWhiteName
+                : (ctx.newWhiteName ?? ctx.newBlackName);
+          return `Assigned ${opponentName ?? 'an opponent'} to play ${ctx.soloName ?? 'the unpaired player'} on ${roundLabel}`;
         }
-        if (b.whitePlayerId != null || b.blackPlayerId != null) return `Swapped a player on ${location}`;
+        if (typeof b.whitePlayerId === 'number') {
+          return `Swapped ${ctx.whiteName ?? 'the white player'} out for ${ctx.newWhiteName ?? '?'} (White) on ${location}`;
+        }
+        if (typeof b.blackPlayerId === 'number') {
+          return `Swapped ${ctx.blackName ?? 'the black player'} out for ${ctx.newBlackName ?? '?'} (Black) on ${location}`;
+        }
         if (b.tableNumber != null) return `Moved a game to Table ${String(b.tableNumber)} on ${roundLabel}`;
         return `Updated an entry on ${location}`;
       }

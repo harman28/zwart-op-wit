@@ -3,11 +3,18 @@ import { prisma } from '../../db/client.js';
 export interface LogContext {
   roundNumber?: number;
   tableNumber?: number | null;
+  whitePlayerId?: number | null;
+  blackPlayerId?: number | null;
+  soloPlayerId?: number | null;
   whiteName?: string;
   blackName?: string;
   soloName?: string;
   playerName?: string;
   seasonName?: string;
+  /** Filled in later, in the onResponse hook, once the request body is available. */
+  newWhiteName?: string;
+  newBlackName?: string;
+  newSoloName?: string;
 }
 
 /**
@@ -32,6 +39,9 @@ export async function resolveLogContext(path: string): Promise<LogContext> {
         return {
           roundNumber: entry.round.number,
           tableNumber: entry.tableNumber,
+          whitePlayerId: entry.whitePlayerId,
+          blackPlayerId: entry.blackPlayerId,
+          soloPlayerId: entry.soloPlayerId,
           whiteName: entry.whitePlayer?.name,
           blackName: entry.blackPlayer?.name,
           soloName: entry.soloPlayer?.name,
@@ -54,4 +64,26 @@ export async function resolveLogContext(path: string): Promise<LogContext> {
     // best-effort enrichment only — a lookup failure just falls back to raw IDs
   }
   return {};
+}
+
+/** Resolves whichever new whitePlayerId/blackPlayerId/soloPlayerId the request body is
+ * setting (a swap, assign-opponent, or add-entry) into names — runs post-mutation
+ * (onResponse), once the body is available, unlike the round/table/old-player lookup above. */
+export async function resolveNewPlayerNames(
+  body: unknown,
+): Promise<{ newWhiteName?: string; newBlackName?: string; newSoloName?: string }> {
+  const b = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>;
+  const ids = [b.whitePlayerId, b.blackPlayerId, b.soloPlayerId].filter((v): v is number => typeof v === 'number');
+  if (ids.length === 0) return {};
+  try {
+    const players = await prisma.player.findMany({ where: { id: { in: ids } } });
+    const byId = new Map(players.map((p) => [p.id, p.name]));
+    return {
+      newWhiteName: typeof b.whitePlayerId === 'number' ? byId.get(b.whitePlayerId) : undefined,
+      newBlackName: typeof b.blackPlayerId === 'number' ? byId.get(b.blackPlayerId) : undefined,
+      newSoloName: typeof b.soloPlayerId === 'number' ? byId.get(b.soloPlayerId) : undefined,
+    };
+  } catch {
+    return {};
+  }
 }

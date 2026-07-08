@@ -7,7 +7,7 @@ import { HttpError } from './lib/errors.js';
 import { actionLogRoutes } from './modules/actionlog/actionlog.routes.js';
 import { recordAction } from './modules/actionlog/actionlog.service.js';
 import { describeAction } from './modules/actionlog/describeAction.js';
-import { resolveLogContext, type LogContext } from './modules/actionlog/resolveLogContext.js';
+import { resolveLogContext, resolveNewPlayerNames, type LogContext } from './modules/actionlog/resolveLogContext.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { backupRoutes } from './modules/backup/backup.routes.js';
 import { knsbRoutes } from './modules/knsb/knsb.routes.js';
@@ -82,7 +82,8 @@ export function buildApp() {
     if (!LOGGED_METHODS.has(request.method) || reply.statusCode >= 400) return;
     const path = request.raw.url?.split('?')[0] ?? '';
     if (!isLoggedAdminPath(path)) return;
-    const summary = describeAction(request.method, path, request.body, request.logContext);
+    const newNames = await resolveNewPlayerNames(request.body);
+    const summary = describeAction(request.method, path, request.body, { ...request.logContext, ...newNames });
     await recordAction({ actorName: request.actorName ?? null, method: request.method, path, summary }).catch(() => {});
   });
 

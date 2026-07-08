@@ -21,7 +21,7 @@ describe('round lifecycle (real Postgres): create -> edit -> publish -> re-edit 
     const loginRes = await app.inject({
       method: 'POST',
       url: '/api/auth/login',
-      payload: { password: env.ADMIN_INITIAL_PASSWORD },
+      payload: { password: env.ADMIN_INITIAL_PASSWORD, name: 'Tester' },
     });
     cookie = extractCookie(loginRes.headers['set-cookie']);
   });

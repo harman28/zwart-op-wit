@@ -24,7 +24,11 @@ describe('auth routes (real Postgres)', () => {
   });
 
   it('rejects an incorrect password', async () => {
-    const res = await app.inject({ method: 'POST', url: '/api/auth/login', payload: { password: 'definitely-wrong' } });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: { password: 'definitely-wrong', name: 'Tester' },
+    });
     expect(res.statusCode).toBe(401);
   });
 
@@ -46,7 +50,7 @@ describe('auth routes (real Postgres)', () => {
     const loginRes = await app.inject({
       method: 'POST',
       url: '/api/auth/login',
-      payload: { password: env.ADMIN_INITIAL_PASSWORD },
+      payload: { password: env.ADMIN_INITIAL_PASSWORD, name: 'Tester' },
     });
     expect(loginRes.statusCode).toBe(200);
     const cookie = extractCookie(loginRes.headers['set-cookie']);
@@ -63,13 +67,13 @@ describe('auth routes (real Postgres)', () => {
     const loginA = await app.inject({
       method: 'POST',
       url: '/api/auth/login',
-      payload: { password: env.ADMIN_INITIAL_PASSWORD },
+      payload: { password: env.ADMIN_INITIAL_PASSWORD, name: 'Tester A' },
     });
     const cookieA = extractCookie(loginA.headers['set-cookie']);
     const loginB = await app.inject({
       method: 'POST',
       url: '/api/auth/login',
-      payload: { password: env.ADMIN_INITIAL_PASSWORD },
+      payload: { password: env.ADMIN_INITIAL_PASSWORD, name: 'Tester B' },
     });
     const cookieB = extractCookie(loginB.headers['set-cookie']);
 
