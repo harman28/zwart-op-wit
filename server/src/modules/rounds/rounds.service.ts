@@ -80,10 +80,16 @@ export async function createRound(seasonId: number, input: CreateRoundInput) {
     orderBy: { number: 'asc' },
   });
 
+  // Same rule as the live leaderboard: when external matches are switched off
+  // for this season, they must not affect scoring at all, not just visibility.
+  const roundsForReplay = season.countExternalMatches
+    ? allRounds
+    : allRounds.map((r) => ({ ...r, entries: r.entries.filter((e) => e.kind !== 'EXTERNAL_BYE') }));
+
   const replay = replaySeason({
     topValue: season.topValue,
     baselines: mapEnrollmentsToBaselines(season.enrollments),
-    rounds: allRounds.map(mapRoundToEngine),
+    rounds: roundsForReplay.map(mapRoundToEngine),
   });
   const standingsByPlayer = new Map(replay.current.standings.map((s) => [s.playerId, s]));
 

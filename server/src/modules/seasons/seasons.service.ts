@@ -119,10 +119,18 @@ export async function getLiveLeaderboard(seasonId: number) {
     orderBy: { number: 'asc' },
   });
 
+  // The countExternalMatches toggle is meant to control whether external
+  // results affect scoring at all, not just whether they're visible — drop
+  // them here before replay when the season has the setting off, rather than
+  // relying on query-level filtering elsewhere (which only hides them).
+  const roundsForReplay = season.countExternalMatches
+    ? publishedRounds
+    : publishedRounds.map((r) => ({ ...r, entries: r.entries.filter((e) => e.kind !== 'EXTERNAL_BYE') }));
+
   const replay = replaySeason({
     topValue: season.topValue,
     baselines: mapEnrollmentsToBaselines(season.enrollments),
-    rounds: publishedRounds.map(mapRoundToEngine),
+    rounds: roundsForReplay.map(mapRoundToEngine),
   });
 
   const playerById = new Map(season.enrollments.map((e) => [e.playerId, e.player]));
