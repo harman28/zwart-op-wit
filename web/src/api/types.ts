@@ -11,7 +11,7 @@ export interface Player {
   notes: string | null;
   gender: Gender | null;
   knsbId: string | null;
-  federation: string;
+  federation: string | null;
   createdAt: string;
   roundsThisSeason?: number;
 }

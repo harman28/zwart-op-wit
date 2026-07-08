@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import * as playersApi from '../api/players.js';
 import type { Gender, MembershipType, Player } from '../api/types.js';
 import CustomSelect from '../components/CustomSelect.js';
+import Modal from '../components/Modal.js';
 import { errorMessage } from '../lib/format.js';
 import { MEMBERSHIP_OPTIONS } from '../lib/membership.js';
 
@@ -14,6 +15,37 @@ const GENDER_OPTIONS = [
   { value: 'X', label: 'X' },
 ];
 
+const MEMBERSHIP_BADGE_CLASS: Record<MembershipType, string> = {
+  FULL: 'pill full',
+  INTERNAL_ONLY: 'pill internal',
+  GUEST: 'pill guest',
+};
+const MEMBERSHIP_SHORT: Record<MembershipType, string> = {
+  FULL: 'Full',
+  INTERNAL_ONLY: 'Internal',
+  GUEST: 'Guest',
+};
+
+interface EditDraft {
+  name: string;
+  membershipType: MembershipType;
+  notes: string;
+  federation: string;
+  knsbId: string;
+  gender: string;
+}
+
+function draftFor(p: Player): EditDraft {
+  return {
+    name: p.name,
+    membershipType: p.membershipType,
+    notes: p.notes ?? '',
+    federation: p.federation ?? '',
+    knsbId: p.knsbId ?? '',
+    gender: p.gender ?? '',
+  };
+}
+
 export default function PlayersPage() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,6 +55,10 @@ export default function PlayersPage() {
   const [newName, setNewName] = useState('');
   const [newMembership, setNewMembership] = useState<MembershipType>('FULL');
   const [importText, setImportText] = useState('');
+
+  const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
+  const [draft, setDraft] = useState<EditDraft | null>(null);
+  const [saving, setSaving] = useState(false);
 
   function load() {
     setLoading(true);
@@ -37,11 +73,11 @@ export default function PlayersPage() {
 
   async function handleAdd() {
     if (!newName.trim()) return;
-    await playersApi.createPlayer(newName.trim(), newMembership);
+    const player = await playersApi.createPlayer(newName.trim(), newMembership);
+    setPlayers((prev) => [...prev, player].sort((a, b) => a.name.localeCompare(b.name)));
     setNewName('');
     setNewMembership('FULL');
     setShowAdd(false);
-    load();
   }
 
   async function handleImport() {
@@ -56,39 +92,42 @@ export default function PlayersPage() {
         return { name: name!, membershipType };
       });
     if (entries.length === 0) return;
-    await playersApi.importPlayers(entries);
+    const created = await playersApi.importPlayers(entries);
+    setPlayers((prev) => [...prev, ...created].sort((a, b) => a.name.localeCompare(b.name)));
     setImportText('');
     setShowImport(false);
-    load();
   }
 
-  async function handleMembershipChange(id: number, membershipType: MembershipType) {
-    await playersApi.updatePlayer(id, { membershipType });
-    load();
+  function openEdit(player: Player) {
+    setEditingPlayer(player);
+    setDraft(draftFor(player));
   }
 
-  async function handleGenderChange(id: number, gender: string) {
-    await playersApi.updatePlayer(id, { gender: (gender || null) as Gender | null });
-    load();
+  function closeEdit() {
+    setEditingPlayer(null);
+    setDraft(null);
   }
 
-  async function handleKnsbIdSave(player: Player, knsbId: string) {
-    if (knsbId === (player.knsbId ?? '')) return;
-    await playersApi.updatePlayer(player.id, { knsbId: knsbId.trim() || null });
-    load();
-  }
-
-  async function handleFederationSave(player: Player, federation: string) {
-    const trimmed = federation.trim().toUpperCase();
-    if (!trimmed || trimmed === player.federation) return;
-    await playersApi.updatePlayer(player.id, { federation: trimmed });
-    load();
-  }
-
-  async function handleNotesSave(player: Player, notes: string) {
-    if (notes === (player.notes ?? '')) return;
-    await playersApi.updatePlayer(player.id, { notes: notes.trim() || null });
-    load();
+  async function handleSaveEdit() {
+    if (!editingPlayer || !draft) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const updated = await playersApi.updatePlayer(editingPlayer.id, {
+        name: draft.name.trim() || editingPlayer.name,
+        membershipType: draft.membershipType,
+        notes: draft.notes.trim() || null,
+        federation: draft.federation.trim() ? draft.federation.trim().toUpperCase() : undefined,
+        knsbId: draft.knsbId.trim() || null,
+        gender: (draft.gender || null) as Gender | null,
+      });
+      setPlayers((prev) => [...prev.filter((p) => p.id !== updated.id), updated].sort((a, b) => a.name.localeCompare(b.name)));
+      closeEdit();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -163,81 +202,134 @@ export default function PlayersPage() {
       {loading ? (
         <p style={{ color: 'var(--muted)' }}>Loading…</p>
       ) : (
-        <div className="card" style={{ padding: '16px 22px 6px' }}>
-          <table className="roster">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Membership</th>
-                <th>Gender</th>
-                <th>KNSB ID</th>
-                <th>Federation</th>
-                <th>Notes</th>
-              </tr>
-            </thead>
-            <tbody>
-              {players.map((p) => (
-                <tr key={p.id}>
-                  <td>{p.name}</td>
-                  <td>
-                    <CustomSelect
-                      value={p.membershipType}
-                      options={MEMBERSHIP_OPTIONS}
-                      onChange={(v) => handleMembershipChange(p.id, v as MembershipType)}
-                      triggerClassName="roster-select"
-                    />
-                  </td>
-                  <td>
-                    <CustomSelect
-                      value={p.gender ?? ''}
-                      options={GENDER_OPTIONS}
-                      onChange={(v) => handleGenderChange(p.id, v)}
-                      triggerClassName="roster-select"
-                    />
-                  </td>
-                  <td>
-                    <input
-                      className="notes-input"
-                      style={{ width: 110 }}
-                      defaultValue={p.knsbId ?? ''}
-                      placeholder="unknown"
-                      onBlur={(e) => handleKnsbIdSave(p, e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      className="notes-input"
-                      style={{ width: 56 }}
-                      defaultValue={p.federation}
-                      onBlur={(e) => handleFederationSave(p, e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                    />
-                  </td>
-                  <td className="note-cell">
-                    <input
-                      className="notes-input"
-                      defaultValue={p.notes ?? ''}
-                      onBlur={(e) => handleNotesSave(p, e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                    />
-                    {p.membershipType === 'GUEST' &&
-                      (() => {
-                        const rounds = p.roundsThisSeason ?? 0;
-                        const dueForUpgrade = rounds >= 3;
-                        return (
-                          <div className={dueForUpgrade ? 'guest-count-hint due' : 'guest-count-hint'}>
-                            {rounds} round(s) played this season
-                            {dueForUpgrade && ' — consider upgrading'}
-                          </div>
-                        );
-                      })()}
-                  </td>
+        <>
+          <div className="card players-table-wrap">
+            <table className="roster">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Membership</th>
+                  <th>Notes</th>
+                  <th>Federation</th>
+                  <th>KNSB ID</th>
+                  <th>Gender</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {players.map((p) => (
+                  <tr key={p.id} className="player-row" onClick={() => openEdit(p)}>
+                    <td>{p.name}</td>
+                    <td>
+                      <span className={MEMBERSHIP_BADGE_CLASS[p.membershipType]}>{MEMBERSHIP_SHORT[p.membershipType]}</span>
+                    </td>
+                    <td className="note-cell">
+                      {p.notes || <span style={{ color: 'var(--muted)' }}>—</span>}
+                      {p.membershipType === 'GUEST' &&
+                        (() => {
+                          const rounds = p.roundsThisSeason ?? 0;
+                          const dueForUpgrade = rounds >= 3;
+                          return (
+                            <div className={dueForUpgrade ? 'guest-count-hint due' : 'guest-count-hint'}>
+                              {rounds} round(s) played this season
+                              {dueForUpgrade && ' — consider upgrading'}
+                            </div>
+                          );
+                        })()}
+                    </td>
+                    <td className="note-cell">{p.federation ?? '—'}</td>
+                    <td className="note-cell">{p.knsbId ?? '—'}</td>
+                    <td className="note-cell">{p.gender ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="player-cards">
+            {players.map((p) => (
+              <div
+                key={p.id}
+                className={`player-card ${p.membershipType.toLowerCase()}`}
+                onClick={() => openEdit(p)}
+              >
+                <div className="player-card-top">
+                  <span className="player-card-name">{p.name}</span>
+                  <span className={MEMBERSHIP_BADGE_CLASS[p.membershipType]}>{MEMBERSHIP_SHORT[p.membershipType]}</span>
+                </div>
+                {p.notes && <div className="player-card-notes">{p.notes}</div>}
+                <div className="player-card-meta">
+                  {p.federation ?? '—'} · KNSB {p.knsbId ?? '—'} · {p.gender ?? '—'}
+                </div>
+                {p.membershipType === 'GUEST' &&
+                  (() => {
+                    const rounds = p.roundsThisSeason ?? 0;
+                    const dueForUpgrade = rounds >= 3;
+                    return (
+                      <div className={dueForUpgrade ? 'guest-count-hint due' : 'guest-count-hint'}>
+                        {rounds} round(s) played this season
+                        {dueForUpgrade && ' — consider upgrading'}
+                      </div>
+                    );
+                  })()}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {editingPlayer && draft && (
+        <Modal title="Edit player" onClose={closeEdit}>
+          <div className="field">
+            <label htmlFor="edit-name">Name</label>
+            <input id="edit-name" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} autoFocus />
+          </div>
+          <div className="field">
+            <label>Membership</label>
+            <CustomSelect
+              value={draft.membershipType}
+              options={MEMBERSHIP_OPTIONS}
+              onChange={(v) => setDraft({ ...draft, membershipType: v as MembershipType })}
+              triggerClassName="roster-select"
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="edit-notes">Notes</label>
+            <input id="edit-notes" value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />
+          </div>
+          <div className="field-row" style={{ marginBottom: 0 }}>
+            <div className="field">
+              <label htmlFor="edit-federation">Federation</label>
+              <input
+                id="edit-federation"
+                style={{ width: 80 }}
+                value={draft.federation}
+                placeholder="unset"
+                onChange={(e) => setDraft({ ...draft, federation: e.target.value })}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="edit-knsb-id">KNSB ID</label>
+              <input
+                id="edit-knsb-id"
+                value={draft.knsbId}
+                placeholder="unknown"
+                onChange={(e) => setDraft({ ...draft, knsbId: e.target.value })}
+              />
+            </div>
+            <div className="field">
+              <label>Gender</label>
+              <CustomSelect
+                value={draft.gender}
+                options={GENDER_OPTIONS}
+                onChange={(v) => setDraft({ ...draft, gender: v })}
+                triggerClassName="roster-select"
+              />
+            </div>
+          </div>
+          <button className="btn btn-primary" onClick={handleSaveEdit} disabled={saving} style={{ marginTop: 4 }}>
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+        </Modal>
       )}
     </div>
   );

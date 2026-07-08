@@ -17,6 +17,7 @@ export interface LogContext {
   newSoloName?: string;
   newPlayerAName?: string;
   newPlayerBName?: string;
+  newOpponentName?: string;
 }
 
 /**
@@ -78,9 +79,10 @@ export async function resolveNewPlayerNames(body: unknown): Promise<{
   newSoloName?: string;
   newPlayerAName?: string;
   newPlayerBName?: string;
+  newOpponentName?: string;
 }> {
   const b = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>;
-  const ids = [b.whitePlayerId, b.blackPlayerId, b.soloPlayerId, b.playerAId, b.playerBId].filter(
+  const ids = [b.whitePlayerId, b.blackPlayerId, b.soloPlayerId, b.playerAId, b.playerBId, b.opponentId].filter(
     (v): v is number => typeof v === 'number',
   );
   if (ids.length === 0) return {};
@@ -93,6 +95,7 @@ export async function resolveNewPlayerNames(body: unknown): Promise<{
       newSoloName: typeof b.soloPlayerId === 'number' ? byId.get(b.soloPlayerId) : undefined,
       newPlayerAName: typeof b.playerAId === 'number' ? byId.get(b.playerAId) : undefined,
       newPlayerBName: typeof b.playerBId === 'number' ? byId.get(b.playerBId) : undefined,
+      newOpponentName: typeof b.opponentId === 'number' ? byId.get(b.opponentId) : undefined,
     };
   } catch {
     return {};

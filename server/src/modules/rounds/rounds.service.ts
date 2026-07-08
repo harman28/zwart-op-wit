@@ -231,6 +231,21 @@ export async function addEntry(
   return prisma.roundEntry.create({ data: { roundId, ...data } });
 }
 
+/** Shared by addMatchup and assignOpponent: who plays which color is never an
+ * admin choice (computed via assignColors, same as pairing generation), and a
+ * newly-created table always gets the next free number in the round. */
+async function computeColorsAndNextTable(roundId: number, seasonId: number, playerAId: number, playerBId: number) {
+  const { candidatesByPlayer } = await computeCurrentCandidates(seasonId);
+  const a = candidatesByPlayer.get(playerAId);
+  const b = candidatesByPlayer.get(playerBId);
+  if (!a || !b) throw new HttpError(400, 'Both players must be enrolled in this season');
+
+  const colors = assignColors(a, b);
+  const existingGames = await prisma.roundEntry.findMany({ where: { roundId, kind: 'GAME' } });
+  const nextTable = Math.max(0, ...existingGames.map((g) => g.tableNumber ?? 0)) + 1;
+  return { colors, nextTable };
+}
+
 /**
  * Adds a brand-new matchup to an existing round from just two players — who
  * plays which color is never an admin choice, so this computes it the same
@@ -241,19 +256,60 @@ export async function addMatchup(roundId: number, playerAId: number, playerBId: 
   const round = await prisma.round.findUnique({ where: { id: roundId } });
   if (!round) throw new HttpError(404, `Round ${roundId} not found`);
 
-  const { candidatesByPlayer } = await computeCurrentCandidates(round.seasonId);
-  const a = candidatesByPlayer.get(playerAId);
-  const b = candidatesByPlayer.get(playerBId);
-  if (!a || !b) throw new HttpError(400, 'Both players must be enrolled in this season');
-
-  const colors = assignColors(a, b);
-  const existingGames = await prisma.roundEntry.findMany({ where: { roundId, kind: 'GAME' } });
-  const nextTable = Math.max(0, ...existingGames.map((g) => g.tableNumber ?? 0)) + 1;
+  const { colors, nextTable } = await computeColorsAndNextTable(roundId, round.seasonId, playerAId, playerBId);
 
   return prisma.roundEntry.create({
     data: {
       roundId,
       kind: 'GAME',
+      whitePlayerId: colors.whitePlayerId,
+      blackPlayerId: colors.blackPlayerId,
+      tableNumber: nextTable,
+    },
+  });
+}
+
+export interface AssignOpponentInput {
+  opponentId?: number;
+  /** Same "add an unregistered player" shape createRound offers — creates the
+   * club-wide identity and this season's enrollment in one step. */
+  newOpponent?: { name: string; membershipType?: MembershipType; startingValue: number };
+}
+
+/**
+ * Turns a PAIRING_BYE into a GAME by giving the unpaired player an opponent —
+ * same color/table computation as addMatchup, rather than always hardcoding
+ * the previously-unpaired player as White and leaving tableNumber unset. The
+ * opponent can be an existing enrolled player or a brand-new unregistered one.
+ */
+export async function assignOpponent(pairingByeEntryId: number, input: AssignOpponentInput) {
+  const entry = await prisma.roundEntry.findUnique({ where: { id: pairingByeEntryId } });
+  if (!entry) throw new HttpError(404, `Entry ${pairingByeEntryId} not found`);
+  if (entry.kind !== 'PAIRING_BYE' || entry.soloPlayerId == null) {
+    throw new HttpError(400, `Entry ${pairingByeEntryId} is not a pairing bye`);
+  }
+  const round = await prisma.round.findUnique({ where: { id: entry.roundId } });
+  if (!round) throw new HttpError(404, `Round ${entry.roundId} not found`);
+
+  let opponentId = input.opponentId;
+  if (opponentId == null) {
+    if (!input.newOpponent) throw new HttpError(400, 'Either opponentId or newOpponent is required');
+    const player = await prisma.player.create({
+      data: { name: input.newOpponent.name, membershipType: input.newOpponent.membershipType ?? 'GUEST' },
+    });
+    await prisma.seasonEnrollment.create({
+      data: { seasonId: round.seasonId, playerId: player.id, startingValue: input.newOpponent.startingValue },
+    });
+    opponentId = player.id;
+  }
+
+  const { colors, nextTable } = await computeColorsAndNextTable(entry.roundId, round.seasonId, entry.soloPlayerId, opponentId);
+
+  return prisma.roundEntry.update({
+    where: { id: pairingByeEntryId },
+    data: {
+      kind: 'GAME',
+      soloPlayerId: null,
       whitePlayerId: colors.whitePlayerId,
       blackPlayerId: colors.blackPlayerId,
       tableNumber: nextTable,

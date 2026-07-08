@@ -566,7 +566,11 @@ export default function SettingsPage() {
                   { value: '', label: 'Select…' },
                   ...knsbRounds.map((r) => ({ value: String(r.number), label: `Round ${r.number} — ${formatDate(r.date)}` })),
                 ]}
-                onChange={setKnsbFromRound}
+                onChange={(v) => {
+                  setKnsbFromRound(v);
+                  // Rounds can only be added in order — clear "through" if it's no longer valid.
+                  if (v && knsbThroughRound && Number(knsbThroughRound) < Number(v)) setKnsbThroughRound('');
+                }}
                 triggerClassName="roster-select"
               />
             </div>
@@ -576,7 +580,9 @@ export default function SettingsPage() {
                 value={knsbThroughRound}
                 options={[
                   { value: '', label: 'Select…' },
-                  ...knsbRounds.map((r) => ({ value: String(r.number), label: `Round ${r.number} — ${formatDate(r.date)}` })),
+                  ...knsbRounds
+                    .filter((r) => !knsbFromRound || r.number >= Number(knsbFromRound))
+                    .map((r) => ({ value: String(r.number), label: `Round ${r.number} — ${formatDate(r.date)}` })),
                 ]}
                 onChange={setKnsbThroughRound}
                 triggerClassName="roster-select"

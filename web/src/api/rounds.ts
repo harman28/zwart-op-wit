@@ -61,6 +61,17 @@ export function addMatchup(roundId: number, playerAId: number, playerBId: number
   return api.post(`/admin/rounds/${roundId}/matchups`, { playerAId, playerBId });
 }
 
+/** Turns a pairing bye into a game — table number and color are computed
+ * server-side, same as addMatchup. Opponent is either an existing player or
+ * a brand-new unregistered one (same shape as createRound's newPlayers). */
+export function assignOpponent(
+  roundId: number,
+  entryId: number,
+  opponent: { opponentId: number } | { newOpponent: { name: string; membershipType?: MembershipType; startingValue: number } },
+) {
+  return api.post(`/admin/rounds/${roundId}/entries/${entryId}/assign-opponent`, opponent);
+}
+
 export function renumberTables(roundId: number, startAt: number) {
   return api.patch(`/admin/rounds/${roundId}/table-numbers`, { startAt });
 }

@@ -63,16 +63,6 @@ export function describeAction(method: string, path: string, body: unknown, ctx:
         if ('externalOutcome' in b) {
           return `Set external result ${String(b.externalOutcome ?? '(pending)')} for ${ctx.soloName ?? 'a player'} on ${roundLabel}`;
         }
-        if (b.kind === 'GAME' && (b.whitePlayerId != null || b.blackPlayerId != null)) {
-          // Assign-opponent: one side is the player who had the pairing bye, the other is new.
-          const opponentName =
-            ctx.soloPlayerId != null && ctx.soloPlayerId === b.whitePlayerId
-              ? ctx.newBlackName
-              : ctx.soloPlayerId != null && ctx.soloPlayerId === b.blackPlayerId
-                ? ctx.newWhiteName
-                : (ctx.newWhiteName ?? ctx.newBlackName);
-          return `Assigned ${opponentName ?? 'an opponent'} to play ${ctx.soloName ?? 'the unpaired player'} on ${roundLabel}`;
-        }
         if (typeof b.whitePlayerId === 'number') {
           return `Swapped ${ctx.whiteName ?? 'the white player'} out for ${ctx.newWhiteName ?? '?'} (White) on ${location}`;
         }
@@ -85,6 +75,11 @@ export function describeAction(method: string, path: string, body: unknown, ctx:
     }
     if (segs[2] === 'matchups' && method === 'POST') {
       return `Added ${ctx.newPlayerAName ?? '?'} vs ${ctx.newPlayerBName ?? '?'} to ${roundLabel}`;
+    }
+    if (segs[2] === 'entries' && segs[4] === 'assign-opponent' && method === 'POST') {
+      const newOpponent = b.newOpponent as { name?: string } | undefined;
+      const opponentName = ctx.newOpponentName ?? newOpponent?.name ?? 'an opponent';
+      return `Assigned ${opponentName} to play ${ctx.soloName ?? 'the unpaired player'} on ${roundLabel}`;
     }
     if (segs[2] === 'table-numbers') return `Renumbered tables on ${roundLabel} (starting at ${String(b.startAt)})`;
     if (segs[2] === 'publish') return `Published ${roundLabel}`;

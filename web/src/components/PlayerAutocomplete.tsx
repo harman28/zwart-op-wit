@@ -5,6 +5,10 @@ interface Props {
   /** The eligible pool to search — caller filters out anyone who shouldn't be selectable. */
   players: Player[];
   onSelect: (player: Player) => void;
+  /** Fires when the input loses focus without a selection having been made —
+   * e.g. clicking away to back out of an in-place edit. Never fires after a
+   * real select() (the post-select refocus reclaims focus first). */
+  onCancel?: () => void;
   placeholder?: string;
   /** Persistent quick-add bubbles for the most-frequently-attending eligible players. */
   showFrequentBubbles?: boolean;
@@ -24,6 +28,7 @@ interface Props {
 export default function PlayerAutocomplete({
   players,
   onSelect,
+  onCancel,
   placeholder = 'Type a name…',
   showFrequentBubbles = false,
   frequentLimit = 8,
@@ -43,7 +48,12 @@ export default function PlayerAutocomplete({
     // Delayed so a click on a dropdown item (which blurs the input first) still registers —
     // but cancelled by handleFocus if focus comes right back (e.g. the post-select refocus),
     // otherwise a stale timeout can hide the dropdown a moment after it should still be open.
-    blurTimeoutRef.current = setTimeout(() => setFocused(false), 150);
+    // That same "focus never came back" signal is exactly "blurred without picking anything",
+    // which is when onCancel should fire — a real select() always refocuses before this runs.
+    blurTimeoutRef.current = setTimeout(() => {
+      setFocused(false);
+      onCancel?.();
+    }, 150);
   }
 
   const suggestions = useMemo(() => {

@@ -11,11 +11,10 @@ const PAIRING_METHOD = 'Individual: Keizer system';
 
 /**
  * Builds the fixed-width KNSB submission for one reporting batch (Jim
- * submits monthly — a range of rounds, not the whole season to date).
- * Every enrolled player is listed, even one who didn't play any game in this
- * particular range (all rounds render blank/"not paired" for them) — safer
- * than guessing who to exclude, since a missing real result would be a
- * genuine rating-data bug while an extra all-blank row is harmless.
+ * submits monthly — a range of rounds, not the whole season to date). Only
+ * players with a KNSB ID on file are included — an unregistered/guest player
+ * has nothing to submit to KNSB, and a game against one renders as "not
+ * paired" for their opponent's row (there's no listed player to reference).
  */
 export async function generateSeasonKnsbExport(
   seasonId: number,
@@ -40,6 +39,9 @@ export async function generateSeasonKnsbExport(
 
   // Lotingsnummer (seed number) reflects each player's standing just before
   // this batch starts — replay only the rounds strictly before fromRound.
+  // The replay itself still needs every enrollment's baseline (a KNSB-less
+  // player's games still affect everyone else's standings), even though only
+  // the KNSB-eligible subset ends up numbered/listed below.
   const priorRounds = allRounds.filter((r) => r.number < fromRound);
   const roundsForReplay = season.countExternalMatches
     ? priorRounds
@@ -51,12 +53,13 @@ export async function generateSeasonKnsbExport(
   });
   const standingsByPlayer = new Map(replay.current.standings.map((s) => [s.playerId, s]));
 
-  const rankedByValue = season.enrollments
+  const eligible = season.enrollments.filter((e) => e.player.knsbId != null);
+  const rankedByValue = eligible
     .map((e) => ({ playerId: e.playerId, value: standingsByPlayer.get(e.playerId)?.value ?? e.startingValue }))
     .sort((a, b) => b.value - a.value);
   const lotingsnummerByPlayer = new Map(rankedByValue.map((r, idx) => [r.playerId, idx + 1]));
 
-  const players: KnsbPlayerRow[] = season.enrollments.map((e) => {
+  const players: KnsbPlayerRow[] = eligible.map((e) => {
     const lotingsnummer = lotingsnummerByPlayer.get(e.playerId)!;
     let totalScore = 0;
     const rounds: KnsbRoundResult[] = rangeRounds.map((round) => {
@@ -72,6 +75,10 @@ export async function generateSeasonKnsbExport(
 
       const isWhite = entry.whitePlayerId === e.playerId;
       const opponentId = (isWhite ? entry.blackPlayerId : entry.whitePlayerId)!;
+      const opponentLotingsnummer = lotingsnummerByPlayer.get(opponentId);
+      // Opponent has no KNSB ID (not listed in this file) — nothing to reference.
+      if (opponentLotingsnummer == null) return { opponentLotingsnummer: null, color: null, result: null };
+
       const color: 'w' | 'b' = isWhite ? 'w' : 'b';
       let result: '1' | '=' | '0';
       let points: number;
@@ -85,7 +92,7 @@ export async function generateSeasonKnsbExport(
         points = won ? 1 : 0;
       }
       totalScore += points;
-      return { opponentLotingsnummer: lotingsnummerByPlayer.get(opponentId) ?? 0, color, result };
+      return { opponentLotingsnummer, color, result };
     });
 
     return {
@@ -93,7 +100,7 @@ export async function generateSeasonKnsbExport(
       gender: e.player.gender,
       name: e.player.name,
       knsbRating: 0, // KNSB owns its own on-file rating; we never track/report a live value.
-      federation: e.player.federation,
+      federation: e.player.federation ?? 'NED',
       knsbId: e.player.knsbId,
       totalScore,
       finalRanking: lotingsnummer,

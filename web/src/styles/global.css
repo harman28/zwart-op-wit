@@ -83,9 +83,11 @@ button {
 .season-pill {
   font-family: var(--font-mono);
   font-size: 12px;
-  color: var(--accent);
-  border: 1px solid var(--accent-dim);
-  border-radius: 999px;
+  color: var(--muted);
+  /* Deliberately not styled like .btn-ghost (no border/outline) — this is a
+     label, not a control, and shouldn't invite a click that does nothing. */
+  background: var(--card-raised);
+  border-radius: 6px;
   padding: 4px 12px;
   white-space: nowrap;
   overflow: hidden;
@@ -255,7 +257,9 @@ table.board tr:last-child td {
   font-size: 15px;
 }
 .lb-card-record {
-  flex: none;
+  flex: 1;
+  display: flex;
+  justify-content: center;
   font-family: var(--font-mono);
   font-size: 13px;
   font-weight: 700;
@@ -578,10 +582,14 @@ tr.unpaired-row td:last-child {
 .external-tag-btn {
   background: none;
   border: none;
+  border-bottom: 1px dotted var(--accent-dim);
   cursor: pointer;
   padding: 4px 2px;
   font-family: var(--font-ui);
-  transition: color 0.15s ease;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.external-tag-btn:hover {
+  border-color: var(--accent);
 }
 .external-tag.win,
 .external-tag-btn.win {
@@ -1044,6 +1052,57 @@ table.roster td {
 table.roster tr:last-child td {
   border-bottom: none;
 }
+.player-row {
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+.player-row:hover {
+  background: rgba(212, 168, 83, 0.06);
+}
+
+.player-cards {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+}
+.player-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+}
+.player-card.full {
+  border-left-color: var(--win);
+}
+.player-card.internal_only {
+  border-left-color: var(--accent);
+}
+.player-card.guest {
+  border-left-color: var(--draw);
+}
+.player-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.player-card-name {
+  font-weight: 700;
+  font-size: 14.5px;
+}
+.player-card-notes {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--text);
+}
+.player-card-meta {
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
 .pill {
   display: inline-block;
   font-size: 11px;
@@ -1099,6 +1158,10 @@ table.roster tr:last-child td {
   min-width: 140px;
   max-height: 220px;
   overflow-y: auto;
+}
+.custom-select-menu.open-upward {
+  top: auto;
+  bottom: calc(100% + 6px);
 }
 .custom-select-menu div.sel {
   background: rgba(212, 168, 83, 0.12);
@@ -1189,6 +1252,12 @@ footer.note {
     display: none;
   }
   .lb-cards {
+    display: flex;
+  }
+  .players-table-wrap {
+    display: none;
+  }
+  .player-cards {
     display: flex;
   }
 }

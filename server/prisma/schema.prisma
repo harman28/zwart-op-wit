@@ -54,10 +54,11 @@ model Player {
   // dummy 1900.01.01, nobody bothers entering real DOBs.
   gender      Gender?
   knsbId      String?
-  // 3-letter federation code (NED/ESP/HUN/ENG/...), required per the KNSB
-  // spec's "Federatie" field — defaults to NED since nearly every player is,
-  // but must be editable for the club's foreign members.
-  federation  String  @default("NED")
+  // 3-letter federation code (NED/ESP/HUN/ENG/...), required by the KNSB spec
+  // but deliberately no default here — a Guest never needs one filled in, and
+  // silently defaulting it for every new player (including guests) was a bug.
+  // Admin fills it in once a player is upgraded to Full and actually reported.
+  federation  String?
 
   enrollments  SeasonEnrollment[]
   signups      RoundSignup[]

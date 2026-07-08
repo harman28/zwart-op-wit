@@ -66,13 +66,7 @@ export default function ReviewPairingsPage() {
   }
 
   async function handleAssignOpponent(pairingBye: RoundEntry, opponent: Player) {
-    await roundsApi.updateEntry(roundId, pairingBye.id, {
-      kind: 'GAME',
-      soloPlayerId: null,
-      whitePlayerId: pairingBye.soloPlayerId,
-      blackPlayerId: opponent.id,
-      tableNumber: Number(startAtDraft) || 1,
-    });
+    await roundsApi.assignOpponent(roundId, pairingBye.id, { opponentId: opponent.id });
     setAssigningBye(false);
     load();
   }
@@ -141,6 +135,7 @@ export default function ReviewPairingsPage() {
         <PlayerAutocomplete
           players={allPlayers.filter((p) => p.id !== otherId)}
           onSelect={(p) => handleSwapPlayer(entry, side, p)}
+          onCancel={() => setEditingCell(null)}
           inputClassName="editable-name-input"
           autoFocus
         />

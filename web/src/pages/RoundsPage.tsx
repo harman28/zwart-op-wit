@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import * as playersApi from '../api/players.js';
 import * as roundsApi from '../api/rounds.js';
 import * as seasonsApi from '../api/seasons.js';
-import type { ExternalOutcome, GameResult, Player, Round, RoundEntry } from '../api/types.js';
+import type { ExternalOutcome, GameResult, MembershipType, Player, Round, RoundEntry } from '../api/types.js';
+import CustomSelect from '../components/CustomSelect.js';
 import ExternalSection from '../components/ExternalSection.js';
 import PlayerAutocomplete from '../components/PlayerAutocomplete.js';
 import ResultToggle from '../components/ResultToggle.js';
@@ -10,6 +11,7 @@ import UnpairedCallout from '../components/UnpairedCallout.js';
 import { useAdmin } from '../context/AdminContext.js';
 import { useLatestSeason } from '../hooks/useSeason.js';
 import { errorMessage, formatDate, resultClass, resultLabel } from '../lib/format.js';
+import { MEMBERSHIP_OPTIONS } from '../lib/membership.js';
 
 export default function RoundsPage() {
   const { season, loading: seasonLoading } = useLatestSeason();
@@ -22,6 +24,10 @@ export default function RoundsPage() {
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [editingCell, setEditingCell] = useState<{ entryId: number; side: 'white' | 'black' } | null>(null);
   const [assigningByeId, setAssigningByeId] = useState<number | null>(null);
+  const [showAddUnregistered, setShowAddUnregistered] = useState(false);
+  const [unregName, setUnregName] = useState('');
+  const [unregMembership, setUnregMembership] = useState<MembershipType>('GUEST');
+  const [unregValue, setUnregValue] = useState('100');
   // key = roundId; value = null while picking the first player, or the chosen first player while picking the second.
   const [addMatchupState, setAddMatchupState] = useState<Map<number, Player | null>>(new Map());
 
@@ -116,14 +122,26 @@ export default function RoundsPage() {
     await refreshRounds();
   }
 
-  async function handleAssignOpponent(round: Round, pairingBye: RoundEntry, opponent: Player) {
-    await roundsApi.updateEntry(round.id, pairingBye.id, {
-      kind: 'GAME',
-      soloPlayerId: null,
-      whitePlayerId: pairingBye.soloPlayerId,
-      blackPlayerId: opponent.id,
-    });
+  function closeAssignOpponent() {
     setAssigningByeId(null);
+    setShowAddUnregistered(false);
+    setUnregName('');
+    setUnregMembership('GUEST');
+    setUnregValue('100');
+  }
+
+  async function handleAssignOpponent(round: Round, pairingBye: RoundEntry, opponent: Player) {
+    await roundsApi.assignOpponent(round.id, pairingBye.id, { opponentId: opponent.id });
+    closeAssignOpponent();
+    await refreshRounds();
+  }
+
+  async function handleAssignNewOpponent(round: Round, pairingBye: RoundEntry) {
+    if (!unregName.trim()) return;
+    await roundsApi.assignOpponent(round.id, pairingBye.id, {
+      newOpponent: { name: unregName.trim(), membershipType: unregMembership, startingValue: Number(unregValue) || 0 },
+    });
+    closeAssignOpponent();
     await refreshRounds();
   }
 
@@ -236,6 +254,7 @@ export default function RoundsPage() {
                             <PlayerAutocomplete
                               players={allPlayers.filter((p) => p.id !== g.blackPlayerId)}
                               onSelect={(p) => handleSwapPlayer(round, g, 'white', p)}
+                              onCancel={() => setEditingCell(null)}
                               inputClassName="editable-name-input"
                               autoFocus
                             />
@@ -261,6 +280,7 @@ export default function RoundsPage() {
                             <PlayerAutocomplete
                               players={allPlayers.filter((p) => p.id !== g.whitePlayerId)}
                               onSelect={(p) => handleSwapPlayer(round, g, 'black', p)}
+                              onCancel={() => setEditingCell(null)}
                               inputClassName="editable-name-input"
                               autoFocus
                             />
@@ -325,13 +345,63 @@ export default function RoundsPage() {
                   <>
                     {adminMode && assigningByeId === pairingBye.id ? (
                       <div style={{ marginTop: 8 }}>
-                        <PlayerAutocomplete
-                          players={allPlayers.filter((p) => p.id !== pairingBye.soloPlayerId && !pairedIds.has(p.id))}
-                          onSelect={(p) => handleAssignOpponent(round, pairingBye, p)}
-                          inputClassName="editable-name-input"
-                          placeholder={`Opponent for ${pairingBye.soloPlayer?.name ?? ''}…`}
-                          autoFocus
-                        />
+                        {showAddUnregistered ? (
+                          <div className="field-row" style={{ alignItems: 'flex-end' }}>
+                            <div className="field">
+                              <label htmlFor="unreg-name">Name</label>
+                              <input
+                                id="unreg-name"
+                                value={unregName}
+                                onChange={(e) => setUnregName(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleAssignNewOpponent(round, pairingBye)}
+                                autoFocus
+                              />
+                            </div>
+                            <div className="field">
+                              <label>Membership</label>
+                              <CustomSelect
+                                value={unregMembership}
+                                options={MEMBERSHIP_OPTIONS}
+                                onChange={(v) => setUnregMembership(v as MembershipType)}
+                                triggerClassName="roster-select"
+                              />
+                            </div>
+                            <div className="field">
+                              <label htmlFor="unreg-value">Starting value</label>
+                              <input
+                                id="unreg-value"
+                                type="text"
+                                inputMode="numeric"
+                                style={{ minWidth: 80 }}
+                                value={unregValue}
+                                onChange={(e) => setUnregValue(e.target.value.replace(/[^0-9]/g, ''))}
+                                onKeyDown={(e) => e.key === 'Enter' && handleAssignNewOpponent(round, pairingBye)}
+                              />
+                            </div>
+                            <button className="btn btn-primary" onClick={() => handleAssignNewOpponent(round, pairingBye)}>
+                              Add
+                            </button>
+                            <button className="btn btn-ghost" onClick={() => setShowAddUnregistered(false)}>
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <PlayerAutocomplete
+                              players={allPlayers.filter((p) => p.id !== pairingBye.soloPlayerId && !pairedIds.has(p.id))}
+                              onSelect={(p) => handleAssignOpponent(round, pairingBye, p)}
+                              inputClassName="editable-name-input"
+                              placeholder={`Opponent for ${pairingBye.soloPlayer?.name ?? ''}…`}
+                              autoFocus
+                            />
+                            <button className="link-add" onClick={() => setShowAddUnregistered(true)}>
+                              + Add an unregistered player
+                            </button>
+                            <button className="link-add" onClick={closeAssignOpponent}>
+                              Cancel
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <UnpairedCallout

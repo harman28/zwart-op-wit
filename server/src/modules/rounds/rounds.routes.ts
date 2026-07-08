@@ -4,6 +4,7 @@ import { requireAdmin } from '../../lib/requireAdmin.js';
 import {
   addEntry,
   addMatchup,
+  assignOpponent,
   createRound,
   deleteEntry,
   deleteRound,
@@ -66,6 +67,17 @@ const tableNumbersBody = z.object({ startAt: z.number().int() });
 
 const addMatchupBody = z.object({ playerAId: z.number().int(), playerBId: z.number().int() });
 
+const assignOpponentBody = z.object({
+  opponentId: z.number().int().optional(),
+  newOpponent: z
+    .object({
+      name: z.string().min(1),
+      membershipType: membershipTypeSchema.optional(),
+      startingValue: z.number().int(),
+    })
+    .optional(),
+});
+
 export async function roundsRoutes(app: FastifyInstance): Promise<void> {
   app.post('/api/admin/seasons/:id/rounds', { preHandler: requireAdmin }, async (request, reply) => {
     const params = seasonIdParams.parse(request.params);
@@ -105,6 +117,12 @@ export async function roundsRoutes(app: FastifyInstance): Promise<void> {
     const entry = await addMatchup(params.id, body.playerAId, body.playerBId);
     reply.code(201);
     return entry;
+  });
+
+  app.post('/api/admin/rounds/:id/entries/:entryId/assign-opponent', { preHandler: requireAdmin }, async (request) => {
+    const params = entryIdParams.parse(request.params);
+    const body = assignOpponentBody.parse(request.body);
+    return assignOpponent(params.entryId, body);
   });
 
   app.delete('/api/admin/rounds/:id/entries/:entryId', { preHandler: requireAdmin }, async (request, reply) => {
