@@ -19,26 +19,24 @@ Still `chessclub123` — a placeholder approved early on "for now, we'll change
 it later." Change it in Settings → Change password before anyone outside this
 feedback loop has the URL.
 
-## 3. Give local dev its own database
+## 3. ~~Give local dev its own database~~ — done (2026-07-08)
 
-**Most likely to get forgotten — read this before asking for more changes once
-real data is in the system.**
-
-Local development and the live production site currently point at the *same*
-Railway Postgres database. That was fine while everything was disposable
-sample data, but once real results are in there, any further local
-development or testing (including work done via Claude Code) risks:
-- creating test seasons/players/rounds that show up on the real site,
-- colliding with invariants that assume test-friendly state (e.g. "only one
-  active season") when real data violates them, and
-- a test script mutating or wiping something real by mistake.
-
-**Fix**: provision a second Postgres (a small Railway addon is enough) for
-local dev/testing, point `server/.env`'s `DATABASE_URL` at it, and leave the
-live `server` service's `DATABASE_URL` (set directly on Railway, not in this
-repo) pointing at the real one. This is a small, one-time infrastructure
-change — flag it explicitly the next time code changes are needed, since it
-won't happen automatically.
+Three separate environments now exist, each with its own Postgres:
+- **production** — Railway `production` environment (`web`, `server`,
+  `Postgres`). Only ever touched by a deliberate `railway up` deploy once
+  something's been verified elsewhere. This is what Jim uses.
+- **staging** — Railway `staging` environment, a full duplicate of
+  production's service shape with its own empty Postgres
+  (https://web-staging-2c9c.up.railway.app). `server/.env` (local dev) points
+  here now, never at production. All future feature work and manual
+  verification happens against this DB.
+- **test** — a local Postgres database (`zwart_op_wit_test`, via Homebrew),
+  used only by the vitest suite (`server/.env.test`, loaded by
+  `vitest.setup.ts`). Fully disposable, isolated from both staging and
+  production, so `npm test` can freely create/delete seasons without
+  conflicting with real state. CI (`.github/workflows/ci.yml`) uses its own
+  ephemeral Postgres service container, same schema, zero shared state with
+  local test runs.
 
 ## Not yet built (intentional, not broken)
 
