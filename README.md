@@ -33,6 +33,12 @@ it encodes the club's actual rules doc and a real worked example. It should very
 rarely need to change; if a change to it feels necessary, treat that as a signal to
 double check the rules doc rather than the other way around.
 
+## Going live
+
+The deployed site currently runs on disposable sample data for review/feedback
+purposes. See [`PRELAUNCH.md`](./PRELAUNCH.md) for the checklist before switching
+to real club data — including an important note about the shared dev/prod database.
+
 ## Backup / restore
 
 Every season can be exported to a single JSON file (`GET /api/admin/seasons/:id/backup`)
