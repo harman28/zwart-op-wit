@@ -7,6 +7,7 @@ import { HttpError } from './lib/errors.js';
 import { actionLogRoutes } from './modules/actionlog/actionlog.routes.js';
 import { recordAction } from './modules/actionlog/actionlog.service.js';
 import { describeAction } from './modules/actionlog/describeAction.js';
+import { resolveLogContext, type LogContext } from './modules/actionlog/resolveLogContext.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { backupRoutes } from './modules/backup/backup.routes.js';
 import { knsbRoutes } from './modules/knsb/knsb.routes.js';
@@ -16,6 +17,16 @@ import { seasonsRoutes } from './modules/seasons/seasons.routes.js';
 import { settingsRoutes } from './modules/settings/settings.routes.js';
 
 const LOGGED_METHODS = new Set(['POST', 'PATCH', 'DELETE']);
+
+declare module 'fastify' {
+  interface FastifyRequest {
+    logContext?: LogContext;
+  }
+}
+
+function isLoggedAdminPath(path: string): boolean {
+  return path.startsWith('/api/admin/') || path === '/api/auth/change-password';
+}
 
 export function buildApp() {
   const app = Fastify({ logger: false });
@@ -54,15 +65,24 @@ export function buildApp() {
 
   app.get('/health', async () => ({ ok: true }));
 
-  // Admin action log: one generic hook covers every mutating admin route
-  // (and the differently-prefixed change-password route) rather than
-  // threading a log call into each individual handler.
+  // Admin action log: one generic pair of hooks covers every mutating admin
+  // route (and the differently-prefixed change-password route) rather than
+  // threading a log call into each individual handler. The lookup runs
+  // *before* the mutation (onRequest, not onResponse) so a DELETE can still
+  // resolve what it's about to remove — onResponse only builds the final
+  // string and writes the log row once the request has actually succeeded.
+  app.addHook('onRequest', async (request) => {
+    if (!LOGGED_METHODS.has(request.method)) return;
+    const path = request.raw.url?.split('?')[0] ?? '';
+    if (!isLoggedAdminPath(path)) return;
+    request.logContext = await resolveLogContext(path);
+  });
+
   app.addHook('onResponse', async (request, reply) => {
     if (!LOGGED_METHODS.has(request.method) || reply.statusCode >= 400) return;
     const path = request.raw.url?.split('?')[0] ?? '';
-    const isAdminAction = path.startsWith('/api/admin/') || path === '/api/auth/change-password';
-    if (!isAdminAction) return;
-    const summary = describeAction(request.method, path, request.body);
+    if (!isLoggedAdminPath(path)) return;
+    const summary = describeAction(request.method, path, request.body, request.logContext);
     await recordAction({ actorName: request.actorName ?? null, method: request.method, path, summary }).catch(() => {});
   });
 
