@@ -91,8 +91,21 @@ export default function RoundsPage() {
   }
 
   async function handleResultChange(round: Round, entry: RoundEntry, result: GameResult) {
-    await roundsApi.updateEntry(round.id, entry.id, { result });
-    await refreshRounds();
+    // Optimistic: this is the highest-frequency click on the page (entering a
+    // whole round's results in one sitting), so reflect it immediately rather
+    // than waiting on a full round-trip + full rounds refetch. Only refetch
+    // (to recover the real state) if the update actually fails.
+    setRounds((prev) =>
+      prev.map((r) =>
+        r.id !== round.id ? r : { ...r, entries: r.entries.map((e) => (e.id === entry.id ? { ...e, result } : e)) },
+      ),
+    );
+    try {
+      await roundsApi.updateEntry(round.id, entry.id, { result });
+    } catch (err) {
+      setError(errorMessage(err));
+      await refreshRounds();
+    }
   }
 
   async function handleSwapPlayer(round: Round, entry: RoundEntry, side: 'white' | 'black', player: Player) {
@@ -257,11 +270,6 @@ export default function RoundsPage() {
           </div>
         );
       })}
-      {isAdmin && adminMode && (
-        <footer className="note" style={{ marginTop: 18 }}>
-          Admin view: results and pairings are edited right here — no separate &quot;enter results&quot; page.
-        </footer>
-      )}
     </div>
   );
 }

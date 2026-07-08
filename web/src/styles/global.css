@@ -2,6 +2,18 @@
   box-sizing: border-box;
 }
 
+/* Every <select> site-wide gets the same custom chevron instead of the
+   browser's native arrow — without this, no amount of border/color styling
+   reads as "modernized" since the native control chrome still dominates. */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237a6440' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 26px !important;
+}
+
 html,
 body,
 #root {
@@ -278,6 +290,12 @@ table.board tr:last-child td {
   margin-bottom: 10px;
   overflow: hidden;
 }
+/* Once open, let the autocomplete dropdown (swap/assign/external-add) escape
+   the card's bounds instead of being clipped — hidden is only needed to keep
+   the collapsed header's corners rounded. */
+.round.open {
+  overflow: visible;
+}
 .round-head {
   display: flex;
   align-items: center;
@@ -456,17 +474,10 @@ tr.unpaired-row td:last-child {
   font-size: 13px;
 }
 .external-row .txt {
-  min-width: 120px;
+  min-width: 90px;
 }
-/* Fixed-width right zone so switching between a short tag and the wider
-   edit toggle doesn't visibly yank the row's controls sideways. */
-.external-row-controls {
+.external-remove {
   margin-left: auto;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  min-width: 260px;
 }
 .external-tag,
 .external-tag-btn {
@@ -596,7 +607,7 @@ tr.unpaired-row td:last-child {
   font-family: var(--font-ui);
   font-size: 14px;
   color: var(--text);
-  background: var(--bg);
+  background-color: var(--bg);
   border: 1px solid var(--border);
   border-radius: 7px;
   padding: 9px 11px;
@@ -970,7 +981,7 @@ table.roster tr:last-child td {
   padding: 6px 10px;
   border-radius: 7px;
   border: 1px solid var(--border);
-  background: var(--bg);
+  background-color: var(--bg);
   color: var(--text);
   cursor: pointer;
   transition: border-color 0.15s ease;
