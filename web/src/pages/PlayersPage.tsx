@@ -73,11 +73,16 @@ export default function PlayersPage() {
 
   async function handleAdd() {
     if (!newName.trim()) return;
-    const player = await playersApi.createPlayer(newName.trim(), newMembership);
-    setPlayers((prev) => [...prev, player].sort((a, b) => a.name.localeCompare(b.name)));
-    setNewName('');
-    setNewMembership('FULL');
-    setShowAdd(false);
+    setError(null);
+    try {
+      const player = await playersApi.createPlayer(newName.trim(), newMembership);
+      setPlayers((prev) => [...prev, player].sort((a, b) => a.name.localeCompare(b.name)));
+      setNewName('');
+      setNewMembership('FULL');
+      setShowAdd(false);
+    } catch (err) {
+      setError(errorMessage(err));
+    }
   }
 
   async function handleImport() {
@@ -92,10 +97,15 @@ export default function PlayersPage() {
         return { name: name!, membershipType };
       });
     if (entries.length === 0) return;
-    const created = await playersApi.importPlayers(entries);
-    setPlayers((prev) => [...prev, ...created].sort((a, b) => a.name.localeCompare(b.name)));
-    setImportText('');
-    setShowImport(false);
+    setError(null);
+    try {
+      const created = await playersApi.importPlayers(entries);
+      setPlayers((prev) => [...prev, ...created].sort((a, b) => a.name.localeCompare(b.name)));
+      setImportText('');
+      setShowImport(false);
+    } catch (err) {
+      setError(errorMessage(err));
+    }
   }
 
   function openEdit(player: Player) {
@@ -258,7 +268,7 @@ export default function PlayersPage() {
                 </div>
                 {p.notes && <div className="player-card-notes">{p.notes}</div>}
                 <div className="player-card-meta">
-                  {p.federation ?? '—'} · KNSB {p.knsbId ?? '—'} · {p.gender ?? '—'}
+                  Fed {p.federation ?? '—'} · KNSB {p.knsbId ?? '—'} · Gender {p.gender ?? '—'}
                 </div>
                 {p.membershipType === 'GUEST' &&
                   (() => {
@@ -281,7 +291,7 @@ export default function PlayersPage() {
         <Modal title="Edit player" onClose={closeEdit}>
           <div className="field">
             <label htmlFor="edit-name">Name</label>
-            <input id="edit-name" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} autoFocus />
+            <input id="edit-name" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
           </div>
           <div className="field">
             <label>Membership</label>

@@ -138,11 +138,15 @@ export default function RoundsPage() {
 
   async function handleAssignNewOpponent(round: Round, pairingBye: RoundEntry) {
     if (!unregName.trim()) return;
-    await roundsApi.assignOpponent(round.id, pairingBye.id, {
-      newOpponent: { name: unregName.trim(), membershipType: unregMembership, startingValue: Number(unregValue) || 0 },
-    });
-    closeAssignOpponent();
-    await refreshRounds();
+    try {
+      await roundsApi.assignOpponent(round.id, pairingBye.id, {
+        newOpponent: { name: unregName.trim(), membershipType: unregMembership, startingValue: Number(unregValue) || 0 },
+      });
+      closeAssignOpponent();
+      await refreshRounds();
+    } catch (err) {
+      setError(errorMessage(err));
+    }
   }
 
   async function handleDeleteMatchup(round: Round, entry: RoundEntry) {

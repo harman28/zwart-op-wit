@@ -239,9 +239,20 @@ table.board tr:last-child td {
   padding: 10px 14px;
 }
 .lb-card-top {
+  /* 1fr / auto / 1fr — the classic "center a middle item between two
+     variable-width sides" grid: as long as both outer tracks are equal
+     fractions, the record lands at the row's true visual center regardless
+     of how long the name or the points value happen to be. */
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: baseline;
+  gap: 10px;
+}
+.lb-card-left {
   display: flex;
   align-items: baseline;
   gap: 10px;
+  min-width: 0;
 }
 .lb-card-top .rank-num {
   width: 18px;
@@ -249,17 +260,20 @@ table.board tr:last-child td {
 }
 .lb-card-top .player-name {
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .lb-card-top .lb-points {
   font-family: var(--font-mono);
   font-weight: 700;
   color: var(--accent);
   font-size: 15px;
+  justify-self: end;
 }
 .lb-card-record {
-  flex: 1;
-  display: flex;
-  justify-content: center;
+  justify-self: center;
   font-family: var(--font-mono);
   font-size: 13px;
   font-weight: 700;
@@ -280,10 +294,17 @@ table.board tr:last-child td {
 }
 .lb-card-stats {
   margin-top: 4px;
-  padding-left: 28px;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted);
   font-family: var(--font-mono);
+  /* Never wrap to a second line — on a narrow phone with an extreme value
+     (e.g. "Color -20"), scroll horizontally within this one line instead. */
+  white-space: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.lb-card-stats::-webkit-scrollbar {
+  display: none;
 }
 
 /* ---- rounds accordion ---- */

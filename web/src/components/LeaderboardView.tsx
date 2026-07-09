@@ -51,8 +51,10 @@ export default function LeaderboardView({ standings }: { standings: Standing[] }
         {standings.map((s) => (
           <div className="lb-card" key={s.playerId}>
             <div className="lb-card-top">
-              <span className={s.rank === 1 ? 'rank-num rank-1' : 'rank-num'}>{s.rank}</span>
-              <span className="player-name">{s.name}</span>
+              <div className="lb-card-left">
+                <span className={s.rank === 1 ? 'rank-num rank-1' : 'rank-num'}>{s.rank}</span>
+                <span className="player-name">{s.name}</span>
+              </div>
               <span className="lb-card-record">
                 <span className="rec-w">{s.wins}W</span>
                 <span className="rec-sep">/</span>

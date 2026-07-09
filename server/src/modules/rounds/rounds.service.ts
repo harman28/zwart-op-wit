@@ -6,6 +6,7 @@ import { replaySeason } from '../../engine/standings.js';
 import type { PairingCandidate, PastPairing } from '../../engine/types.js';
 import { HttpError } from '../../lib/errors.js';
 import { mapEnrollmentsToBaselines, mapRoundToEngine } from '../../lib/mappers.js';
+import { assertNameAvailable } from '../players/players.service.js';
 
 type RoundWithEntries = Round & { entries: RoundEntry[] };
 
@@ -104,6 +105,7 @@ export async function createRound(seasonId: number, input: CreateRoundInput) {
   // "rounds played this season" hint on guests is what surfaces "they should
   // probably be upgraded now" once they've turned up a few times.
   for (const np of input.newPlayers ?? []) {
+    await assertNameAvailable(np.name);
     const player = await prisma.player.create({ data: { name: np.name, membershipType: np.membershipType ?? 'GUEST' } });
     const enrollment = await prisma.seasonEnrollment.create({
       data: { seasonId, playerId: player.id, startingValue: np.startingValue },
@@ -294,6 +296,7 @@ export async function assignOpponent(pairingByeEntryId: number, input: AssignOpp
   let opponentId = input.opponentId;
   if (opponentId == null) {
     if (!input.newOpponent) throw new HttpError(400, 'Either opponentId or newOpponent is required');
+    await assertNameAvailable(input.newOpponent.name);
     const player = await prisma.player.create({
       data: { name: input.newOpponent.name, membershipType: input.newOpponent.membershipType ?? 'GUEST' },
     });
