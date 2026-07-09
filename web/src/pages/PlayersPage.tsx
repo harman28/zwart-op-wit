@@ -52,6 +52,7 @@ export default function PlayersPage() {
   const [error, setError] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [search, setSearch] = useState('');
   const [newName, setNewName] = useState('');
   const [newMembership, setNewMembership] = useState<MembershipType>('FULL');
   const [importText, setImportText] = useState('');
@@ -70,6 +71,9 @@ export default function PlayersPage() {
   }
 
   useEffect(load, []);
+
+  const query = search.trim().toLowerCase();
+  const filteredPlayers = query ? players.filter((p) => p.name.toLowerCase().includes(query)) : players;
 
   async function handleAdd() {
     if (!newName.trim()) return;
@@ -146,12 +150,22 @@ export default function PlayersPage() {
       {error && <div className="error-banner">{error}</div>}
 
       <div className="players-toolbar">
-        <button className="btn btn-ghost" onClick={() => setShowImport((v) => !v)}>
-          Import roster (CSV/paste)
-        </button>
-        <button className="btn btn-primary" onClick={() => setShowAdd((v) => !v)}>
-          + Add player
-        </button>
+        <input
+          className="players-search"
+          type="text"
+          placeholder="Search players…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          aria-label="Search players"
+        />
+        <div className="players-toolbar-actions">
+          <button className="btn btn-ghost" onClick={() => setShowImport((v) => !v)}>
+            Import roster (CSV/paste)
+          </button>
+          <button className="btn btn-primary" onClick={() => setShowAdd((v) => !v)}>
+            + Add player
+          </button>
+        </div>
       </div>
 
       {showImport && (
@@ -226,7 +240,7 @@ export default function PlayersPage() {
                 </tr>
               </thead>
               <tbody>
-                {players.map((p) => (
+                {filteredPlayers.map((p) => (
                   <tr key={p.id} className="player-row" onClick={() => openEdit(p)}>
                     <td>{p.name}</td>
                     <td>
@@ -255,8 +269,12 @@ export default function PlayersPage() {
             </table>
           </div>
 
+          {filteredPlayers.length === 0 && (
+            <p style={{ color: 'var(--muted)' }}>No players match "{search.trim()}".</p>
+          )}
+
           <div className="player-cards">
-            {players.map((p) => (
+            {filteredPlayers.map((p) => (
               <div
                 key={p.id}
                 className={`player-card ${p.membershipType.toLowerCase()}`}

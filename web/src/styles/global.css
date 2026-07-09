@@ -1047,9 +1047,42 @@ tr.unpaired-row td:last-child {
 
 .players-toolbar {
   display: flex;
-  justify-content: flex-end;
-  gap: 8px;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
   margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.players-search {
+  flex: 1;
+  min-width: 160px;
+  max-width: 260px;
+  padding: 8px 12px;
+  font-size: 13.5px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+}
+.players-search:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.players-toolbar-actions {
+  display: flex;
+  gap: 8px;
+}
+@media (max-width: 640px) {
+  .players-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .players-search {
+    max-width: none;
+  }
+  .players-toolbar-actions {
+    justify-content: flex-end;
+  }
 }
 table.roster {
   width: 100%;
