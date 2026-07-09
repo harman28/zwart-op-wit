@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import NavBar from './components/NavBar.js';
 import { AdminProvider, useAdmin } from './context/AdminContext.js';
+import { ThemeProvider } from './context/ThemeContext.js';
 import ActivityLogPage from './pages/ActivityLogPage.js';
 import LeaderboardPage from './pages/LeaderboardPage.js';
 import LoginPage from './pages/LoginPage.js';
@@ -74,10 +75,12 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <AdminProvider>
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
-    </AdminProvider>
+    <ThemeProvider>
+      <AdminProvider>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </AdminProvider>
+    </ThemeProvider>
   );
 }

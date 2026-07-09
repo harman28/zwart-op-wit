@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <title>Zwart op Wit — Internal Competition</title>
+    <script>
+      // Applied before React mounts (and before first paint) so there's no
+      // flash of the wrong theme — ThemeContext just reads this back.
+      (function () {
+        var stored = localStorage.getItem('zow:theme');
+        if (stored === 'light') document.documentElement.dataset.theme = 'light';
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

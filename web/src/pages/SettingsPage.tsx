@@ -9,9 +9,11 @@ import type { ClubSettings, Player, Round, Season } from '../api/types.js';
 import CustomSelect from '../components/CustomSelect.js';
 import Modal from '../components/Modal.js';
 import PasswordVisibilityToggle from '../components/PasswordVisibilityToggle.js';
+import { useTheme } from '../context/ThemeContext.js';
 import { errorMessage, formatDate } from '../lib/format.js';
 
 export default function SettingsPage() {
+  const { theme, toggleTheme } = useTheme();
   const [season, setSeason] = useState<Season | null>(null);
   const [seasonLoaded, setSeasonLoaded] = useState(false);
   const [existingPlayers, setExistingPlayers] = useState<Player[]>([]);
@@ -402,9 +404,14 @@ export default function SettingsPage() {
         <div className="settings-row">
           <div>
             <div className="label">Light mode</div>
-            <div className="help">Not configured yet — no light palette has been designed.</div>
+            <div className="help">Switches the whole site's palette — applies immediately, remembered on this device.</div>
           </div>
-          <button className="switch" disabled style={{ opacity: 0.45, cursor: 'default' }} />
+          <button
+            className={theme === 'light' ? 'switch on' : 'switch'}
+            onClick={toggleTheme}
+            aria-pressed={theme === 'light'}
+            aria-label="Toggle light mode"
+          />
         </div>
         <div className="settings-row">
           <div>

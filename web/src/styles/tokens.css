@@ -1,8 +1,13 @@
 /*
   Every color/spacing decision the frontend makes lives here, and only here.
-  Re-theming Zwart op Wit (new palette, light mode, etc.) means editing this
-  file — components below reference these custom properties, never literals.
-  Carried over 1:1 from the agreed mockup for now.
+  Re-theming Zwart op Wit means editing this file — components in global.css
+  reference these custom properties, never literals (accent/win/loss-tinted
+  overlays there use color-mix() against these tokens for the same reason).
+
+  Dark is the default (:root) and was carried over 1:1 from the agreed
+  mockup. Light (:root[data-theme="light"]) is the literal "op wit" half of
+  the club's own name — warm paper/parchment rather than a clinical white,
+  so it still reads as the same product, not a generic light-mode inversion.
 */
 :root {
   --bg: #09080a;
@@ -11,6 +16,10 @@
   --border: #2e2610;
   --accent: #d4a853;
   --accent-dim: #8a6f39;
+  /* Text/hover color *on top of* an --accent-colored surface (e.g. a primary
+     button) — accent is light-on-dark here, so that surface needs dark text. */
+  --accent-text: #17130a;
+  --accent-hover: #e0b666;
   --muted: #7a6440;
   --text: #f8f0dd;
 
@@ -21,13 +30,40 @@
   --draw: #a89566;
 
   /* Result colors read as "which piece color won" (white/black), never as
-     good/bad — black winning isn't a loss, it's just black's turn to win. */
+     good/bad — black winning isn't a loss, it's just black's turn to win.
+     Deliberately constant across themes: they represent actual chess piece
+     colors, not page-theme colors. */
   --result-white-bg: #efe6cf;
   --result-white-text: #17130a;
   --result-black-bg: #241f16;
   --result-black-text: #f8f0dd;
   --result-black-border: #4a3f28;
 
+  /* Scrim behind a modal — deliberately a constant dark tint rather than
+     var(--bg): a dimming overlay reads as "dimming" in both themes, but
+     --bg itself becomes near-white in light mode, which would make the
+     overlay nearly invisible instead of dimming anything. */
+  --scrim: rgba(20, 16, 10, 0.6);
+
   --font-ui: system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'SFMono-Regular', ui-monospace, Menlo, Consolas, monospace;
+}
+
+:root[data-theme='light'] {
+  --bg: #f6f1e4;
+  --card: #fffdf8;
+  --card-raised: #efe6d1;
+  --border: #ddcda3;
+  --accent: #9c6f1e;
+  --accent-dim: #c9a35c;
+  /* Accent got *darker* than the dark theme's (needs AA contrast on a light
+     page), so text on top of it flips to light instead of dark. */
+  --accent-text: #fffaf0;
+  --accent-hover: #7d5a17;
+  --muted: #86754f;
+  --text: #251f14;
+
+  --win: #4c7a3d;
+  --loss: #a1443c;
+  --draw: #8a723f;
 }
