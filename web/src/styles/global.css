@@ -1213,10 +1213,6 @@ table.roster tr:last-child td {
   max-height: 220px;
   overflow-y: auto;
 }
-.custom-select-menu.open-upward {
-  top: auto;
-  bottom: calc(100% + 6px);
-}
 .custom-select-menu div.sel {
   background: rgba(212, 168, 83, 0.12);
 }
