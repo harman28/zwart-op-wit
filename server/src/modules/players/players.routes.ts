@@ -4,11 +4,19 @@ import { requireAdmin } from '../../lib/requireAdmin.js';
 import { createPlayer, importPlayers, listPlayersWithGuestCounts, updatePlayer } from './players.service.js';
 
 const membershipTypeSchema = z.enum(['FULL', 'INTERNAL_ONLY', 'GUEST']);
+const genderSchema = z.enum(['M', 'V', 'X']);
 const createBody = z.object({ name: z.string().min(1), membershipType: membershipTypeSchema.default('FULL') });
 const importBody = z.object({
-  players: z.array(z.object({ name: z.string().min(1), membershipType: membershipTypeSchema.default('FULL') })),
+  players: z.array(
+    z.object({
+      name: z.string().min(1),
+      membershipType: membershipTypeSchema.default('FULL'),
+      federation: z.string().min(1).optional(),
+      knsbId: z.string().min(1).optional(),
+      gender: genderSchema.optional(),
+    }),
+  ),
 });
-const genderSchema = z.enum(['M', 'V', 'X']);
 const updateBody = z.object({
   name: z.string().min(1).optional(),
   membershipType: membershipTypeSchema.optional(),

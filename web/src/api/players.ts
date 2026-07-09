@@ -7,7 +7,9 @@ export function listPlayers() {
 export function createPlayer(name: string, membershipType?: MembershipType) {
   return api.post<Player>('/admin/players', { name, membershipType });
 }
-export function importPlayers(players: { name: string; membershipType?: MembershipType }[]) {
+export function importPlayers(
+  players: { name: string; membershipType?: MembershipType; federation?: string; knsbId?: string; gender?: Gender }[],
+) {
   return api.post<Player[]>('/admin/players/import', { players });
 }
 export function updatePlayer(

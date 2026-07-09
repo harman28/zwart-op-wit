@@ -95,10 +95,16 @@ export default function PlayersPage() {
       .map((line) => line.trim())
       .filter(Boolean)
       .map((line) => {
-        const [name, membership] = line.split(',').map((s) => s.trim());
+        const [name, membership, federation, knsbId, gender] = line.split(',').map((s) => s.trim());
         const membershipType: MembershipType =
           membership === 'INTERNAL_ONLY' || membership === 'GUEST' ? membership : 'FULL';
-        return { name: name!, membershipType };
+        return {
+          name: name!,
+          membershipType,
+          federation: federation ? federation.toUpperCase() : undefined,
+          knsbId: knsbId || undefined,
+          gender: gender === 'M' || gender === 'V' || gender === 'X' ? (gender as Gender) : undefined,
+        };
       });
     if (entries.length === 0) return;
     setError(null);
@@ -171,12 +177,16 @@ export default function PlayersPage() {
       {showImport && (
         <div className="card">
           <div className="field" style={{ marginBottom: 14 }}>
-            <label htmlFor="import">One player per line: Name, MembershipType (optional, defaults to Full)</label>
+            <label htmlFor="import">
+              One player per line: Name, Membership (optional, defaults to Full), Federation (optional), KNSB ID
+              (optional), Gender (optional: M/V/X)
+            </label>
             <textarea
               id="import"
               rows={6}
               value={importText}
               onChange={(e) => setImportText(e.target.value)}
+              placeholder={'Joppe, FULL, NED, 8938402, M\nBodhi, INTERNAL_ONLY'}
               style={{
                 fontFamily: 'var(--font-mono)',
                 fontSize: 13,

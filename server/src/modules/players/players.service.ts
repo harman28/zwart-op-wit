@@ -46,7 +46,9 @@ export async function createPlayer(name: string, membershipType: MembershipType)
   return prisma.player.create({ data: { name, membershipType } });
 }
 
-export async function importPlayers(entries: { name: string; membershipType: MembershipType }[]) {
+export async function importPlayers(
+  entries: { name: string; membershipType: MembershipType; federation?: string; knsbId?: string; gender?: Gender }[],
+) {
   // Within-batch duplicates (case-insensitive) are just as confusing as
   // against-the-roster ones, and won't be caught by per-entry DB lookups
   // since none of them exist yet at check time.
