@@ -13,14 +13,14 @@
   --bg: #09080a;
   --card: #130f08;
   --card-raised: #1a1409;
-  --border: #2e2610;
+  --border: #74602c;
   --accent: #d4a853;
   --accent-dim: #8a6f39;
   /* Text/hover color *on top of* an --accent-colored surface (e.g. a primary
      button) — accent is light-on-dark here, so that surface needs dark text. */
   --accent-text: #17130a;
   --accent-hover: #e0b666;
-  --muted: #7a6440;
+  --muted: #b89b6c;
   --text: #f8f0dd;
 
   /* Generic positive/negative status colors — membership pills, error banners.
