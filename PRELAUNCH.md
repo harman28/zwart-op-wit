@@ -23,13 +23,17 @@ feedback loop has the URL.
 
 Three separate environments now exist, each with its own Postgres:
 - **production** — Railway `production` environment (`web`, `server`,
-  `Postgres`). Only ever touched by a deliberate `railway up` deploy once
-  something's been verified elsewhere. This is what Jim uses.
+  `Postgres`). Live at https://zwartopwit.up.railway.app. Only ever touched
+  by a deliberate `railway up` deploy once something's been verified
+  elsewhere. This is what Jim uses — **as of 2026-07-09, Jim has been handed
+  production and demoed it to the full club board; treat it as frozen/
+  hands-off until told otherwise, staging work continues as normal.**
 - **staging** — Railway `staging` environment, a full duplicate of
-  production's service shape with its own empty Postgres
-  (https://web-staging-2c9c.up.railway.app). `server/.env` (local dev) points
-  here now, never at production. All future feature work and manual
-  verification happens against this DB.
+  production's service shape with its own empty Postgres. Live at
+  https://zwartopklad.up.railway.app ("klad" = Dutch for a rough draft, a
+  pun on the club's own name). `server/.env` (local dev) points here now,
+  never at production. All future feature work and manual verification
+  happens against this DB.
 - **test** — a local Postgres database (`zwart_op_wit_test`, via Homebrew),
   used only by the vitest suite (`server/.env.test`, loaded by
   `vitest.setup.ts`). Fully disposable, isolated from both staging and
@@ -38,9 +42,14 @@ Three separate environments now exist, each with its own Postgres:
   ephemeral Postgres service container, same schema, zero shared state with
   local test runs.
 
-## Not yet built (intentional, not broken)
+## ~~4. Light mode~~ — done (2026-07-09)
 
-- **Light mode** — the toggle exists in Settings but is disabled; no light
-  palette has been designed yet.
-- **KNSB rating export** — needs a sample export file from the old software
-  before the real format can be built.
+Full dark/light token set in `tokens.css`, toggle enabled in Settings,
+verified across pages/breakpoints. Deployed to staging only so far — held
+there by the production freeze above, not by anything technically
+incomplete.
+
+## ~~5. KNSB rating export~~ — done (2026-07-08)
+
+Built and verified byte-for-byte against a real Jim-submitted export
+(`server/src/modules/knsb/knsbExport.ts`'s golden-master test).
