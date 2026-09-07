@@ -233,6 +233,29 @@ export async function addEntry(
   return prisma.roundEntry.create({ data: { roundId, ...data } });
 }
 
+export interface MatchupParticipantInput {
+  playerId?: number;
+  /** Same "add an unregistered player" shape createRound offers — creates the
+   * club-wide identity and this season's enrollment in one step. */
+  newPlayer?: { name: string; membershipType?: MembershipType; startingValue: number };
+}
+
+/** Shared by addMatchup and assignOpponent: resolves a participant to a
+ * playerId, creating the Player + SeasonEnrollment first if it's a
+ * brand-new unregistered one. */
+async function resolveParticipant(seasonId: number, input: MatchupParticipantInput): Promise<number> {
+  if (input.playerId != null) return input.playerId;
+  if (!input.newPlayer) throw new HttpError(400, 'Either playerId or newPlayer is required');
+  await assertNameAvailable(input.newPlayer.name);
+  const player = await prisma.player.create({
+    data: { name: input.newPlayer.name, membershipType: input.newPlayer.membershipType ?? 'GUEST' },
+  });
+  await prisma.seasonEnrollment.create({
+    data: { seasonId, playerId: player.id, startingValue: input.newPlayer.startingValue },
+  });
+  return player.id;
+}
+
 /** Shared by addMatchup and assignOpponent: who plays which color is never an
  * admin choice (computed via assignColors, same as pairing generation), and a
  * newly-created table always gets the next free number in the round. */
@@ -249,14 +272,19 @@ async function computeColorsAndNextTable(roundId: number, seasonId: number, play
 }
 
 /**
- * Adds a brand-new matchup to an existing round from just two players — who
+ * Adds a brand-new matchup to an existing round from two participants — who
  * plays which color is never an admin choice, so this computes it the same
  * way pairing generation does (`assignColors`, off each player's current
  * color balance and standing) rather than accepting whitePlayerId/blackPlayerId.
+ * Either participant can be an existing enrolled player or a brand-new
+ * unregistered one — not just the odd-one-out from a pairing bye.
  */
-export async function addMatchup(roundId: number, playerAId: number, playerBId: number) {
+export async function addMatchup(roundId: number, participantA: MatchupParticipantInput, participantB: MatchupParticipantInput) {
   const round = await prisma.round.findUnique({ where: { id: roundId } });
   if (!round) throw new HttpError(404, `Round ${roundId} not found`);
+
+  const playerAId = await resolveParticipant(round.seasonId, participantA);
+  const playerBId = await resolveParticipant(round.seasonId, participantB);
 
   const { colors, nextTable } = await computeColorsAndNextTable(roundId, round.seasonId, playerAId, playerBId);
 
@@ -293,18 +321,7 @@ export async function assignOpponent(pairingByeEntryId: number, input: AssignOpp
   const round = await prisma.round.findUnique({ where: { id: entry.roundId } });
   if (!round) throw new HttpError(404, `Round ${entry.roundId} not found`);
 
-  let opponentId = input.opponentId;
-  if (opponentId == null) {
-    if (!input.newOpponent) throw new HttpError(400, 'Either opponentId or newOpponent is required');
-    await assertNameAvailable(input.newOpponent.name);
-    const player = await prisma.player.create({
-      data: { name: input.newOpponent.name, membershipType: input.newOpponent.membershipType ?? 'GUEST' },
-    });
-    await prisma.seasonEnrollment.create({
-      data: { seasonId: round.seasonId, playerId: player.id, startingValue: input.newOpponent.startingValue },
-    });
-    opponentId = player.id;
-  }
+  const opponentId = await resolveParticipant(round.seasonId, { playerId: input.opponentId, newPlayer: input.newOpponent });
 
   const { colors, nextTable } = await computeColorsAndNextTable(entry.roundId, round.seasonId, entry.soloPlayerId, opponentId);
 

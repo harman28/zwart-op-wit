@@ -3,7 +3,7 @@ import * as playersApi from '../api/players.js';
 import * as roundsApi from '../api/rounds.js';
 import * as seasonsApi from '../api/seasons.js';
 import type { ExternalOutcome, GameResult, MembershipType, Player, Round, RoundEntry } from '../api/types.js';
-import CustomSelect from '../components/CustomSelect.js';
+import AddUnregisteredPlayerForm from '../components/AddUnregisteredPlayerForm.js';
 import ExternalSection from '../components/ExternalSection.js';
 import PlayerAutocomplete from '../components/PlayerAutocomplete.js';
 import ResultToggle from '../components/ResultToggle.js';
@@ -11,7 +11,22 @@ import UnpairedCallout from '../components/UnpairedCallout.js';
 import { useAdmin } from '../context/AdminContext.js';
 import { useLatestSeason } from '../hooks/useSeason.js';
 import { errorMessage, formatDate, resultClass, resultLabel } from '../lib/format.js';
-import { MEMBERSHIP_OPTIONS } from '../lib/membership.js';
+
+/** A matchup slot picked while building "+ Add matchup": either an existing
+ * enrolled player, or the not-yet-created shape of a brand-new one. */
+type MatchupParticipant =
+  | { kind: 'existing'; player: Player }
+  | { kind: 'new'; name: string; membershipType: MembershipType; startingValue: number };
+
+function matchupParticipantLabel(p: MatchupParticipant): string {
+  return p.kind === 'existing' ? p.player.name : p.name;
+}
+
+function toMatchupParticipantInput(p: MatchupParticipant): roundsApi.MatchupParticipant {
+  return p.kind === 'existing'
+    ? { playerId: p.player.id }
+    : { newPlayer: { name: p.name, membershipType: p.membershipType, startingValue: p.startingValue } };
+}
 
 export default function RoundsPage() {
   const { season, loading: seasonLoading } = useLatestSeason();
@@ -25,11 +40,10 @@ export default function RoundsPage() {
   const [editingCell, setEditingCell] = useState<{ entryId: number; side: 'white' | 'black' } | null>(null);
   const [assigningByeId, setAssigningByeId] = useState<number | null>(null);
   const [showAddUnregistered, setShowAddUnregistered] = useState(false);
-  const [unregName, setUnregName] = useState('');
-  const [unregMembership, setUnregMembership] = useState<MembershipType>('GUEST');
-  const [unregValue, setUnregValue] = useState('100');
-  // key = roundId; value = null while picking the first player, or the chosen first player while picking the second.
-  const [addMatchupState, setAddMatchupState] = useState<Map<number, Player | null>>(new Map());
+  // key = roundId; value = null while picking the first slot, or the chosen first slot while picking the second.
+  const [addMatchupState, setAddMatchupState] = useState<Map<number, MatchupParticipant | null>>(new Map());
+  // roundIds where the "+ Add an unregistered player" form is open for whichever slot is currently being picked.
+  const [addMatchupUnregisteredFor, setAddMatchupUnregisteredFor] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     if (!season) {
@@ -125,9 +139,6 @@ export default function RoundsPage() {
   function closeAssignOpponent() {
     setAssigningByeId(null);
     setShowAddUnregistered(false);
-    setUnregName('');
-    setUnregMembership('GUEST');
-    setUnregValue('100');
   }
 
   async function handleAssignOpponent(round: Round, pairingBye: RoundEntry, opponent: Player) {
@@ -136,12 +147,13 @@ export default function RoundsPage() {
     await refreshRounds();
   }
 
-  async function handleAssignNewOpponent(round: Round, pairingBye: RoundEntry) {
-    if (!unregName.trim()) return;
+  async function handleAssignNewOpponent(
+    round: Round,
+    pairingBye: RoundEntry,
+    newOpponent: { name: string; membershipType: MembershipType; startingValue: number },
+  ) {
     try {
-      await roundsApi.assignOpponent(round.id, pairingBye.id, {
-        newOpponent: { name: unregName.trim(), membershipType: unregMembership, startingValue: Number(unregValue) || 0 },
-      });
+      await roundsApi.assignOpponent(round.id, pairingBye.id, { newOpponent });
       closeAssignOpponent();
       await refreshRounds();
     } catch (err) {
@@ -178,13 +190,30 @@ export default function RoundsPage() {
       next.delete(roundId);
       return next;
     });
+    setAddMatchupUnregisteredFor((prev) => {
+      const next = new Set(prev);
+      next.delete(roundId);
+      return next;
+    });
   }
-  async function finishAddMatchup(round: Round, playerA: Player, playerB: Player) {
+  function pickMatchupSlot(roundId: number, participant: MatchupParticipant) {
+    setAddMatchupState((prev) => new Map(prev).set(roundId, participant));
+    setAddMatchupUnregisteredFor((prev) => {
+      const next = new Set(prev);
+      next.delete(roundId);
+      return next;
+    });
+  }
+  async function finishAddMatchup(round: Round, participantA: MatchupParticipant, participantB: MatchupParticipant) {
     // Colors aren't an admin choice — the server assigns them the same way
     // pairing generation does, off each player's current color balance.
-    await roundsApi.addMatchup(round.id, playerA.id, playerB.id);
-    cancelAddMatchup(round.id);
-    await refreshRounds();
+    try {
+      await roundsApi.addMatchup(round.id, toMatchupParticipantInput(participantA), toMatchupParticipantInput(participantB));
+      cancelAddMatchup(round.id);
+      await refreshRounds();
+    } catch (err) {
+      setError(errorMessage(err));
+    }
   }
 
   if (seasonLoading || loading) {
@@ -313,28 +342,62 @@ export default function RoundsPage() {
                 </table>
                 {adminMode &&
                   (addMatchupState.has(round.id) ? (
-                    <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-                      {addMatchupState.get(round.id) == null ? (
-                        <PlayerAutocomplete
-                          players={allPlayers.filter((p) => !pairedIds.has(p.id))}
-                          onSelect={(p) => setAddMatchupState((prev) => new Map(prev).set(round.id, p))}
-                          inputClassName="editable-name-input"
-                          placeholder="First player…"
-                          autoFocus
-                        />
-                      ) : (
-                        <>
-                          <span className="txt">{addMatchupState.get(round.id)!.name} vs</span>
-                          <PlayerAutocomplete
-                            players={allPlayers.filter(
-                              (p) => !pairedIds.has(p.id) && p.id !== addMatchupState.get(round.id)!.id,
-                            )}
-                            onSelect={(p) => finishAddMatchup(round, addMatchupState.get(round.id)!, p)}
-                            inputClassName="editable-name-input"
-                            placeholder="Second player…"
-                            autoFocus
-                          />
-                        </>
+                    <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      {(() => {
+                        const firstSlot = addMatchupState.get(round.id) ?? null;
+                        const addingUnregistered = addMatchupUnregisteredFor.has(round.id);
+                        if (addingUnregistered) {
+                          return (
+                            <AddUnregisteredPlayerForm
+                              submitLabel={firstSlot == null ? 'Next' : 'Add'}
+                              onSubmit={(input) =>
+                                firstSlot == null
+                                  ? pickMatchupSlot(round.id, { kind: 'new', ...input })
+                                  : finishAddMatchup(round, firstSlot, { kind: 'new', ...input })
+                              }
+                              onCancel={() =>
+                                setAddMatchupUnregisteredFor((prev) => {
+                                  const next = new Set(prev);
+                                  next.delete(round.id);
+                                  return next;
+                                })
+                              }
+                            />
+                          );
+                        }
+                        if (firstSlot == null) {
+                          return (
+                            <PlayerAutocomplete
+                              players={allPlayers.filter((p) => !pairedIds.has(p.id))}
+                              onSelect={(p) => pickMatchupSlot(round.id, { kind: 'existing', player: p })}
+                              inputClassName="editable-name-input"
+                              placeholder="First player…"
+                              autoFocus
+                            />
+                          );
+                        }
+                        return (
+                          <>
+                            <span className="txt">{matchupParticipantLabel(firstSlot)} vs</span>
+                            <PlayerAutocomplete
+                              players={allPlayers.filter(
+                                (p) => !pairedIds.has(p.id) && !(firstSlot.kind === 'existing' && p.id === firstSlot.player.id),
+                              )}
+                              onSelect={(p) => finishAddMatchup(round, firstSlot, { kind: 'existing', player: p })}
+                              inputClassName="editable-name-input"
+                              placeholder="Second player…"
+                              autoFocus
+                            />
+                          </>
+                        );
+                      })()}
+                      {!addMatchupUnregisteredFor.has(round.id) && (
+                        <button
+                          className="link-add"
+                          onClick={() => setAddMatchupUnregisteredFor((prev) => new Set(prev).add(round.id))}
+                        >
+                          + Add an unregistered player
+                        </button>
                       )}
                       <button className="link-add" onClick={() => cancelAddMatchup(round.id)}>
                         Cancel
@@ -350,45 +413,10 @@ export default function RoundsPage() {
                     {adminMode && assigningByeId === pairingBye.id ? (
                       <div style={{ marginTop: 8 }}>
                         {showAddUnregistered ? (
-                          <div className="field-row" style={{ alignItems: 'flex-end' }}>
-                            <div className="field">
-                              <label htmlFor="unreg-name">Name</label>
-                              <input
-                                id="unreg-name"
-                                value={unregName}
-                                onChange={(e) => setUnregName(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleAssignNewOpponent(round, pairingBye)}
-                                autoFocus
-                              />
-                            </div>
-                            <div className="field">
-                              <label>Membership</label>
-                              <CustomSelect
-                                value={unregMembership}
-                                options={MEMBERSHIP_OPTIONS}
-                                onChange={(v) => setUnregMembership(v as MembershipType)}
-                                triggerClassName="roster-select"
-                              />
-                            </div>
-                            <div className="field">
-                              <label htmlFor="unreg-value">Starting value</label>
-                              <input
-                                id="unreg-value"
-                                type="text"
-                                inputMode="numeric"
-                                style={{ minWidth: 80 }}
-                                value={unregValue}
-                                onChange={(e) => setUnregValue(e.target.value.replace(/[^0-9]/g, ''))}
-                                onKeyDown={(e) => e.key === 'Enter' && handleAssignNewOpponent(round, pairingBye)}
-                              />
-                            </div>
-                            <button className="btn btn-primary" onClick={() => handleAssignNewOpponent(round, pairingBye)}>
-                              Add
-                            </button>
-                            <button className="btn btn-ghost" onClick={() => setShowAddUnregistered(false)}>
-                              Cancel
-                            </button>
-                          </div>
+                          <AddUnregisteredPlayerForm
+                            onSubmit={(input) => handleAssignNewOpponent(round, pairingBye, input)}
+                            onCancel={() => setShowAddUnregistered(false)}
+                          />
                         ) : (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <PlayerAutocomplete

@@ -65,7 +65,18 @@ const addEntryBody = z.object({
 
 const tableNumbersBody = z.object({ startAt: z.number().int() });
 
-const addMatchupBody = z.object({ playerAId: z.number().int(), playerBId: z.number().int() });
+const matchupParticipantSchema = z.object({
+  playerId: z.number().int().optional(),
+  newPlayer: z
+    .object({
+      name: z.string().min(1),
+      membershipType: membershipTypeSchema.optional(),
+      startingValue: z.number().int(),
+    })
+    .optional(),
+});
+
+const addMatchupBody = z.object({ playerA: matchupParticipantSchema, playerB: matchupParticipantSchema });
 
 const assignOpponentBody = z.object({
   opponentId: z.number().int().optional(),
@@ -114,7 +125,7 @@ export async function roundsRoutes(app: FastifyInstance): Promise<void> {
   app.post('/api/admin/rounds/:id/matchups', { preHandler: requireAdmin }, async (request, reply) => {
     const params = roundIdParams.parse(request.params);
     const body = addMatchupBody.parse(request.body);
-    const entry = await addMatchup(params.id, body.playerAId, body.playerBId);
+    const entry = await addMatchup(params.id, body.playerA, body.playerB);
     reply.code(201);
     return entry;
   });
