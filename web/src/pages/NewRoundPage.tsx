@@ -218,7 +218,13 @@ export default function NewRoundPage() {
 
         <div className="whos-playing">
           <div className="prompt">Who&apos;s playing?</div>
-          <PlayerAutocomplete players={eligiblePlayers} onSelect={addSignup} showFrequentBubbles autoFocus />
+          <PlayerAutocomplete
+            players={eligiblePlayers}
+            onSelect={addSignup}
+            showFrequentBubbles
+            frequentLimit={eligiblePlayers.length}
+            autoFocus
+          />
 
           {totalCount > 0 && (
             <p

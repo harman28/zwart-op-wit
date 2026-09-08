@@ -876,7 +876,7 @@ tr.unpaired-row td:last-child {
   gap: 6px;
   justify-content: center;
   margin: 14px auto 0;
-  max-width: 480px;
+  max-width: 100%;
 }
 .frequent-bubble {
   display: inline-flex;
