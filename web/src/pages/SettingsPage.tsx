@@ -22,6 +22,7 @@ export default function SettingsPage() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const [newSeasonName, setNewSeasonName] = useState('');
+  const [topValueDraft, setTopValueDraft] = useState('');
   const [rosterText, setRosterText] = useState('');
 
   const [windowDraft, setWindowDraft] = useState('');
@@ -69,6 +70,7 @@ export default function SettingsPage() {
       setClubSettings(cs);
       setArbiterNameDraft(cs.defaultKnsbArbiterName ?? '');
       setArbiterEmailDraft(cs.defaultKnsbArbiterEmail ?? '');
+      setTopValueDraft(String(cs.defaultTopValue));
     });
     playersApi
       .listPlayers()
@@ -203,12 +205,13 @@ export default function SettingsPage() {
           ? { playerId: existing.id, startingValue: Number(value) || 0 }
           : { newPlayerName: name!, startingValue: Number(value) || 0 };
       });
-    if (!newSeasonName.trim() || roster.length === 0) {
-      setError('Season name and at least one roster line are required.');
+    const topValue = Number(topValueDraft);
+    if (!newSeasonName.trim() || roster.length === 0 || !Number.isFinite(topValue) || topValue <= 0) {
+      setError('Season name, a top value, and at least one roster line are required.');
       return;
     }
     try {
-      await seasonsApi.createSeason({ name: newSeasonName.trim(), roster });
+      await seasonsApi.createSeason({ name: newSeasonName.trim(), topValue, roster });
       setNewSeasonName('');
       setRosterText('');
       loadSeason();
@@ -374,7 +377,22 @@ export default function SettingsPage() {
                   <label htmlFor="season-name">New season name</label>
                   <input id="season-name" style={{ width: '100%' }} value={newSeasonName} onChange={(e) => setNewSeasonName(e.target.value)} />
                 </div>
+                <div className="field">
+                  <label htmlFor="top-value">Top value</label>
+                  <input
+                    id="top-value"
+                    className="settings-num"
+                    type="text"
+                    inputMode="numeric"
+                    value={topValueDraft}
+                    onChange={(e) => setTopValueDraft(e.target.value.replace(/[^0-9]/g, ''))}
+                  />
+                </div>
               </div>
+              <p style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: -8, marginBottom: 14 }}>
+                Value assigned to rank 1 each round — the whole season's point scale. Defaults to the club default
+                ({clubSettings?.defaultTopValue ?? '…'}) and can't be changed once the season starts.
+              </p>
               <div className="field" style={{ marginBottom: 14 }}>
                 <label htmlFor="roster">Roster — one per line: Name, starting value</label>
                 <textarea
