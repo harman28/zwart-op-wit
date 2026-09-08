@@ -6,9 +6,51 @@ import { replaySeason } from '../../engine/standings.js';
 import type { PairingCandidate, PastPairing } from '../../engine/types.js';
 import { HttpError } from '../../lib/errors.js';
 import { mapEnrollmentsToBaselines, mapRoundToEngine } from '../../lib/mappers.js';
-import { assertNameAvailable } from '../players/players.service.js';
 
 type RoundWithEntries = Round & { entries: RoundEntry[] };
+
+/**
+ * "Add an unregistered player" — resolves a name to a playerId enrolled in
+ * this season. A name matching an existing player (typically a former club
+ * member who was left off this season's initial roster on purpose — added
+ * to the system, but not given a ranking spot until they actually show up)
+ * reuses that identity and unarchives them, rather than rejecting the name
+ * as taken or creating a duplicate. A name matching no one creates a
+ * brand-new identity, defaulting to GUEST (not FULL) — an admin who hasn't
+ * classified them yet shouldn't have them silently counted as a full
+ * member; the players page's "rounds played this season" hint on guests is
+ * what surfaces "they should probably be upgraded now" once they've turned
+ * up a few times. An existing player's membership type is left untouched.
+ */
+async function enrollNewOrReturningPlayer(
+  seasonId: number,
+  data: { name: string; membershipType?: MembershipType; startingValue: number },
+) {
+  const name = data.name.trim();
+  const existingPlayer = await prisma.player.findFirst({ where: { name: { equals: name, mode: 'insensitive' } } });
+
+  let playerId: number;
+  if (existingPlayer) {
+    const alreadyEnrolled = await prisma.seasonEnrollment.findUnique({
+      where: { seasonId_playerId: { seasonId, playerId: existingPlayer.id } },
+    });
+    if (alreadyEnrolled) {
+      throw new HttpError(409, `${existingPlayer.name} is already enrolled in this season — pick them from the list instead`);
+    }
+    if (existingPlayer.archivedAt) {
+      await prisma.player.update({ where: { id: existingPlayer.id }, data: { archivedAt: null } });
+    }
+    playerId = existingPlayer.id;
+  } else {
+    const player = await prisma.player.create({ data: { name, membershipType: data.membershipType ?? 'GUEST' } });
+    playerId = player.id;
+  }
+
+  const enrollment = await prisma.seasonEnrollment.create({
+    data: { seasonId, playerId, startingValue: data.startingValue },
+  });
+  return { playerId, enrollment };
+}
 
 function extractPastPairings(rounds: RoundWithEntries[]): PastPairing[] {
   const result: PastPairing[] = [];
@@ -98,20 +140,11 @@ export async function createRound(seasonId: number, input: CreateRoundInput) {
   const signedUpPlayerIds = [...input.signedUpPlayerIds];
   const enrollmentByPlayer = new Map(season.enrollments.map((e) => [e.playerId, e]));
 
-  // "Add an unregistered player" — creates the club-wide identity and this
-  // season's enrollment in the same step, then folds them into signups.
-  // Defaults to GUEST (not FULL) — an admin who hasn't classified them yet
-  // shouldn't have them silently counted as a full member; the players page's
-  // "rounds played this season" hint on guests is what surfaces "they should
-  // probably be upgraded now" once they've turned up a few times.
+  // "Add an unregistered player" — folds them into signups once enrolled.
   for (const np of input.newPlayers ?? []) {
-    await assertNameAvailable(np.name);
-    const player = await prisma.player.create({ data: { name: np.name, membershipType: np.membershipType ?? 'GUEST' } });
-    const enrollment = await prisma.seasonEnrollment.create({
-      data: { seasonId, playerId: player.id, startingValue: np.startingValue },
-    });
-    enrollmentByPlayer.set(player.id, enrollment);
-    signedUpPlayerIds.push(player.id);
+    const { playerId, enrollment } = await enrollNewOrReturningPlayer(seasonId, np);
+    enrollmentByPlayer.set(playerId, enrollment);
+    signedUpPlayerIds.push(playerId);
   }
 
   for (const playerId of signedUpPlayerIds) {
@@ -235,25 +268,18 @@ export async function addEntry(
 
 export interface MatchupParticipantInput {
   playerId?: number;
-  /** Same "add an unregistered player" shape createRound offers — creates the
-   * club-wide identity and this season's enrollment in one step. */
+  /** Same "add an unregistered player" shape createRound offers. */
   newPlayer?: { name: string; membershipType?: MembershipType; startingValue: number };
 }
 
 /** Shared by addMatchup and assignOpponent: resolves a participant to a
- * playerId, creating the Player + SeasonEnrollment first if it's a
- * brand-new unregistered one. */
+ * playerId, enrolling them (new or returning) first if it's not an
+ * already-enrolled existing player. */
 async function resolveParticipant(seasonId: number, input: MatchupParticipantInput): Promise<number> {
   if (input.playerId != null) return input.playerId;
   if (!input.newPlayer) throw new HttpError(400, 'Either playerId or newPlayer is required');
-  await assertNameAvailable(input.newPlayer.name);
-  const player = await prisma.player.create({
-    data: { name: input.newPlayer.name, membershipType: input.newPlayer.membershipType ?? 'GUEST' },
-  });
-  await prisma.seasonEnrollment.create({
-    data: { seasonId, playerId: player.id, startingValue: input.newPlayer.startingValue },
-  });
-  return player.id;
+  const { playerId } = await enrollNewOrReturningPlayer(seasonId, input.newPlayer);
+  return playerId;
 }
 
 /** Shared by addMatchup and assignOpponent: who plays which color is never an
