@@ -7,8 +7,9 @@ export function listSeasons() {
 export function getSeason(id: number) {
   return api.get<Season>(`/seasons/${id}`);
 }
-export function getLeaderboard(id: number) {
-  return api.get<Leaderboard>(`/seasons/${id}/leaderboard`);
+export function getLeaderboard(id: number, afterRound?: number) {
+  const query = afterRound != null ? `?afterRound=${afterRound}` : '';
+  return api.get<Leaderboard>(`/seasons/${id}/leaderboard${query}`);
 }
 export function getPublicRounds(id: number) {
   return api.get<Round[]>(`/seasons/${id}/rounds`);

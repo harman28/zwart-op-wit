@@ -123,8 +123,14 @@ export async function updateSeasonSettings(
  * which already carry full player relations — standings need player
  * name/membershipType enriched in here rather than requiring visitors to
  * hit the admin-only players list to resolve a bare playerId.
+ *
+ * Pass `afterRound` to get the standings as they stood right after that
+ * published round, instead of the season's current state — the engine
+ * already computes every round's snapshot in one replay (`byRound`), so this
+ * is just picking a different snapshot out of the same result, not a
+ * separate/heavier computation.
  */
-export async function getLiveLeaderboard(seasonId: number) {
+export async function getLiveLeaderboard(seasonId: number, afterRound?: number) {
   const season = await prisma.season.findUnique({
     where: { id: seasonId },
     include: { enrollments: { include: { player: true } } },
@@ -151,10 +157,18 @@ export async function getLiveLeaderboard(seasonId: number) {
     rounds: roundsForReplay.map(mapRoundToEngine),
   });
 
+  let snapshot = replay.current;
+  if (afterRound != null) {
+    const found = replay.byRound.find((r) => r.roundNumber === afterRound);
+    if (!found) throw new HttpError(404, `Round ${afterRound} has no published standings in this season`);
+    snapshot = found;
+  }
+
   const playerById = new Map(season.enrollments.map((e) => [e.playerId, e.player]));
   return {
-    ...replay.current,
-    standings: replay.current.standings.map((s) => {
+    ...snapshot,
+    availableRounds: publishedRounds.map((r) => r.number),
+    standings: snapshot.standings.map((s) => {
       const player = playerById.get(s.playerId);
       return { ...s, name: player?.name ?? `#${s.playerId}`, membershipType: player?.membershipType ?? 'FULL' };
     }),

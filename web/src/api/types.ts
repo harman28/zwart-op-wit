@@ -52,6 +52,8 @@ export interface Standing {
 export interface Leaderboard {
   roundNumber: number;
   standings: Standing[];
+  /** Published round numbers this season has, ascending — for a "view as of round X" picker. */
+  availableRounds: number[];
 }
 
 export interface PlayerRef {
