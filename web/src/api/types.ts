@@ -13,6 +13,7 @@ export interface Player {
   knsbId: string | null;
   federation: string | null;
   createdAt: string;
+  archivedAt: string | null;
   roundsThisSeason?: number;
 }
 
