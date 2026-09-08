@@ -1,5 +1,5 @@
 import { api } from './client.js';
-import type { Leaderboard, MembershipType, Player, PlayerHistory, Round, Season } from './types.js';
+import type { Gender, Leaderboard, MembershipType, Player, PlayerHistory, Round, Season } from './types.js';
 
 export function listSeasons() {
   return api.get<Season[]>('/seasons');
@@ -44,6 +44,9 @@ export interface RosterEntryInput {
   playerId?: number;
   newPlayerName?: string;
   membershipType?: MembershipType;
+  knsbId?: string;
+  gender?: Gender;
+  federation?: string;
   startingValue: number;
 }
 
