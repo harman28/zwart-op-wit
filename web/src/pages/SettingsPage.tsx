@@ -5,7 +5,7 @@ import * as backupApi from '../api/backup.js';
 import * as playersApi from '../api/players.js';
 import * as seasonsApi from '../api/seasons.js';
 import * as settingsApi from '../api/settings.js';
-import type { ClubSettings, Player, Round, Season } from '../api/types.js';
+import type { ClubSettings, Gender, MembershipType, Player, Round, Season } from '../api/types.js';
 import CustomSelect from '../components/CustomSelect.js';
 import Modal from '../components/Modal.js';
 import PasswordVisibilityToggle from '../components/PasswordVisibilityToggle.js';
@@ -191,24 +191,42 @@ export default function SettingsPage() {
 
   async function handleStartSeason() {
     setError(null);
+    const topValue = Number(topValueDraft);
+    if (!newSeasonName.trim() || !Number.isFinite(topValue) || topValue <= 0) {
+      setError('Season name and a top value are required.');
+      return;
+    }
+    const lines = rosterText
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
+    if (lines.length === 0) {
+      setError('At least one roster line is required.');
+      return;
+    }
     // Reuse an existing player by name (case-insensitive) if one exists —
     // otherwise this silently creates a duplicate identity instead of
     // enrolling the player the admin already added on the Players page.
-    const roster = rosterText
-      .split('\n')
-      .map((l) => l.trim())
-      .filter(Boolean)
-      .map((line) => {
-        const [name, value] = line.split(',').map((s) => s.trim());
-        const existing = existingPlayers.find((p) => p.name.toLowerCase() === name!.toLowerCase());
-        return existing
-          ? { playerId: existing.id, startingValue: Number(value) || 0 }
-          : { newPlayerName: name!, startingValue: Number(value) || 0 };
-      });
-    const topValue = Number(topValueDraft);
-    if (!newSeasonName.trim() || roster.length === 0 || !Number.isFinite(topValue) || topValue <= 0) {
-      setError('Season name, a top value, and at least one roster line are required.');
-      return;
+    // Starting value comes from last season's rank, not typed directly —
+    // same value = topValue - rank + 1 the engine uses everywhere else.
+    const roster: seasonsApi.RosterEntryInput[] = [];
+    for (const line of lines) {
+      const [rankText, name, knsbId, gender, federation] = line.split(',').map((s) => s.trim());
+      const rank = Number(rankText);
+      if (!name || !Number.isFinite(rank)) {
+        setError(`Couldn't read this roster line as "Rank, Name, KNSB ID (optional), Gender (optional), FED (optional)": "${line}"`);
+        return;
+      }
+      const startingValue = topValue - rank + 1;
+      const existing = existingPlayers.find((p) => p.name.toLowerCase() === name.toLowerCase());
+      const extra = {
+        // No KNSB ID means they're not registered with the federation — internal-only.
+        membershipType: (knsbId ? 'FULL' : 'INTERNAL_ONLY') as MembershipType,
+        knsbId: knsbId || undefined,
+        gender: gender === 'M' || gender === 'V' || gender === 'X' ? (gender as Gender) : undefined,
+        federation: federation ? federation.toUpperCase() : undefined,
+      };
+      roster.push(existing ? { playerId: existing.id, startingValue, ...extra } : { newPlayerName: name, startingValue, ...extra });
     }
     try {
       await seasonsApi.createSeason({ name: newSeasonName.trim(), topValue, roster });
@@ -394,12 +412,15 @@ export default function SettingsPage() {
                 ({clubSettings?.defaultTopValue ?? '…'}) and can't be changed once the season starts.
               </p>
               <div className="field" style={{ marginBottom: 14 }}>
-                <label htmlFor="roster">Roster — one per line: Name, starting value</label>
+                <label htmlFor="roster">
+                  Roster — one per line: Rank, Name, KNSB ID (optional), Gender (optional: M/V/X), FED (optional)
+                </label>
                 <textarea
                   id="roster"
                   rows={5}
                   value={rosterText}
                   onChange={(e) => setRosterText(e.target.value)}
+                  placeholder={'1, Joppe, 8938402, M, NED\n2, Bodhi'}
                   style={{
                     fontFamily: 'var(--font-mono)',
                     fontSize: 13,
@@ -411,6 +432,11 @@ export default function SettingsPage() {
                   }}
                 />
               </div>
+              <p style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: -8, marginBottom: 14 }}>
+                Rank is last season's final placing (1 = top) — starting value is computed as top value − rank + 1.
+                A KNSB ID makes them Full membership; no KNSB ID makes them Internal-only. A name matching an
+                existing player reuses that player (unarchiving them if needed) instead of creating a duplicate.
+              </p>
               <button className="btn btn-primary" onClick={handleStartSeason} disabled={!existingPlayersLoaded}>
                 {existingPlayersLoaded ? 'Start season' : 'Loading players…'}
               </button>

@@ -1,4 +1,4 @@
-import type { MembershipType, Player, Season, SeasonEnrollment } from '@prisma/client';
+import type { Gender, MembershipType, Player, Season, SeasonEnrollment } from '@prisma/client';
 import { prisma } from '../../db/client.js';
 import { playerGameHistory, replaySeason } from '../../engine/standings.js';
 import { HttpError } from '../../lib/errors.js';
@@ -24,6 +24,9 @@ export interface RosterEntryInput {
   playerId?: number;
   newPlayerName?: string;
   membershipType?: MembershipType;
+  knsbId?: string;
+  gender?: Gender;
+  federation?: string;
   startingValue: number;
 }
 
@@ -70,13 +73,45 @@ export async function createSeason(input: CreateSeasonInput) {
         if (playerId == null) {
           if (!entry.newPlayerName) throw new HttpError(400, 'Each roster entry needs a playerId or a newPlayerName');
           const player = await tx.player.create({
-            data: { name: entry.newPlayerName, membershipType: entry.membershipType ?? 'FULL' },
+            data: {
+              name: entry.newPlayerName,
+              membershipType: entry.membershipType ?? 'FULL',
+              knsbId: entry.knsbId,
+              gender: entry.gender,
+              federation: entry.federation,
+            },
           });
           playerId = player.id;
+        } else {
+          // Reusing an existing player by name — being on this season's
+          // roster means they're actively playing again, so clear any
+          // archived flag rather than leaving them hidden from the Players
+          // tab while still turning up as pickable in round pairings. Also
+          // apply this roster line's membership type and KNSB details —
+          // this import is the corrected record, not just a supplement.
+          await tx.player.update({
+            where: { id: playerId },
+            data: {
+              archivedAt: null,
+              membershipType: entry.membershipType,
+              knsbId: entry.knsbId,
+              gender: entry.gender,
+              federation: entry.federation,
+            },
+          });
         }
         enrollments.push({ seasonId: season.id, playerId, startingValue: entry.startingValue });
       }
       await tx.seasonEnrollment.createMany({ data: enrollments });
+      // A new season's roster is the complete "who's actually playing now"
+      // list — anyone active but left off it didn't make the cut, so archive
+      // them rather than leaving stale members cluttering the Players tab.
+      // Already-archived players are left alone (keeps their original
+      // archive date instead of bumping it to now).
+      await tx.player.updateMany({
+        where: { id: { notIn: enrollments.map((e) => e.playerId) }, archivedAt: null },
+        data: { archivedAt: new Date() },
+      });
       return season;
     },
     { timeout: 15000 },

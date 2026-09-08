@@ -24,6 +24,9 @@ const rosterEntrySchema = z.object({
   playerId: z.number().int().optional(),
   newPlayerName: z.string().min(1).optional(),
   membershipType: z.enum(['FULL', 'INTERNAL_ONLY', 'GUEST']).optional(),
+  knsbId: z.string().min(1).optional(),
+  gender: z.enum(['M', 'V', 'X']).optional(),
+  federation: z.string().min(1).optional(),
   startingValue: z.number().int(),
 });
 const createSeasonBody = z.object({
