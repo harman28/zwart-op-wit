@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
-import * as playersApi from '../api/players.js';
 import * as roundsApi from '../api/rounds.js';
 import * as seasonsApi from '../api/seasons.js';
 import type { MembershipType, Player } from '../api/types.js';
@@ -87,6 +86,8 @@ export default function NewRoundPage() {
         restoredRef.current = true;
         setSeasonId(s.id); // set last — triggers the save-effect only once restoration is done
 
+        seasonsApi.getEnrolledPlayers(s.id).then(setAllPlayers).catch(() => {});
+
         // A sensible starting value for a brand-new player: the midpoint of
         // the current spread of values, not a one-size-fits-all constant —
         // a season valuing its top player at 200 shouldn't default newcomers to 100.
@@ -103,7 +104,6 @@ export default function NewRoundPage() {
         }
       })
       .catch((err: unknown) => setError(errorMessage(err)));
-    playersApi.listPlayers().then(setAllPlayers).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -218,7 +218,13 @@ export default function NewRoundPage() {
 
         <div className="whos-playing">
           <div className="prompt">Who&apos;s playing?</div>
-          <PlayerAutocomplete players={eligiblePlayers} onSelect={addSignup} showFrequentBubbles autoFocus />
+          <PlayerAutocomplete
+            players={eligiblePlayers}
+            onSelect={addSignup}
+            showFrequentBubbles
+            frequentLimit={eligiblePlayers.length}
+            autoFocus
+          />
 
           {totalCount > 0 && (
             <p

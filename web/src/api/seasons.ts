@@ -1,5 +1,5 @@
 import { api } from './client.js';
-import type { Leaderboard, MembershipType, Round, Season } from './types.js';
+import type { Leaderboard, MembershipType, Player, PlayerHistory, Round, Season } from './types.js';
 
 export function listSeasons() {
   return api.get<Season[]>('/seasons');
@@ -7,11 +7,15 @@ export function listSeasons() {
 export function getSeason(id: number) {
   return api.get<Season>(`/seasons/${id}`);
 }
-export function getLeaderboard(id: number) {
-  return api.get<Leaderboard>(`/seasons/${id}/leaderboard`);
+export function getLeaderboard(id: number, afterRound?: number) {
+  const query = afterRound != null ? `?afterRound=${afterRound}` : '';
+  return api.get<Leaderboard>(`/seasons/${id}/leaderboard${query}`);
 }
 export function getPublicRounds(id: number) {
   return api.get<Round[]>(`/seasons/${id}/rounds`);
+}
+export function getPlayerHistory(seasonId: number, playerId: number) {
+  return api.get<PlayerHistory>(`/seasons/${seasonId}/players/${playerId}/history`);
 }
 
 export function getCurrentSeason() {
@@ -27,6 +31,13 @@ export function getNextRoundNumber(seasonId: number) {
 /** Same published rounds as the public feed, but every entry kind (incl. REGULAR_BYE). */
 export function getAdminRounds(id: number) {
   return api.get<Round[]>(`/admin/seasons/${id}/rounds`);
+}
+
+/** Players actually enrolled in this season — the valid pool for "who's playing?",
+ * swap-opponent, and assign-opponent pickers (never the club-wide players list,
+ * which spans every season a player has ever touched). */
+export function getEnrolledPlayers(id: number) {
+  return api.get<Player[]>(`/admin/seasons/${id}/players`);
 }
 
 export interface RosterEntryInput {

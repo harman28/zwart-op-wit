@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import * as playersApi from '../api/players.js';
 import * as roundsApi from '../api/rounds.js';
 import * as seasonsApi from '../api/seasons.js';
 import type { ExternalOutcome, Player, RoundAdmin, RoundEntry } from '../api/types.js';
@@ -33,13 +32,13 @@ export default function ReviewPairingsPage() {
           .filter((e) => e.kind === 'GAME')
           .sort((a, b) => (a.tableNumber ?? 0) - (b.tableNumber ?? 0))[0]?.tableNumber;
         if (firstTable != null) setStartAtDraft(String(firstTable));
+        seasonsApi.getEnrolledPlayers(r.seasonId).then(setAllPlayers).catch(() => {});
       })
       .catch((err: unknown) => setError(errorMessage(err)));
   }
 
   useEffect(() => {
     load();
-    playersApi.listPlayers().then(setAllPlayers).catch(() => {});
     seasonsApi
       .getCurrentSeason()
       .then((s) => setCountExternalMatches(s.countExternalMatches))

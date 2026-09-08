@@ -90,6 +90,40 @@ export interface SeasonReplayResult {
   current: RoundStandingsSnapshot;
 }
 
+/**
+ * One round's worth of history for a single player, from their perspective —
+ * opponent/color resolved instead of raw white/black ids. `points` is that
+ * entry's contribution to the player's CURRENT score: since every round
+ * rebases every historical contribution under that round's opponent values
+ * (see replaySeason), this is computed under the season's final values, not
+ * whatever the entry looked like the round it was played — so a player's
+ * `points` summed across their whole history always equals their current score.
+ */
+export interface PlayerHistoryEntry {
+  roundNumber: number;
+  kind: RoundEntryInput['kind'];
+  /** GAME only. */
+  opponentId: number | null;
+  /** GAME only. */
+  color: 'WHITE' | 'BLACK' | null;
+  /** GAME only, null until a result is entered. */
+  result: GameOutcome | null;
+  /** EXTERNAL_BYE only, null until an outcome is entered. */
+  externalOutcome: ExternalOutcome | null;
+  isSelfArranged: boolean;
+  points: number;
+}
+
+export interface PlayerGameHistory {
+  /** The player's own "current value" term feeding into their score — not
+   * their preseason baseline once they've played at least one round. This is
+   * what makes `startingValue + sum(entries.points)` equal their current
+   * score exactly, same as the engine's own score formula. */
+  startingValue: number;
+  /** Oldest round first. */
+  entries: PlayerHistoryEntry[];
+}
+
 export interface PairingCandidate {
   playerId: number;
   rank: number;

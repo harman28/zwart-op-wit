@@ -23,11 +23,11 @@ feedback loop has the URL.
 
 Three separate environments now exist, each with its own Postgres:
 - **production** — Railway `production` environment (`web`, `server`,
-  `Postgres`). Live at https://zwartopwit.up.railway.app. Only ever touched
-  by a deliberate `railway up` deploy once something's been verified
-  elsewhere. This is what Jim uses — **as of 2026-07-09, Jim has been handed
-  production and demoed it to the full club board; treat it as frozen/
-  hands-off until told otherwise, staging work continues as normal.**
+  `Postgres`). Live at https://zwartopwit.up.railway.app. As of 2026-09-08,
+  Jim is actively running the real internal competition here (Season 9,
+  round 1 played 2026-09-08) — no longer sample data, treat it as live and
+  handle with care. Deploys are now git-based (see below), not a manual
+  `railway up`.
 - **staging** — Railway `staging` environment, a full duplicate of
   production's service shape with its own empty Postgres. Live at
   https://zwartopklad.up.railway.app ("klad" = Dutch for a rough draft, a
@@ -41,6 +41,24 @@ Three separate environments now exist, each with its own Postgres:
   conflicting with real state. CI (`.github/workflows/ci.yml`) uses its own
   ephemeral Postgres service container, same schema, zero shared state with
   local test runs.
+
+### Deploy pipeline (2026-09-08)
+
+Branch-based, no one needs standing Railway access to ship a change:
+
+- Feature branches merge (via PR) into `staging`. Railway's `staging`
+  environment auto-deploys on every push to `staging` — this is how
+  https://zwartopklad.up.railway.app gets updated now, replacing the old
+  manual `railway up`.
+- Once a change has been reviewed and tested on staging, `staging` merges
+  (via PR) into `main`. Railway's `production` environment auto-deploys on
+  every push to `main`.
+- **One-time setup still needed on Railway's side** (Jim or whoever owns the
+  Railway project): for both the `staging` and `production` environments'
+  `web` and `server` services, set Source → connect the GitHub repo and pin
+  the branch (`staging` branch for the staging environment's services,
+  `main` for production's), with auto-deploy on push enabled. Until that's
+  done, pushes to these branches don't deploy anywhere by themselves.
 
 ## ~~4. Light mode~~ — done (2026-07-09)
 

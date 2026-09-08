@@ -76,3 +76,11 @@ export async function updatePlayer(
   if (data.name) await assertNameAvailable(data.name, id);
   return prisma.player.update({ where: { id }, data });
 }
+
+export async function archivePlayer(id: number) {
+  return prisma.player.update({ where: { id }, data: { archivedAt: new Date() } });
+}
+
+export async function unarchivePlayer(id: number) {
+  return prisma.player.update({ where: { id }, data: { archivedAt: null } });
+}

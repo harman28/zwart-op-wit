@@ -20,10 +20,11 @@ interface Props {
 /**
  * One autocomplete, used everywhere a player needs picking: "Who's playing?",
  * assigning an opponent, and swapping a paired player. Always shows
- * suggestions (even before typing — sorted by this-season frequency so the
- * regulars are right there), Enter selects an unambiguous match, and focus
- * returns to the input after a pick so a whole roster can be typed in one
- * unbroken flow.
+ * suggestions (even before typing — alphabetically, so a name's position
+ * never shifts as other players get picked and drop out of the list, which
+ * matters a lot when you're tapping through a long list on a phone), Enter
+ * selects an unambiguous match, and focus returns to the input after a pick
+ * so a whole roster can be typed in one unbroken flow.
  */
 export default function PlayerAutocomplete({
   players,
@@ -62,13 +63,13 @@ export default function PlayerAutocomplete({
       // When frequent bubbles are shown, they already cover "nothing typed yet" —
       // showing the dropdown too would visually overlap and duplicate them.
       if (showFrequentBubbles) return [];
-      return [...players].sort((a, b) => (b.roundsThisSeason ?? 0) - (a.roundsThisSeason ?? 0)).slice(0, 8);
+      return [...players].sort((a, b) => a.name.localeCompare(b.name)).slice(0, 8);
     }
     return players.filter((p) => p.name.toLowerCase().includes(q)).slice(0, 8);
   }, [query, players, showFrequentBubbles]);
 
   const frequent = useMemo(
-    () => [...players].sort((a, b) => (b.roundsThisSeason ?? 0) - (a.roundsThisSeason ?? 0)).slice(0, frequentLimit),
+    () => [...players].sort((a, b) => a.name.localeCompare(b.name)).slice(0, frequentLimit),
     [players, frequentLimit],
   );
 
