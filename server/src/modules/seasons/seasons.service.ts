@@ -1,4 +1,4 @@
-import type { MembershipType, Player, Season, SeasonEnrollment } from '@prisma/client';
+import type { Gender, MembershipType, Player, Season, SeasonEnrollment } from '@prisma/client';
 import { prisma } from '../../db/client.js';
 import { playerGameHistory, replaySeason } from '../../engine/standings.js';
 import { HttpError } from '../../lib/errors.js';
@@ -24,6 +24,9 @@ export interface RosterEntryInput {
   playerId?: number;
   newPlayerName?: string;
   membershipType?: MembershipType;
+  knsbId?: string;
+  gender?: Gender;
+  federation?: string;
   startingValue: number;
 }
 
@@ -70,9 +73,22 @@ export async function createSeason(input: CreateSeasonInput) {
         if (playerId == null) {
           if (!entry.newPlayerName) throw new HttpError(400, 'Each roster entry needs a playerId or a newPlayerName');
           const player = await tx.player.create({
-            data: { name: entry.newPlayerName, membershipType: entry.membershipType ?? 'FULL' },
+            data: {
+              name: entry.newPlayerName,
+              membershipType: entry.membershipType ?? 'FULL',
+              knsbId: entry.knsbId,
+              gender: entry.gender,
+              federation: entry.federation,
+            },
           });
           playerId = player.id;
+        } else if (entry.knsbId != null || entry.gender != null || entry.federation != null) {
+          // Reusing an existing player by name — fill in whatever KNSB details
+          // this roster line carries rather than requiring a separate edit.
+          await tx.player.update({
+            where: { id: playerId },
+            data: { knsbId: entry.knsbId, gender: entry.gender, federation: entry.federation },
+          });
         }
         enrollments.push({ seasonId: season.id, playerId, startingValue: entry.startingValue });
       }
