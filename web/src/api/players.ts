@@ -25,3 +25,9 @@ export function updatePlayer(
 ) {
   return api.patch<Player>(`/admin/players/${id}`, data);
 }
+export function archivePlayer(id: number) {
+  return api.post<Player>(`/admin/players/${id}/archive`);
+}
+export function unarchivePlayer(id: number) {
+  return api.post<Player>(`/admin/players/${id}/unarchive`);
+}

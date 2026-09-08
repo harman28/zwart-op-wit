@@ -26,6 +26,80 @@ const MEMBERSHIP_SHORT: Record<MembershipType, string> = {
   GUEST: 'Guest',
 };
 
+function PlayerListTable({ list, onSelect }: { list: Player[]; onSelect: (p: Player) => void }) {
+  return (
+    <>
+      <div className="card players-table-wrap">
+        <table className="roster">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Membership</th>
+              <th>Notes</th>
+              <th>Federation</th>
+              <th>KNSB ID</th>
+              <th>Gender</th>
+            </tr>
+          </thead>
+          <tbody>
+            {list.map((p) => (
+              <tr key={p.id} className="player-row" onClick={() => onSelect(p)}>
+                <td>{p.name}</td>
+                <td>
+                  <span className={MEMBERSHIP_BADGE_CLASS[p.membershipType]}>{MEMBERSHIP_SHORT[p.membershipType]}</span>
+                </td>
+                <td className="note-cell">
+                  {p.notes || <span style={{ color: 'var(--muted)' }}>—</span>}
+                  {p.membershipType === 'GUEST' &&
+                    (() => {
+                      const rounds = p.roundsThisSeason ?? 0;
+                      const dueForUpgrade = rounds >= 3;
+                      return (
+                        <div className={dueForUpgrade ? 'guest-count-hint due' : 'guest-count-hint'}>
+                          {rounds} round(s) played this season
+                          {dueForUpgrade && ' — consider upgrading'}
+                        </div>
+                      );
+                    })()}
+                </td>
+                <td className="note-cell">{p.federation ?? '—'}</td>
+                <td className="note-cell">{p.knsbId ?? '—'}</td>
+                <td className="note-cell">{p.gender ?? '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="player-cards">
+        {list.map((p) => (
+          <div key={p.id} className={`player-card ${p.membershipType.toLowerCase()}`} onClick={() => onSelect(p)}>
+            <div className="player-card-top">
+              <span className="player-card-name">{p.name}</span>
+              <span className={MEMBERSHIP_BADGE_CLASS[p.membershipType]}>{MEMBERSHIP_SHORT[p.membershipType]}</span>
+            </div>
+            {p.notes && <div className="player-card-notes">{p.notes}</div>}
+            <div className="player-card-meta">
+              Fed {p.federation ?? '—'} · KNSB {p.knsbId ?? '—'} · Gender {p.gender ?? '—'}
+            </div>
+            {p.membershipType === 'GUEST' &&
+              (() => {
+                const rounds = p.roundsThisSeason ?? 0;
+                const dueForUpgrade = rounds >= 3;
+                return (
+                  <div className={dueForUpgrade ? 'guest-count-hint due' : 'guest-count-hint'}>
+                    {rounds} round(s) played this season
+                    {dueForUpgrade && ' — consider upgrading'}
+                  </div>
+                );
+              })()}
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
 interface EditDraft {
   name: string;
   membershipType: MembershipType;
@@ -60,6 +134,8 @@ export default function PlayersPage() {
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const [draft, setDraft] = useState<EditDraft | null>(null);
   const [saving, setSaving] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   function load() {
     setLoading(true);
@@ -73,7 +149,9 @@ export default function PlayersPage() {
   useEffect(load, []);
 
   const query = search.trim().toLowerCase();
-  const filteredPlayers = query ? players.filter((p) => p.name.toLowerCase().includes(query)) : players;
+  const matching = query ? players.filter((p) => p.name.toLowerCase().includes(query)) : players;
+  const filteredPlayers = matching.filter((p) => !p.archivedAt);
+  const archivedPlayers = matching.filter((p) => p.archivedAt);
 
   async function handleAdd() {
     if (!newName.trim()) return;
@@ -126,6 +204,23 @@ export default function PlayersPage() {
   function closeEdit() {
     setEditingPlayer(null);
     setDraft(null);
+  }
+
+  async function handleToggleArchive() {
+    if (!editingPlayer) return;
+    setArchiving(true);
+    setError(null);
+    try {
+      const updated = editingPlayer.archivedAt
+        ? await playersApi.unarchivePlayer(editingPlayer.id)
+        : await playersApi.archivePlayer(editingPlayer.id);
+      setPlayers((prev) => [...prev.filter((p) => p.id !== updated.id), updated].sort((a, b) => a.name.localeCompare(b.name)));
+      closeEdit();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setArchiving(false);
+    }
   }
 
   async function handleSaveEdit() {
@@ -237,81 +332,28 @@ export default function PlayersPage() {
         <p style={{ color: 'var(--muted)' }}>Loading…</p>
       ) : (
         <>
-          <div className="card players-table-wrap">
-            <table className="roster">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Membership</th>
-                  <th>Notes</th>
-                  <th>Federation</th>
-                  <th>KNSB ID</th>
-                  <th>Gender</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredPlayers.map((p) => (
-                  <tr key={p.id} className="player-row" onClick={() => openEdit(p)}>
-                    <td>{p.name}</td>
-                    <td>
-                      <span className={MEMBERSHIP_BADGE_CLASS[p.membershipType]}>{MEMBERSHIP_SHORT[p.membershipType]}</span>
-                    </td>
-                    <td className="note-cell">
-                      {p.notes || <span style={{ color: 'var(--muted)' }}>—</span>}
-                      {p.membershipType === 'GUEST' &&
-                        (() => {
-                          const rounds = p.roundsThisSeason ?? 0;
-                          const dueForUpgrade = rounds >= 3;
-                          return (
-                            <div className={dueForUpgrade ? 'guest-count-hint due' : 'guest-count-hint'}>
-                              {rounds} round(s) played this season
-                              {dueForUpgrade && ' — consider upgrading'}
-                            </div>
-                          );
-                        })()}
-                    </td>
-                    <td className="note-cell">{p.federation ?? '—'}</td>
-                    <td className="note-cell">{p.knsbId ?? '—'}</td>
-                    <td className="note-cell">{p.gender ?? '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <PlayerListTable list={filteredPlayers} onSelect={openEdit} />
 
           {filteredPlayers.length === 0 && (
-            <p style={{ color: 'var(--muted)' }}>No players match "{search.trim()}".</p>
+            <p style={{ color: 'var(--muted)' }}>No active players match "{search.trim()}".</p>
           )}
 
-          <div className="player-cards">
-            {filteredPlayers.map((p) => (
-              <div
-                key={p.id}
-                className={`player-card ${p.membershipType.toLowerCase()}`}
-                onClick={() => openEdit(p)}
+          {archivedPlayers.length > 0 && (
+            <div style={{ marginTop: 28 }}>
+              <button
+                className="btn btn-ghost"
+                onClick={() => setShowArchived((v) => !v)}
+                aria-expanded={showArchived}
               >
-                <div className="player-card-top">
-                  <span className="player-card-name">{p.name}</span>
-                  <span className={MEMBERSHIP_BADGE_CLASS[p.membershipType]}>{MEMBERSHIP_SHORT[p.membershipType]}</span>
+                {showArchived ? '▾' : '▸'} Archived ({archivedPlayers.length})
+              </button>
+              {showArchived && (
+                <div style={{ marginTop: 12, opacity: 0.75 }}>
+                  <PlayerListTable list={archivedPlayers} onSelect={openEdit} />
                 </div>
-                {p.notes && <div className="player-card-notes">{p.notes}</div>}
-                <div className="player-card-meta">
-                  Fed {p.federation ?? '—'} · KNSB {p.knsbId ?? '—'} · Gender {p.gender ?? '—'}
-                </div>
-                {p.membershipType === 'GUEST' &&
-                  (() => {
-                    const rounds = p.roundsThisSeason ?? 0;
-                    const dueForUpgrade = rounds >= 3;
-                    return (
-                      <div className={dueForUpgrade ? 'guest-count-hint due' : 'guest-count-hint'}>
-                        {rounds} round(s) played this season
-                        {dueForUpgrade && ' — consider upgrading'}
-                      </div>
-                    );
-                  })()}
-              </div>
-            ))}
-          </div>
+              )}
+            </div>
+          )}
         </>
       )}
 
@@ -364,9 +406,14 @@ export default function PlayersPage() {
               />
             </div>
           </div>
-          <button className="btn btn-primary" onClick={handleSaveEdit} disabled={saving} style={{ marginTop: 4 }}>
-            {saving ? 'Saving…' : 'Save'}
-          </button>
+          <div className="btn-row" style={{ marginTop: 4, justifyContent: 'space-between' }}>
+            <button className="btn btn-ghost" onClick={handleToggleArchive} disabled={archiving}>
+              {archiving ? 'Saving…' : editingPlayer.archivedAt ? 'Restore player' : 'Archive player'}
+            </button>
+            <button className="btn btn-primary" onClick={handleSaveEdit} disabled={saving}>
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+          </div>
         </Modal>
       )}
     </div>

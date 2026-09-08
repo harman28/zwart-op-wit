@@ -47,6 +47,10 @@ model Player {
   membershipType MembershipType @default(FULL)
   notes          String?
   createdAt      DateTime       @default(now())
+  // Set when an admin archives someone who hasn't shown up in a long time —
+  // purely a display/list-declutter flag, never touches enrollments or
+  // historical RoundEntry rows. Null means active.
+  archivedAt     DateTime?
 
   // KNSB rating-list submission fields. Always admin-editable regardless of
   // whether a player self-reports them — "some people don't know their own

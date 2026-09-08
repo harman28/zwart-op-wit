@@ -1,7 +1,14 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requireAdmin } from '../../lib/requireAdmin.js';
-import { createPlayer, importPlayers, listPlayersWithGuestCounts, updatePlayer } from './players.service.js';
+import {
+  archivePlayer,
+  createPlayer,
+  importPlayers,
+  listPlayersWithGuestCounts,
+  unarchivePlayer,
+  updatePlayer,
+} from './players.service.js';
 
 const membershipTypeSchema = z.enum(['FULL', 'INTERNAL_ONLY', 'GUEST']);
 const genderSchema = z.enum(['M', 'V', 'X']);
@@ -49,4 +56,12 @@ export async function playersRoutes(app: FastifyInstance): Promise<void> {
     const body = updateBody.parse(request.body);
     return updatePlayer(params.id, body);
   });
+
+  app.post('/api/admin/players/:id/archive', { preHandler: requireAdmin }, async (request) =>
+    archivePlayer(idParams.parse(request.params).id),
+  );
+
+  app.post('/api/admin/players/:id/unarchive', { preHandler: requireAdmin }, async (request) =>
+    unarchivePlayer(idParams.parse(request.params).id),
+  );
 }
