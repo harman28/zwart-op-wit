@@ -148,6 +148,18 @@ async function getSeasonWithEnrollments(seasonId: number): Promise<SeasonWithEnr
 }
 
 /**
+ * Players actually enrolled in this season — the only valid pool for "who's
+ * playing?", swap-opponent, and assign-opponent pickers. The club-wide
+ * players list spans every season a player has ever touched, so using it
+ * directly there let an admin pick someone this season never enrolled,
+ * which the round-creation/matchup endpoints then correctly reject.
+ */
+export async function getEnrolledPlayers(seasonId: number) {
+  const season = await getSeasonWithEnrollments(seasonId);
+  return season.enrollments.map((e) => e.player);
+}
+
+/**
  * The live leaderboard: replayed from this season's *published* rounds only.
  * This is a public, no-auth endpoint, so — unlike the round-pairing views,
  * which already carry full player relations — standings need player
