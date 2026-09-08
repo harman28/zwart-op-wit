@@ -103,6 +103,15 @@ export async function createSeason(input: CreateSeasonInput) {
         enrollments.push({ seasonId: season.id, playerId, startingValue: entry.startingValue });
       }
       await tx.seasonEnrollment.createMany({ data: enrollments });
+      // A new season's roster is the complete "who's actually playing now"
+      // list — anyone active but left off it didn't make the cut, so archive
+      // them rather than leaving stale members cluttering the Players tab.
+      // Already-archived players are left alone (keeps their original
+      // archive date instead of bumping it to now).
+      await tx.player.updateMany({
+        where: { id: { notIn: enrollments.map((e) => e.playerId) }, archivedAt: null },
+        data: { archivedAt: new Date() },
+      });
       return season;
     },
     { timeout: 15000 },
