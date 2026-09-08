@@ -59,7 +59,10 @@ export function buildApp() {
       return reply.code(400).send({ error: 'Invalid request', issues: error.issues });
     }
     // Prisma "record not found" etc. surface as plain errors from the service layer in a few
-    // places — treat anything else as a 500 rather than leaking internals.
+    // places — treat anything else as a 500 rather than leaking internals. The client only
+    // ever gets the generic message, but this still needs to land in the deploy logs somewhere
+    // — logger: false above means Fastify itself won't do it.
+    console.error(error);
     return reply.code(500).send({ error: 'Internal server error' });
   });
 
