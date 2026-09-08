@@ -4,7 +4,14 @@ function formatNumber(n: number): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, '');
 }
 
-export default function LeaderboardView({ standings }: { standings: Standing[] }) {
+export default function LeaderboardView({
+  standings,
+  onSelectPlayer,
+}: {
+  standings: Standing[];
+  /** Omit to fall back to plain (non-clickable) names. */
+  onSelectPlayer?: (playerId: number) => void;
+}) {
   return (
     <>
       <div className="board-wrap">
@@ -29,7 +36,13 @@ export default function LeaderboardView({ standings }: { standings: Standing[] }
               <tr key={s.playerId}>
                 <td className={s.rank === 1 ? 'rank-num rank-1' : 'rank-num'}>{s.rank}</td>
                 <td className="player-name">
-                  {s.name}
+                  {onSelectPlayer ? (
+                    <button className="editable-name" onClick={() => onSelectPlayer(s.playerId)}>
+                      {s.name}
+                    </button>
+                  ) : (
+                    s.name
+                  )}
                   {s.membershipType === 'GUEST' && <span className="badge">Guest</span>}
                 </td>
                 <td className="num score-cell">{formatNumber(s.score)}</td>
@@ -53,7 +66,15 @@ export default function LeaderboardView({ standings }: { standings: Standing[] }
             <div className="lb-card-top">
               <div className="lb-card-left">
                 <span className={s.rank === 1 ? 'rank-num rank-1' : 'rank-num'}>{s.rank}</span>
-                <span className="player-name">{s.name}</span>
+                <span className="player-name">
+                  {onSelectPlayer ? (
+                    <button className="editable-name" onClick={() => onSelectPlayer(s.playerId)}>
+                      {s.name}
+                    </button>
+                  ) : (
+                    s.name
+                  )}
+                </span>
               </div>
               <span className="lb-card-record">
                 <span className="rec-w">{s.wins}W</span>

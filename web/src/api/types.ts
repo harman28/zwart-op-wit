@@ -61,6 +61,35 @@ export interface PlayerRef {
   name: string;
 }
 
+export interface PlayerHistoryEntry {
+  roundNumber: number;
+  kind: EntryKind;
+  /** GAME only. */
+  opponentId: number | null;
+  /** GAME only. */
+  opponentName: string | null;
+  /** GAME only. */
+  color: 'WHITE' | 'BLACK' | null;
+  /** GAME only, null until a result is entered. */
+  result: GameResult | null;
+  /** EXTERNAL_BYE only, null until an outcome is entered. */
+  externalOutcome: ExternalOutcome | null;
+  isSelfArranged: boolean;
+  /** This entry's contribution to the player's CURRENT score — every entry is
+   * rebased under the season's latest values, so summing these plus
+   * startingValue equals the player's current total exactly. */
+  points: number;
+}
+
+export interface PlayerHistory {
+  playerId: number;
+  name: string;
+  /** Plus the sum of every entry's points, equals the player's current score. */
+  startingValue: number;
+  /** Oldest round first. */
+  entries: PlayerHistoryEntry[];
+}
+
 export interface RoundEntry {
   id: number;
   kind: EntryKind;

@@ -3,6 +3,7 @@ import * as seasonsApi from '../api/seasons.js';
 import type { Leaderboard } from '../api/types.js';
 import CustomSelect from '../components/CustomSelect.js';
 import LeaderboardView from '../components/LeaderboardView.js';
+import PlayerHistoryModal from '../components/PlayerHistoryModal.js';
 import { useLatestSeason } from '../hooks/useSeason.js';
 import { errorMessage } from '../lib/format.js';
 
@@ -14,6 +15,7 @@ export default function LeaderboardPage() {
   const [asOfRound, setAsOfRound] = useState<string>(CURRENT);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!season) {
@@ -78,7 +80,10 @@ export default function LeaderboardPage() {
         )}
       </div>
       {error && <div className="error-banner">{error}</div>}
-      {leaderboard && <LeaderboardView standings={leaderboard.standings} />}
+      {leaderboard && <LeaderboardView standings={leaderboard.standings} onSelectPlayer={setSelectedPlayerId} />}
+      {selectedPlayerId != null && (
+        <PlayerHistoryModal seasonId={season.id} playerId={selectedPlayerId} onClose={() => setSelectedPlayerId(null)} />
+      )}
     </div>
   );
 }

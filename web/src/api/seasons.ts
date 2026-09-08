@@ -1,5 +1,5 @@
 import { api } from './client.js';
-import type { Leaderboard, MembershipType, Round, Season } from './types.js';
+import type { Leaderboard, MembershipType, PlayerHistory, Round, Season } from './types.js';
 
 export function listSeasons() {
   return api.get<Season[]>('/seasons');
@@ -13,6 +13,9 @@ export function getLeaderboard(id: number, afterRound?: number) {
 }
 export function getPublicRounds(id: number) {
   return api.get<Round[]>(`/seasons/${id}/rounds`);
+}
+export function getPlayerHistory(seasonId: number, playerId: number) {
+  return api.get<PlayerHistory>(`/seasons/${seasonId}/players/${playerId}/history`);
 }
 
 export function getCurrentSeason() {

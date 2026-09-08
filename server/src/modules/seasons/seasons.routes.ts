@@ -8,6 +8,7 @@ import {
   getCurrentSeason,
   getLiveLeaderboard,
   getNextRoundNumber,
+  getPlayerHistory,
   getPublicRounds,
   getSeason,
   listSeasons,
@@ -15,6 +16,7 @@ import {
 } from './seasons.service.js';
 
 const idParams = z.object({ id: z.coerce.number().int() });
+const playerIdParams = z.object({ id: z.coerce.number().int(), playerId: z.coerce.number().int() });
 const leaderboardQuery = z.object({ afterRound: z.coerce.number().int().optional() });
 
 const rosterEntrySchema = z.object({
@@ -51,6 +53,10 @@ export async function seasonsRoutes(app: FastifyInstance): Promise<void> {
     return getLiveLeaderboard(params.id, query.afterRound);
   });
   app.get('/api/seasons/:id/rounds', async (request) => getPublicRounds(idParams.parse(request.params).id));
+  app.get('/api/seasons/:id/players/:playerId/history', async (request) => {
+    const params = playerIdParams.parse(request.params);
+    return getPlayerHistory(params.id, params.playerId);
+  });
 
   // Admin
   app.get('/api/admin/seasons/current', { preHandler: requireAdmin }, async () => getCurrentSeason());

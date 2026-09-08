@@ -1,6 +1,6 @@
-import type { MembershipType } from '@prisma/client';
+import type { MembershipType, Player, Season, SeasonEnrollment } from '@prisma/client';
 import { prisma } from '../../db/client.js';
-import { replaySeason } from '../../engine/standings.js';
+import { playerGameHistory, replaySeason } from '../../engine/standings.js';
 import { HttpError } from '../../lib/errors.js';
 import { mapEnrollmentsToBaselines, mapRoundToEngine } from '../../lib/mappers.js';
 
@@ -117,6 +117,36 @@ export async function updateSeasonSettings(
   return prisma.season.update({ where: { id }, data });
 }
 
+type SeasonWithEnrollments = Season & { enrollments: (SeasonEnrollment & { player: Player })[] };
+
+/**
+ * Shared by getLiveLeaderboard and getPlayerHistory: this season's published
+ * rounds, with EXTERNAL_BYE entries dropped when the season has external
+ * matches switched off — that toggle is meant to control whether external
+ * results affect scoring at all, not just whether they're visible, so they
+ * come out here before anything gets replayed, rather than relying on
+ * query-level filtering elsewhere (which only hides them).
+ */
+async function getPublishedRoundsForReplay(season: SeasonWithEnrollments) {
+  const publishedRounds = await prisma.round.findMany({
+    where: { seasonId: season.id, isPublished: true },
+    include: { entries: true },
+    orderBy: { number: 'asc' },
+  });
+  return season.countExternalMatches
+    ? publishedRounds
+    : publishedRounds.map((r) => ({ ...r, entries: r.entries.filter((e) => e.kind !== 'EXTERNAL_BYE') }));
+}
+
+async function getSeasonWithEnrollments(seasonId: number): Promise<SeasonWithEnrollments> {
+  const season = await prisma.season.findUnique({
+    where: { id: seasonId },
+    include: { enrollments: { include: { player: true } } },
+  });
+  if (!season) throw new HttpError(404, `Season ${seasonId} not found`);
+  return season;
+}
+
 /**
  * The live leaderboard: replayed from this season's *published* rounds only.
  * This is a public, no-auth endpoint, so — unlike the round-pairing views,
@@ -131,25 +161,8 @@ export async function updateSeasonSettings(
  * separate/heavier computation.
  */
 export async function getLiveLeaderboard(seasonId: number, afterRound?: number) {
-  const season = await prisma.season.findUnique({
-    where: { id: seasonId },
-    include: { enrollments: { include: { player: true } } },
-  });
-  if (!season) throw new HttpError(404, `Season ${seasonId} not found`);
-
-  const publishedRounds = await prisma.round.findMany({
-    where: { seasonId, isPublished: true },
-    include: { entries: true },
-    orderBy: { number: 'asc' },
-  });
-
-  // The countExternalMatches toggle is meant to control whether external
-  // results affect scoring at all, not just whether they're visible — drop
-  // them here before replay when the season has the setting off, rather than
-  // relying on query-level filtering elsewhere (which only hides them).
-  const roundsForReplay = season.countExternalMatches
-    ? publishedRounds
-    : publishedRounds.map((r) => ({ ...r, entries: r.entries.filter((e) => e.kind !== 'EXTERNAL_BYE') }));
+  const season = await getSeasonWithEnrollments(seasonId);
+  const roundsForReplay = await getPublishedRoundsForReplay(season);
 
   const replay = replaySeason({
     topValue: season.topValue,
@@ -167,11 +180,46 @@ export async function getLiveLeaderboard(seasonId: number, afterRound?: number) 
   const playerById = new Map(season.enrollments.map((e) => [e.playerId, e.player]));
   return {
     ...snapshot,
-    availableRounds: publishedRounds.map((r) => r.number),
+    availableRounds: roundsForReplay.map((r) => r.number),
     standings: snapshot.standings.map((s) => {
       const player = playerById.get(s.playerId);
       return { ...s, name: player?.name ?? `#${s.playerId}`, membershipType: player?.membershipType ?? 'FULL' };
     }),
+  };
+}
+
+/**
+ * One enrolled player's round-by-round history for this season — who they
+ * played, the result, and how many points it's currently worth. `startingValue`
+ * plus every entry's `points` adds up to exactly their current score (see
+ * playerGameHistory — every entry is rebased under the season's final values,
+ * not frozen as it looked the round it happened). Public, no-auth — same
+ * visibility as the leaderboard itself.
+ */
+export async function getPlayerHistory(seasonId: number, playerId: number) {
+  const season = await getSeasonWithEnrollments(seasonId);
+  const playerById = new Map(season.enrollments.map((e) => [e.playerId, e.player]));
+  const player = playerById.get(playerId);
+  if (!player) throw new HttpError(404, `Player ${playerId} is not enrolled in season ${seasonId}`);
+
+  const roundsForReplay = await getPublishedRoundsForReplay(season);
+  const history = playerGameHistory(
+    {
+      topValue: season.topValue,
+      baselines: mapEnrollmentsToBaselines(season.enrollments),
+      rounds: roundsForReplay.map(mapRoundToEngine),
+    },
+    playerId,
+  );
+
+  return {
+    playerId,
+    name: player.name,
+    startingValue: history.startingValue,
+    entries: history.entries.map((e) => ({
+      ...e,
+      opponentName: e.opponentId != null ? (playerById.get(e.opponentId)?.name ?? `#${e.opponentId}`) : null,
+    })),
   };
 }
 

@@ -528,6 +528,30 @@ tr.unpaired-row td:last-child {
   color: var(--draw);
 }
 
+/* Win/draw/loss from ONE player's own perspective — distinct from
+   .result-pill's white/black-piece framing, which says nothing about who won. */
+.outcome-pill {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 5px;
+  white-space: nowrap;
+  display: inline-block;
+}
+.outcome-pill.win {
+  background: color-mix(in srgb, var(--win) 18%, transparent);
+  color: var(--win);
+}
+.outcome-pill.draw {
+  background: color-mix(in srgb, var(--draw) 18%, transparent);
+  color: var(--draw);
+}
+.outcome-pill.loss {
+  background: color-mix(in srgb, var(--loss) 18%, transparent);
+  color: var(--loss);
+}
+
 .unpaired-flag {
   display: flex;
   align-items: center;
