@@ -4,12 +4,33 @@ import {
   REGULAR_BYE_FRACTION,
 } from './constants.js';
 import type {
+  PlayerGameHistory,
+  PlayerHistoryEntry,
   PlayerStanding,
   RoundEntryInput,
   RoundStandingsSnapshot,
   SeasonReplayInput,
   SeasonReplayResult,
 } from './types.js';
+
+/** One historical entry plus which round it belongs to — `historyEntries` needs
+ * the round number attached so a per-player ledger entry can report it. */
+interface DatedEntry {
+  roundNumber: number;
+  entry: RoundEntryInput;
+}
+
+/** A single (playerId, entry) contribution, captured while replaying the
+ * round whose valueOf/historyEntries produced it. Rebuilt fresh every round,
+ * so after the full replay it holds only the LAST round's ledger — i.e. every
+ * historical entry's contribution as rebased under the season's final values,
+ * matching `current`'s scores exactly. */
+interface LedgerRow {
+  playerId: number;
+  roundNumber: number;
+  entry: RoundEntryInput;
+  points: number;
+}
 
 interface Counters {
   played: number;
@@ -152,7 +173,20 @@ function contributionsFor(
   throw new Error('unreachable');
 }
 
-export function replaySeason(input: SeasonReplayInput): SeasonReplayResult {
+interface ReplayCore {
+  byRound: RoundStandingsSnapshot[];
+  current: RoundStandingsSnapshot;
+  /** Every historical entry's per-player contribution, as rebased under the
+   * FINAL round's values (see LedgerRow) — empty when there are no rounds. */
+  ledger: LedgerRow[];
+  /** Per player, the "own current-snapshot value" term from step 4 above, as
+   * of the FINAL round replayed (raw baseline for anyone who never debuted).
+   * This plus the sum of that player's `ledger` points equals their current
+   * score exactly — it's the piece playerGameHistory needs to make that add up. */
+  ownValues: Map<number, number>;
+}
+
+function runReplay(input: SeasonReplayInput): ReplayCore {
   const { topValue, baselines, rounds } = input;
 
   const baselineMap = new Map<number, number>();
@@ -183,15 +217,19 @@ export function replaySeason(input: SeasonReplayInput): SeasonReplayResult {
       selfArrangedUsed: 0,
     }));
     const snapshot: RoundStandingsSnapshot = { roundNumber: 0, standings };
-    return { byRound: [], current: snapshot };
+    return { byRound: [], current: snapshot, ledger: [], ownValues: new Map(baselineMap) };
   }
 
   const enteringValue = new Map<number, number>();
   const counters = new Map<number, Counters>();
   /** Current known rank order (best first); doubles as the tie-break for the next stable sort. */
   let order: number[] = [];
-  const historyEntries: RoundEntryInput[] = [];
+  const historyEntries: DatedEntry[] = [];
   const byRound: RoundStandingsSnapshot[] = [];
+  /** Rebuilt every round; only the last round's survives past the loop. */
+  let ledger: LedgerRow[] = [];
+  /** Same idea as `ledger`: rebuilt every round, only the last round's values matter. */
+  let lastRoundOwnValues = new Map<number, number>();
 
   for (const round of sortedRounds) {
     // 1. Debuts: first appearance ever uses the raw baseline, never rank-normalized.
@@ -217,18 +255,26 @@ export function replaySeason(input: SeasonReplayInput): SeasonReplayResult {
     }
 
     // 3. This round's entries join the full history used to recompute every score from scratch.
-    historyEntries.push(...round.entries);
+    for (const entry of round.entries) historyEntries.push({ roundNumber: round.number, entry });
 
     // 4. Score = own current-snapshot value + every historical contribution, all under the SAME
     //    current-snapshot (this is what makes past rounds rebase when a player's rank has since moved).
     const valueOf = (playerId: number) => enteringValue.get(playerId)!;
     const score = new Map<number, number>();
-    for (const playerId of order) score.set(playerId, valueOf(playerId));
-    for (const entry of historyEntries) {
+    const roundOwnValues = new Map<number, number>();
+    for (const playerId of order) {
+      score.set(playerId, valueOf(playerId));
+      roundOwnValues.set(playerId, valueOf(playerId));
+    }
+    lastRoundOwnValues = roundOwnValues;
+    const roundLedger: LedgerRow[] = [];
+    for (const { roundNumber, entry } of historyEntries) {
       for (const [playerId, points] of contributionsFor(entry, valueOf)) {
         score.set(playerId, score.get(playerId)! + points);
+        roundLedger.push({ playerId, roundNumber, entry, points });
       }
     }
+    ledger = roundLedger;
 
     // 5. Stable sort by score desc — ties keep the player's rank from entering this round.
     order = [...order].sort((a, b) => score.get(b)! - score.get(a)!);
@@ -259,5 +305,58 @@ export function replaySeason(input: SeasonReplayInput): SeasonReplayResult {
     byRound.push({ roundNumber: round.number, standings });
   }
 
-  return { byRound, current: byRound[byRound.length - 1]! };
+  // Anyone who never actually debuted (enrolled but never appeared in a round
+  // entry) falls back to their raw baseline — same convention the zero-rounds
+  // branch above uses for "current score with nothing played yet".
+  const ownValues = new Map(baselineMap);
+  for (const [playerId, value] of lastRoundOwnValues) ownValues.set(playerId, value);
+
+  return { byRound, current: byRound[byRound.length - 1]!, ledger, ownValues };
+}
+
+export function replaySeason(input: SeasonReplayInput): SeasonReplayResult {
+  const { byRound, current } = runReplay(input);
+  return { byRound, current };
+}
+
+/**
+ * One player's round-by-round history — who they played, what happened, and
+ * how many points it's currently worth. Every `points` value (and
+ * `startingValue`) is computed under the season's final rebase (see
+ * LedgerRow), so `startingValue + sum(entries.points)` equals their current
+ * score exactly.
+ */
+export function playerGameHistory(input: SeasonReplayInput, playerId: number): PlayerGameHistory {
+  const { ledger, ownValues } = runReplay(input);
+  const entries = ledger
+    .filter((row) => row.playerId === playerId)
+    .map((row): PlayerHistoryEntry => {
+      const { entry } = row;
+      if (entry.kind === 'GAME') {
+        const isWhite = entry.whitePlayerId === playerId;
+        return {
+          roundNumber: row.roundNumber,
+          kind: 'GAME',
+          opponentId: isWhite ? entry.blackPlayerId : entry.whitePlayerId,
+          color: isWhite ? 'WHITE' : 'BLACK',
+          result: entry.result,
+          externalOutcome: null,
+          isSelfArranged: entry.isSelfArranged,
+          points: row.points,
+        };
+      }
+      return {
+        roundNumber: row.roundNumber,
+        kind: entry.kind,
+        opponentId: null,
+        color: null,
+        result: null,
+        externalOutcome: entry.kind === 'EXTERNAL_BYE' ? entry.outcome : null,
+        isSelfArranged: false,
+        points: row.points,
+      };
+    })
+    .sort((a, b) => a.roundNumber - b.roundNumber);
+
+  return { startingValue: ownValues.get(playerId) ?? 0, entries };
 }
