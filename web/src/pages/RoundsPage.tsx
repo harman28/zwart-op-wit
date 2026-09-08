@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import * as playersApi from '../api/players.js';
 import * as roundsApi from '../api/rounds.js';
 import * as seasonsApi from '../api/seasons.js';
-import type { ExternalOutcome, GameResult, MembershipType, Player, Round, RoundEntry } from '../api/types.js';
+import type { ExternalOutcome, GameResult, MembershipType, Player, Round, RoundEntry, Season } from '../api/types.js';
 import AddUnregisteredPlayerForm from '../components/AddUnregisteredPlayerForm.js';
+import CustomSelect from '../components/CustomSelect.js';
 import ExternalSection from '../components/ExternalSection.js';
 import PlayerAutocomplete from '../components/PlayerAutocomplete.js';
 import ResultToggle from '../components/ResultToggle.js';
@@ -29,7 +30,7 @@ function toMatchupParticipantInput(p: MatchupParticipant): roundsApi.MatchupPart
 }
 
 export default function RoundsPage() {
-  const { season, loading: seasonLoading } = useLatestSeason();
+  const { season: latestSeason, loading: seasonLoading } = useLatestSeason();
   const { isAdmin } = useAdmin();
   const [rounds, setRounds] = useState<Round[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,6 +38,10 @@ export default function RoundsPage() {
   const [openRoundIds, setOpenRoundIds] = useState<Set<number>>(new Set());
   const [adminMode, setAdminMode] = useState(false);
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
+  const [allSeasons, setAllSeasons] = useState<Season[]>([]);
+  // null = follow the latest season, same as a visitor sees. Only admins can set this.
+  const [selectedSeasonId, setSelectedSeasonId] = useState<number | null>(null);
+  const season = selectedSeasonId != null ? (allSeasons.find((s) => s.id === selectedSeasonId) ?? latestSeason) : latestSeason;
   const [editingCell, setEditingCell] = useState<{ entryId: number; side: 'white' | 'black' } | null>(null);
   const [assigningByeId, setAssigningByeId] = useState<number | null>(null);
   const [showAddUnregistered, setShowAddUnregistered] = useState(false);
@@ -75,6 +80,15 @@ export default function RoundsPage() {
 
   useEffect(() => {
     if (adminMode) playersApi.listPlayers().then(setAllPlayers).catch(() => {});
+  }, [adminMode]);
+
+  useEffect(() => {
+    seasonsApi.listSeasons().then(setAllSeasons).catch(() => {});
+  }, []);
+
+  // Leaving admin view always drops back to whatever a visitor would see.
+  useEffect(() => {
+    if (!adminMode) setSelectedSeasonId(null);
   }, [adminMode]);
 
   function toggleRound(id: number) {
@@ -234,13 +248,23 @@ export default function RoundsPage() {
   return (
     <div className="app">
       {isAdmin && (
-        <div className="mode-toggle" style={{ marginBottom: 18 }}>
-          <button className={!adminMode ? 'on' : ''} onClick={() => setAdminMode(false)}>
-            Visitor view
-          </button>
-          <button className={adminMode ? 'on' : ''} onClick={() => setAdminMode(true)}>
-            Admin view
-          </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 18 }}>
+          <div className="mode-toggle">
+            <button className={!adminMode ? 'on' : ''} onClick={() => setAdminMode(false)}>
+              Visitor view
+            </button>
+            <button className={adminMode ? 'on' : ''} onClick={() => setAdminMode(true)}>
+              Admin view
+            </button>
+          </div>
+          {adminMode && allSeasons.length > 1 && (
+            <CustomSelect
+              value={selectedSeasonId != null ? String(selectedSeasonId) : String(latestSeason?.id ?? '')}
+              options={allSeasons.map((s) => ({ value: String(s.id), label: s.name }))}
+              onChange={(v) => setSelectedSeasonId(Number(v))}
+              triggerClassName="roster-select"
+            />
+          )}
         </div>
       )}
 
