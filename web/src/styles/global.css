@@ -1335,4 +1335,13 @@ footer.note {
   .player-cards {
     display: flex;
   }
+  /* Bigger tap targets for a long roster of quick-add bubbles — the default
+     size is fine on desktop with a mouse, but too small to tap reliably. */
+  .frequent-bubbles {
+    gap: 8px;
+  }
+  .frequent-bubble {
+    padding: 9px 14px;
+    font-size: 14px;
+  }
 }
