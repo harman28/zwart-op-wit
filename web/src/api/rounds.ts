@@ -56,9 +56,14 @@ export function deleteEntry(roundId: number, entryId: number) {
   return api.delete(`/admin/rounds/${roundId}/entries/${entryId}`);
 }
 
-/** Colors are never an admin choice — the server computes who plays white/black. */
-export function addMatchup(roundId: number, playerAId: number, playerBId: number) {
-  return api.post(`/admin/rounds/${roundId}/matchups`, { playerAId, playerBId });
+export type MatchupParticipant =
+  | { playerId: number }
+  | { newPlayer: { name: string; membershipType?: MembershipType; startingValue: number } };
+
+/** Colors are never an admin choice — the server computes who plays white/black.
+ * Either participant can be an existing player or a brand-new unregistered one. */
+export function addMatchup(roundId: number, playerA: MatchupParticipant, playerB: MatchupParticipant) {
+  return api.post(`/admin/rounds/${roundId}/matchups`, { playerA, playerB });
 }
 
 /** Turns a pairing bye into a game — table number and color are computed
