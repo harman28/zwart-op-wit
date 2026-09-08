@@ -6,6 +6,7 @@ import {
   endSeason,
   getAdminRounds,
   getCurrentSeason,
+  getEnrolledPlayers,
   getLiveLeaderboard,
   getNextRoundNumber,
   getPlayerHistory,
@@ -63,6 +64,10 @@ export async function seasonsRoutes(app: FastifyInstance): Promise<void> {
 
   app.get('/api/admin/seasons/:id/rounds', { preHandler: requireAdmin }, async (request) =>
     getAdminRounds(idParams.parse(request.params).id),
+  );
+
+  app.get('/api/admin/seasons/:id/players', { preHandler: requireAdmin }, async (request) =>
+    getEnrolledPlayers(idParams.parse(request.params).id),
   );
 
   app.post('/api/admin/seasons', { preHandler: requireAdmin }, async (request, reply) => {

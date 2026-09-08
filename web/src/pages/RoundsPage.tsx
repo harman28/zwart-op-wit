@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import * as playersApi from '../api/players.js';
 import * as roundsApi from '../api/rounds.js';
 import * as seasonsApi from '../api/seasons.js';
 import type { ExternalOutcome, GameResult, MembershipType, Player, Round, RoundEntry, Season } from '../api/types.js';
@@ -79,8 +78,8 @@ export default function RoundsPage() {
   }, [season, isAdmin, adminMode]);
 
   useEffect(() => {
-    if (adminMode) playersApi.listPlayers().then(setAllPlayers).catch(() => {});
-  }, [adminMode]);
+    if (adminMode && season) seasonsApi.getEnrolledPlayers(season.id).then(setAllPlayers).catch(() => {});
+  }, [adminMode, season]);
 
   useEffect(() => {
     seasonsApi.listSeasons().then(setAllSeasons).catch(() => {});
