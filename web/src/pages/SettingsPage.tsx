@@ -5,7 +5,7 @@ import * as backupApi from '../api/backup.js';
 import * as playersApi from '../api/players.js';
 import * as seasonsApi from '../api/seasons.js';
 import * as settingsApi from '../api/settings.js';
-import type { ClubSettings, Gender, Player, Round, Season } from '../api/types.js';
+import type { ClubSettings, Gender, MembershipType, Player, Round, Season } from '../api/types.js';
 import CustomSelect from '../components/CustomSelect.js';
 import Modal from '../components/Modal.js';
 import PasswordVisibilityToggle from '../components/PasswordVisibilityToggle.js';
@@ -220,6 +220,8 @@ export default function SettingsPage() {
       const startingValue = topValue - rank + 1;
       const existing = existingPlayers.find((p) => p.name.toLowerCase() === name.toLowerCase());
       const extra = {
+        // No KNSB ID means they're not registered with the federation — internal-only.
+        membershipType: (knsbId ? 'FULL' : 'INTERNAL_ONLY') as MembershipType,
         knsbId: knsbId || undefined,
         gender: gender === 'M' || gender === 'V' || gender === 'X' ? (gender as Gender) : undefined,
         federation: federation ? federation.toUpperCase() : undefined,
@@ -432,7 +434,8 @@ export default function SettingsPage() {
               </div>
               <p style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: -8, marginBottom: 14 }}>
                 Rank is last season's final placing (1 = top) — starting value is computed as top value − rank + 1.
-                A name matching an existing player reuses that player instead of creating a duplicate.
+                A KNSB ID makes them Full membership; no KNSB ID makes them Internal-only. A name matching an
+                existing player reuses that player (unarchiving them if needed) instead of creating a duplicate.
               </p>
               <button className="btn btn-primary" onClick={handleStartSeason} disabled={!existingPlayersLoaded}>
                 {existingPlayersLoaded ? 'Start season' : 'Loading players…'}

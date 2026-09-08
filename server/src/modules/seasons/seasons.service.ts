@@ -87,10 +87,17 @@ export async function createSeason(input: CreateSeasonInput) {
           // roster means they're actively playing again, so clear any
           // archived flag rather than leaving them hidden from the Players
           // tab while still turning up as pickable in round pairings. Also
-          // fill in whatever KNSB details this line carries.
+          // apply this roster line's membership type and KNSB details —
+          // this import is the corrected record, not just a supplement.
           await tx.player.update({
             where: { id: playerId },
-            data: { archivedAt: null, knsbId: entry.knsbId, gender: entry.gender, federation: entry.federation },
+            data: {
+              archivedAt: null,
+              membershipType: entry.membershipType,
+              knsbId: entry.knsbId,
+              gender: entry.gender,
+              federation: entry.federation,
+            },
           });
         }
         enrollments.push({ seasonId: season.id, playerId, startingValue: entry.startingValue });
