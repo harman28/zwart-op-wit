@@ -82,12 +82,15 @@ export async function createSeason(input: CreateSeasonInput) {
             },
           });
           playerId = player.id;
-        } else if (entry.knsbId != null || entry.gender != null || entry.federation != null) {
-          // Reusing an existing player by name — fill in whatever KNSB details
-          // this roster line carries rather than requiring a separate edit.
+        } else {
+          // Reusing an existing player by name — being on this season's
+          // roster means they're actively playing again, so clear any
+          // archived flag rather than leaving them hidden from the Players
+          // tab while still turning up as pickable in round pairings. Also
+          // fill in whatever KNSB details this line carries.
           await tx.player.update({
             where: { id: playerId },
-            data: { knsbId: entry.knsbId, gender: entry.gender, federation: entry.federation },
+            data: { archivedAt: null, knsbId: entry.knsbId, gender: entry.gender, federation: entry.federation },
           });
         }
         enrollments.push({ seasonId: season.id, playerId, startingValue: entry.startingValue });
