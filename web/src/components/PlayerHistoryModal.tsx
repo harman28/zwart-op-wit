@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import * as seasonsApi from '../api/seasons.js';
-import type { GameResult, PlayerHistory, PlayerHistoryEntry } from '../api/types.js';
+import type { GameResult, PlayerHistory, PlayerHistoryEntry, Standing } from '../api/types.js';
 import { errorMessage } from '../lib/format.js';
 import Modal from './Modal.js';
+import { RecordLine, SecondaryStatsLine } from './StandingStats.js';
 
 function formatNumber(n: number): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, '');
@@ -42,10 +43,17 @@ const OUTCOME_CLASS: Record<'W' | 'D' | 'L', string> = { W: 'win', D: 'draw', L:
 export default function PlayerHistoryModal({
   seasonId,
   playerId,
+  standing,
   onClose,
 }: {
   seasonId: number;
   playerId: number;
+  /** The player's current-season standing, if the caller already has it
+   * (e.g. from the leaderboard it was opened from) — shows the same
+   * record/Played/Win/Color/Odd summary as the leaderboard card, above the
+   * round-by-round breakdown. Omit if unavailable; the modal still works,
+   * just without that summary. */
+  standing?: Standing;
   onClose: () => void;
 }) {
   const [history, setHistory] = useState<PlayerHistory | null>(null);
@@ -62,6 +70,12 @@ export default function PlayerHistoryModal({
 
   return (
     <Modal title={title} onClose={onClose}>
+      {standing && (
+        <div className="modal-player-summary">
+          <RecordLine standing={standing} />
+          <SecondaryStatsLine standing={standing} />
+        </div>
+      )}
       {error && <div className="error-banner">{error}</div>}
       {!history && !error && <p style={{ color: 'var(--muted)' }}>Loading…</p>}
       {history && (
@@ -82,12 +96,13 @@ export default function PlayerHistoryModal({
                 </thead>
                 <tbody>
                   <tr>
-                    <td className="rank-num" colSpan={2}>
-                      Starting value
-                    </td>
                     <td></td>
-                    <td className="num value-cell"></td>
-                    <td className="num score-cell">{formatNumber(history.startingValue)}</td>
+                    <td></td>
+                    <td></td>
+                    <td colSpan={2} className="num score-cell" style={{ whiteSpace: 'nowrap' }}>
+                      <span className="modal-starting-value-label">Starting value</span>{' '}
+                      {formatNumber(history.startingValue)}
+                    </td>
                   </tr>
                   {(() => {
                     let running = history.startingValue;

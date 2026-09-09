@@ -315,12 +315,27 @@ table.board tbody tr:nth-child(even) {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.lb-card-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  justify-self: end;
+}
 .lb-card-top .lb-points {
   font-family: var(--font-mono);
   font-weight: 700;
   color: var(--accent);
   font-size: 15px;
-  justify-self: end;
+}
+/* Points' quieter companion — no label needed (same as Points, rank, and
+   the W/D/L record all going label-free); parentheses alone say "this is
+   the secondary number" without taking up the word "Value". */
+.lb-card-value {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--muted);
 }
 .lb-card-record {
   justify-self: center;
@@ -344,17 +359,94 @@ table.board tbody tr:nth-child(even) {
 }
 .lb-card-stats {
   margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
   font-size: 11px;
   color: var(--muted);
   font-family: var(--font-mono);
   /* Never wrap to a second line — on a narrow phone with an extreme value
-     (e.g. "Color -20"), scroll horizontally within this one line instead. */
-  white-space: nowrap;
+     (e.g. "Color -20"), scroll horizontally within this one line instead.
+     Flex items don't wrap by default, so this just needs the scroll. */
   overflow-x: auto;
   scrollbar-width: none;
 }
 .lb-card-stats::-webkit-scrollbar {
   display: none;
+}
+.lb-card-stats-sep {
+  flex: none;
+}
+.lb-card-winbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}
+/* A single secondary attribute like Played/Color/Odd, so it gets the same
+   footprint as them — a hint of fill length, not a headline visual. */
+.lb-card-tiny-bar {
+  display: inline-block;
+  width: 20px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+  flex: none;
+}
+.lb-card-tiny-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--win);
+  border-radius: 2px;
+}
+/* Color is a status (more games as White vs Black), not a performance
+   judgment — represented with the real piece colors already used for game
+   results elsewhere, not win/loss green/red. */
+.lb-color-swatch {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+.lb-color-swatch-white {
+  background: var(--result-white-bg);
+  border: 1px solid var(--result-black-border);
+}
+.lb-color-swatch-black {
+  background: var(--result-black-bg);
+  border: 1px solid var(--result-black-border);
+}
+/* Desktop table's Color column: a fixed-width slot for the swatch (present
+   or not) plus a fixed-width number keeps every row's swatch and digits
+   lined up vertically — without these, "-1" being wider than "0" or "1"
+   shifted the swatch left/right row to row. */
+table.board td.color-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.lb-color-swatch-slot {
+  display: inline-flex;
+  width: 7px;
+  flex: none;
+}
+.lb-color-number {
+  min-width: 14px;
+  text-align: right;
+}
+/* Desktop table's Win% column: same tiny bar as the mobile card instead of
+   a bare number, sized to fit the column rather than the card's full
+   width. */
+table.board td.winpct-cell {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+table.board td.winpct-cell .lb-card-tiny-bar {
+  width: 28px;
+  margin-left: auto;
 }
 
 /* ---- rounds accordion ---- */
@@ -502,6 +594,19 @@ table.board tbody tr:nth-child(even) {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+/* Same record + secondary-stats pairing as the leaderboard's mobile card,
+   reused here so the modal shows the same at-a-glance summary before the
+   round-by-round breakdown. */
+.modal-player-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.modal-starting-value-label {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--muted);
 }
 @keyframes modal-fade-in {
   from {

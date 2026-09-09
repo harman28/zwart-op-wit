@@ -102,7 +102,12 @@ export default function LeaderboardPage() {
       {error && <div className="error-banner">{error}</div>}
       {leaderboard && <LeaderboardView standings={leaderboard.standings} onSelectPlayer={setSelectedPlayerId} />}
       {selectedPlayerId != null && (
-        <PlayerHistoryModal seasonId={season.id} playerId={selectedPlayerId} onClose={() => setSelectedPlayerId(null)} />
+        <PlayerHistoryModal
+          seasonId={season.id}
+          playerId={selectedPlayerId}
+          standing={leaderboard?.standings.find((s) => s.playerId === selectedPlayerId)}
+          onClose={() => setSelectedPlayerId(null)}
+        />
       )}
     </div>
   );

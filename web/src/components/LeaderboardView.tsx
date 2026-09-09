@@ -1,4 +1,5 @@
 import type { Standing } from '../api/types.js';
+import { ColorSwatch, RecordLine, SecondaryStatsLine } from './StandingStats.js';
 
 function formatNumber(n: number): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, '');
@@ -58,8 +59,17 @@ export default function LeaderboardView({
                 <td className="num value-cell win-count">{s.wins}</td>
                 <td className="num value-cell draw-count">{s.draws}</td>
                 <td className="num value-cell loss-count">{s.losses}</td>
-                <td className="num value-cell">{formatNumber(s.winPercent)}</td>
-                <td className="num value-cell">{s.colorNumber}</td>
+                <td className="num value-cell winpct-cell">
+                  <span className="lb-card-tiny-bar">
+                    <span className="lb-card-tiny-bar-fill" style={{ width: `${s.winPercent}%` }} />
+                  </span>
+                </td>
+                <td className="num value-cell color-cell">
+                  <span className="lb-color-swatch-slot">
+                    <ColorSwatch n={s.colorNumber} />
+                  </span>
+                  <span className="lb-color-number">{s.colorNumber}</span>
+                </td>
                 <td className="num value-cell">{s.pairingByeUsed ? 1 : 0}</td>
               </tr>
             ))}
@@ -83,19 +93,13 @@ export default function LeaderboardView({
                   )}
                 </span>
               </div>
-              <span className="lb-card-record">
-                <span className="rec-w">{s.wins}W</span>
-                <span className="rec-sep">/</span>
-                <span className="rec-d">{s.draws}D</span>
-                <span className="rec-sep">/</span>
-                <span className="rec-l">{s.losses}L</span>
-              </span>
-              <span className="lb-points">{formatNumber(s.score)}</span>
+              <RecordLine standing={s} />
+              <div className="lb-card-right">
+                <span className="lb-points">{formatNumber(s.score)}</span>
+                <span className="lb-card-value">({s.value})</span>
+              </div>
             </div>
-            <div className="lb-card-stats">
-              Value {s.value} · Played {s.played} · {formatNumber(s.winPercent)}% · Color {s.colorNumber} · Odd{' '}
-              {s.pairingByeUsed ? 1 : 0}
-            </div>
+            <SecondaryStatsLine standing={s} />
           </div>
         ))}
       </div>
