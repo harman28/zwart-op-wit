@@ -724,28 +724,34 @@ table.pairings td:nth-child(4) {
 .result-toggle button:last-child {
   border-radius: 0 6px 6px 0;
 }
-/* White/black-win fills are deliberately constant across themes (real chess
-   piece colors, not page colors) — which means white-win's light fill can
-   nearly vanish against light mode's own light page, and black-win's dark
-   fill can nearly vanish against dark mode's own dark page. This outline is
-   the same accent color regardless of which result is selected, so it
-   marks "selected" independent of how well that fill happens to contrast
-   with the current theme's background. */
-.result-toggle button.sel {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
-}
-.result-toggle button.sel.white-win {
-  background: var(--result-white-bg);
-  color: var(--result-white-text);
-  border-color: var(--result-white-bg);
-}
 .result-toggle button.sel.draw {
   background: color-mix(in srgb, var(--draw) 32%, transparent);
   color: var(--draw);
   border-color: var(--draw);
 }
+/* White/black-win fills are the real (constant) chess-piece colors — each
+   reads fine against the page whose own background is the *opposite*
+   shade, but nearly vanishes against the page that matches it: white-win
+   on light mode's light page, black-win on dark mode's dark page. For
+   that losing pairing, use the same solid accent look as the primary
+   buttons instead of the barely-visible piece color; the pairing that
+   already contrasts well keeps its real piece color. */
+.result-toggle button.sel.white-win {
+  background: var(--result-white-bg);
+  color: var(--result-white-text);
+  border-color: var(--result-white-bg);
+}
 .result-toggle button.sel.black-win {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+:root[data-theme='light'] .result-toggle button.sel.white-win {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+:root[data-theme='light'] .result-toggle button.sel.black-win {
   background: var(--result-black-bg);
   color: var(--result-black-text);
   border-color: var(--result-black-border);
