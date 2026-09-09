@@ -603,6 +603,19 @@ table.board td.winpct-cell .lb-card-tiny-bar {
   flex-direction: column;
   gap: 4px;
 }
+/* Plain text above the round-by-round table, not a table row — the old
+   colSpan row wrapped its own "Starting value" label on narrow screens
+   while the actual number sat in the table's last column, scrolled off
+   to the right and out of view. */
+.modal-starting-value {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--muted);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
 @keyframes modal-fade-in {
   from {
     opacity: 0;

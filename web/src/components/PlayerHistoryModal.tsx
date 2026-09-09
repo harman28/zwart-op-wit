@@ -80,6 +80,9 @@ export default function PlayerHistoryModal({
       {!history && !error && <p style={{ color: 'var(--muted)' }}>Loading…</p>}
       {history && (
         <>
+          <p className="modal-starting-value">
+            Starting value <span className="num score-cell">{formatNumber(history.startingValue)}</span>
+          </p>
           {history.entries.length === 0 ? (
             <p style={{ color: 'var(--muted)' }}>No published rounds played yet this season.</p>
           ) : (
@@ -95,14 +98,6 @@ export default function PlayerHistoryModal({
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td className="rank-num" colSpan={2}>
-                      Starting value
-                    </td>
-                    <td></td>
-                    <td className="num value-cell"></td>
-                    <td className="num score-cell">{formatNumber(history.startingValue)}</td>
-                  </tr>
                   {(() => {
                     let running = history.startingValue;
                     return history.entries.map((entry, idx) => {
