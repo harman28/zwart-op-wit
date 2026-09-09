@@ -124,6 +124,12 @@ button {
 .site-nav .links {
   display: flex;
   gap: 22px;
+  /* Without this, four links (Rounds/Leaderboard/Players/Settings) at a
+     fixed 22px gap refuse to shrink and push the last one off-screen on a
+     narrow phone — wrapping onto a second line keeps everything reachable
+     instead of requiring horizontal scroll. */
+  flex-wrap: wrap;
+  row-gap: 8px;
 }
 .site-nav a.link {
   font-size: 13px;
