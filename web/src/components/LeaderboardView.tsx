@@ -11,6 +11,17 @@ function rankClass(rank: number): string {
   return 'rank-num';
 }
 
+/** Color is a status (which piece color you've played more of), not a
+ * performance judgment — so it's represented with the actual white/black
+ * piece colors already used for game results, not win/loss green/red.
+ * colorNumber > 0 means more games as White, < 0 means more as Black (see
+ * engine/standings.ts). Balanced (0) gets no swatch — there's no color to
+ * show. */
+function ColorSwatch({ n }: { n: number }) {
+  if (n === 0) return null;
+  return <span className={`lb-color-swatch ${n > 0 ? 'lb-color-swatch-white' : 'lb-color-swatch-black'}`} />;
+}
+
 export default function LeaderboardView({
   standings,
   onSelectPlayer,
@@ -59,7 +70,9 @@ export default function LeaderboardView({
                 <td className="num value-cell draw-count">{s.draws}</td>
                 <td className="num value-cell loss-count">{s.losses}</td>
                 <td className="num value-cell">{formatNumber(s.winPercent)}</td>
-                <td className="num value-cell">{s.colorNumber}</td>
+                <td className="num value-cell">
+                  <ColorSwatch n={s.colorNumber} /> {s.colorNumber}
+                </td>
                 <td className="num value-cell">{s.pairingByeUsed ? 1 : 0}</td>
               </tr>
             ))}
@@ -90,11 +103,26 @@ export default function LeaderboardView({
                 <span className="rec-sep">/</span>
                 <span className="rec-l">{s.losses}L</span>
               </span>
-              <span className="lb-points">{formatNumber(s.score)}</span>
+              <div className="lb-card-right">
+                <span className="lb-points">{formatNumber(s.score)}</span>
+                <span className="lb-card-value">({s.value})</span>
+              </div>
             </div>
             <div className="lb-card-stats">
-              Value {s.value} · Played {s.played} · {formatNumber(s.winPercent)}% · Color {s.colorNumber} · Odd{' '}
-              {s.pairingByeUsed ? 1 : 0}
+              <span>Played {s.played}</span>
+              <span className="lb-card-stats-sep">·</span>
+              <span className="lb-card-winbar">
+                Win
+                <span className="lb-card-tiny-bar">
+                  <span className="lb-card-tiny-bar-fill" style={{ width: `${s.winPercent}%` }} />
+                </span>
+              </span>
+              <span className="lb-card-stats-sep">·</span>
+              <span>
+                <ColorSwatch n={s.colorNumber} /> Color {s.colorNumber}
+              </span>
+              <span className="lb-card-stats-sep">·</span>
+              <span>Odd {s.pairingByeUsed ? 1 : 0}</span>
             </div>
           </div>
         ))}
