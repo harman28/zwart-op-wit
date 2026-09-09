@@ -87,7 +87,7 @@ export default function LeaderboardPage() {
           <h1 className="page-title" style={{ margin: 0 }}>
             Standings — {season.name}
           </h1>
-          <LeaderboardExplainer />
+          <LeaderboardExplainer topValue={season.topValue} />
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {isAdmin && allSeasons.length > 1 && (
