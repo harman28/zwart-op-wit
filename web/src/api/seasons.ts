@@ -42,8 +42,12 @@ export function getEnrolledPlayers(id: number) {
 
 /** Adds a player to this season's roster — a name matching an existing
  * (possibly archived) player reuses and unarchives them instead of erroring
- * or duplicating; a new name creates a fresh identity. */
-export function enrollPlayer(id: number, data: { name: string; membershipType?: MembershipType; startingValue: number }) {
+ * or duplicating; a new name creates a fresh identity. Omit startingValue to
+ * default to the median of the season's current standings. */
+export function enrollPlayer(
+  id: number,
+  data: { name: string; membershipType?: MembershipType; startingValue?: number },
+) {
   return api.post<{ playerId: number }>(`/admin/seasons/${id}/players`, data);
 }
 
