@@ -220,6 +220,17 @@ table.board tr:last-child td {
   color: var(--accent);
   font-weight: 700;
 }
+/* 2nd/3rd get a fading share of the same accent rather than separate
+   silver/bronze hues — keeps the top of the table feeling like one
+   graduated podium instead of introducing an unrelated color language. */
+.rank-2 {
+  color: color-mix(in srgb, var(--accent) 70%, var(--muted));
+  font-weight: 700;
+}
+.rank-3 {
+  color: color-mix(in srgb, var(--accent) 45%, var(--muted));
+  font-weight: 700;
+}
 .player-name {
   font-weight: 600;
 }
@@ -233,6 +244,18 @@ table.board tr:last-child td {
   text-align: right;
   color: var(--muted);
   font-size: 13px;
+}
+/* Same win/draw/loss colors already used for the mobile leaderboard cards'
+   record and the Rounds page's result pills — the desktop table's W/D/L
+   columns were the one place still left flat gray. */
+.value-cell.win-count {
+  color: var(--win);
+}
+.value-cell.draw-count {
+  color: var(--draw);
+}
+.value-cell.loss-count {
+  color: var(--loss);
 }
 .badge {
   display: inline-block;
