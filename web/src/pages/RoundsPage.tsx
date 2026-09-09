@@ -125,7 +125,7 @@ export default function RoundsPage() {
     await refreshRounds();
   }
 
-  async function handleResultChange(round: Round, entry: RoundEntry, result: GameResult) {
+  async function handleResultChange(round: Round, entry: RoundEntry, result: GameResult | null) {
     // Optimistic: this is the highest-frequency click on the page (entering a
     // whole round's results in one sitting), so reflect it immediately rather
     // than waiting on a full round-trip + full rounds refetch. Only refetch
