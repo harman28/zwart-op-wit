@@ -6,6 +6,22 @@
     <link rel="icon" type="image/png" href="/favicon.png" />
     <title>Zwart op Wit — Internal Competition</title>
     <script>
+      // Only counts real visits to the production site — staging and
+      // production build from the same index.html, so an unconditional
+      // script tag here would also count every staging deploy check
+      // against the club's real analytics.
+      (function () {
+        var host = window.location.hostname;
+        var isProd = host === 'zwartopwit.up.railway.app' || host === 'internal.zwartopwit.org';
+        if (!isProd) return;
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = '//gc.zgo.at/count.js';
+        s.setAttribute('data-goatcounter', 'https://zwartopwit.goatcounter.com/count');
+        document.head.appendChild(s);
+      })();
+    </script>
+    <script>
       // Applied before React mounts (and before first paint) so there's no
       // flash of the wrong theme — ThemeContext just reads this back. An
       // explicit stored choice (from the toggle) always wins; absent that,
