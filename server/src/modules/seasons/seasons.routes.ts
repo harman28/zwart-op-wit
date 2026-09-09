@@ -4,6 +4,7 @@ import { requireAdmin } from '../../lib/requireAdmin.js';
 import {
   createSeason,
   endSeason,
+  enrollNewOrReturningPlayer,
   getAdminRounds,
   getCurrentSeason,
   getEnrolledPlayers,
@@ -39,6 +40,11 @@ const createSeasonBody = z.object({
   knsbPlannedEndDate: z.coerce.date().optional(),
   roster: z.array(rosterEntrySchema),
 });
+const enrollPlayerBody = z.object({
+  name: z.string().min(1),
+  membershipType: z.enum(['FULL', 'INTERNAL_ONLY', 'GUEST']).optional(),
+  startingValue: z.number().int(),
+});
 const updateSettingsBody = z.object({
   repeatPairingWindow: z.number().int().optional(),
   countExternalMatches: z.boolean().optional(),
@@ -72,6 +78,13 @@ export async function seasonsRoutes(app: FastifyInstance): Promise<void> {
   app.get('/api/admin/seasons/:id/players', { preHandler: requireAdmin }, async (request) =>
     getEnrolledPlayers(idParams.parse(request.params).id),
   );
+
+  app.post('/api/admin/seasons/:id/players', { preHandler: requireAdmin }, async (request, reply) => {
+    const params = idParams.parse(request.params);
+    const body = enrollPlayerBody.parse(request.body);
+    reply.code(201);
+    return enrollNewOrReturningPlayer(params.id, body);
+  });
 
   app.post('/api/admin/seasons', { preHandler: requireAdmin }, async (request, reply) => {
     const body = createSeasonBody.parse(request.body);

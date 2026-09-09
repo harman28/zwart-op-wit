@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import * as playersApi from '../api/players.js';
+import * as seasonsApi from '../api/seasons.js';
 import type { Gender, MembershipType, Player } from '../api/types.js';
 import CustomSelect from '../components/CustomSelect.js';
 import Modal from '../components/Modal.js';
@@ -129,6 +130,8 @@ export default function PlayersPage() {
   const [search, setSearch] = useState('');
   const [newName, setNewName] = useState('');
   const [newMembership, setNewMembership] = useState<MembershipType>('FULL');
+  const [newStartingValue, setNewStartingValue] = useState('');
+  const [currentSeasonId, setCurrentSeasonId] = useState<number | null>(null);
   const [importText, setImportText] = useState('');
 
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
@@ -147,6 +150,12 @@ export default function PlayersPage() {
   }
 
   useEffect(load, []);
+  useEffect(() => {
+    seasonsApi
+      .getCurrentSeason()
+      .then((s) => setCurrentSeasonId(s.id))
+      .catch(() => setCurrentSeasonId(null));
+  }, []);
 
   const query = search.trim().toLowerCase();
   const matching = query ? players.filter((p) => p.name.toLowerCase().includes(query)) : players;
@@ -157,10 +166,22 @@ export default function PlayersPage() {
     if (!newName.trim()) return;
     setError(null);
     try {
-      const player = await playersApi.createPlayer(newName.trim(), newMembership);
-      setPlayers((prev) => [...prev, player].sort((a, b) => a.name.localeCompare(b.name)));
+      const startingValue = newStartingValue.trim() ? Number(newStartingValue) : null;
+      // A starting value (and an active season to enroll into) means this is
+      // "add and enroll now" — same reuse-by-name/unarchive behavior as "add
+      // an unregistered player" on Create Round, so a name matching an
+      // existing (even archived) player picks them back up instead of either
+      // erroring or creating a duplicate. No starting value just creates the
+      // bare identity, same as before.
+      if (startingValue != null && currentSeasonId != null) {
+        await seasonsApi.enrollPlayer(currentSeasonId, { name: newName.trim(), membershipType: newMembership, startingValue });
+      } else {
+        await playersApi.createPlayer(newName.trim(), newMembership);
+      }
+      load();
       setNewName('');
       setNewMembership('FULL');
+      setNewStartingValue('');
       setShowAdd(false);
     } catch (err) {
       setError(errorMessage(err));
@@ -321,10 +342,31 @@ export default function PlayersPage() {
                 triggerClassName="roster-select"
               />
             </div>
+            {currentSeasonId != null && (
+              <div className="field">
+                <label htmlFor="new-starting-value">Starting value (optional)</label>
+                <input
+                  id="new-starting-value"
+                  type="text"
+                  inputMode="numeric"
+                  style={{ minWidth: 90 }}
+                  value={newStartingValue}
+                  onChange={(e) => setNewStartingValue(e.target.value.replace(/[^0-9]/g, ''))}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+                  placeholder="Leave blank to skip"
+                />
+              </div>
+            )}
             <button className="btn btn-primary" onClick={handleAdd}>
               Add
             </button>
           </div>
+          {currentSeasonId != null && (
+            <p style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: -8 }}>
+              Giving a starting value enrolls them in the current season now. A name matching an existing player —
+              archived or not — reuses that player (unarchiving them if needed) instead of creating a duplicate.
+            </p>
+          )}
         </div>
       )}
 

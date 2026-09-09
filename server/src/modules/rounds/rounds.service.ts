@@ -6,51 +6,9 @@ import { replaySeason } from '../../engine/standings.js';
 import type { PairingCandidate, PastPairing } from '../../engine/types.js';
 import { HttpError } from '../../lib/errors.js';
 import { mapEnrollmentsToBaselines, mapRoundToEngine } from '../../lib/mappers.js';
+import { enrollNewOrReturningPlayer } from '../seasons/seasons.service.js';
 
 type RoundWithEntries = Round & { entries: RoundEntry[] };
-
-/**
- * "Add an unregistered player" — resolves a name to a playerId enrolled in
- * this season. A name matching an existing player (typically a former club
- * member who was left off this season's initial roster on purpose — added
- * to the system, but not given a ranking spot until they actually show up)
- * reuses that identity and unarchives them, rather than rejecting the name
- * as taken or creating a duplicate. A name matching no one creates a
- * brand-new identity, defaulting to GUEST (not FULL) — an admin who hasn't
- * classified them yet shouldn't have them silently counted as a full
- * member; the players page's "rounds played this season" hint on guests is
- * what surfaces "they should probably be upgraded now" once they've turned
- * up a few times. An existing player's membership type is left untouched.
- */
-async function enrollNewOrReturningPlayer(
-  seasonId: number,
-  data: { name: string; membershipType?: MembershipType; startingValue: number },
-) {
-  const name = data.name.trim();
-  const existingPlayer = await prisma.player.findFirst({ where: { name: { equals: name, mode: 'insensitive' } } });
-
-  let playerId: number;
-  if (existingPlayer) {
-    const alreadyEnrolled = await prisma.seasonEnrollment.findUnique({
-      where: { seasonId_playerId: { seasonId, playerId: existingPlayer.id } },
-    });
-    if (alreadyEnrolled) {
-      throw new HttpError(409, `${existingPlayer.name} is already enrolled in this season — pick them from the list instead`);
-    }
-    if (existingPlayer.archivedAt) {
-      await prisma.player.update({ where: { id: existingPlayer.id }, data: { archivedAt: null } });
-    }
-    playerId = existingPlayer.id;
-  } else {
-    const player = await prisma.player.create({ data: { name, membershipType: data.membershipType ?? 'GUEST' } });
-    playerId = player.id;
-  }
-
-  const enrollment = await prisma.seasonEnrollment.create({
-    data: { seasonId, playerId, startingValue: data.startingValue },
-  });
-  return { playerId, enrollment };
-}
 
 function extractPastPairings(rounds: RoundWithEntries[]): PastPairing[] {
   const result: PastPairing[] = [];
