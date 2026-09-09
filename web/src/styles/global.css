@@ -603,6 +603,11 @@ table.board td.winpct-cell .lb-card-tiny-bar {
   flex-direction: column;
   gap: 4px;
 }
+.modal-starting-value-label {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--muted);
+}
 @keyframes modal-fade-in {
   from {
     opacity: 0;
