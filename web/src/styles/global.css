@@ -207,6 +207,12 @@ table.board td {
 table.board tr:last-child td {
   border-bottom: none;
 }
+/* Subtle zebra striping — the table otherwise reads as one dense gray block
+   with nothing but a thin border between rows, easy to lose your place in
+   past a handful of players. */
+table.board tbody tr:nth-child(even) {
+  background: var(--card-raised);
+}
 .num {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
