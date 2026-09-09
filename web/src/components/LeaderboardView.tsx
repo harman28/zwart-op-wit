@@ -4,6 +4,13 @@ function formatNumber(n: number): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, '');
 }
 
+function rankClass(rank: number): string {
+  if (rank === 1) return 'rank-num rank-1';
+  if (rank === 2) return 'rank-num rank-2';
+  if (rank === 3) return 'rank-num rank-3';
+  return 'rank-num';
+}
+
 export default function LeaderboardView({
   standings,
   onSelectPlayer,
@@ -34,7 +41,7 @@ export default function LeaderboardView({
           <tbody>
             {standings.map((s) => (
               <tr key={s.playerId}>
-                <td className={s.rank === 1 ? 'rank-num rank-1' : 'rank-num'}>{s.rank}</td>
+                <td className={rankClass(s.rank)}>{s.rank}</td>
                 <td className="player-name">
                   {onSelectPlayer ? (
                     <button className="editable-name" onClick={() => onSelectPlayer(s.playerId)}>
@@ -48,9 +55,9 @@ export default function LeaderboardView({
                 <td className="num score-cell">{formatNumber(s.score)}</td>
                 <td className="num value-cell">{s.value}</td>
                 <td className="num value-cell">{s.played}</td>
-                <td className="num value-cell">{s.wins}</td>
-                <td className="num value-cell">{s.draws}</td>
-                <td className="num value-cell">{s.losses}</td>
+                <td className="num value-cell win-count">{s.wins}</td>
+                <td className="num value-cell draw-count">{s.draws}</td>
+                <td className="num value-cell loss-count">{s.losses}</td>
                 <td className="num value-cell">{formatNumber(s.winPercent)}</td>
                 <td className="num value-cell">{s.colorNumber}</td>
                 <td className="num value-cell">{s.pairingByeUsed ? 1 : 0}</td>
@@ -65,7 +72,7 @@ export default function LeaderboardView({
           <div className="lb-card" key={s.playerId}>
             <div className="lb-card-top">
               <div className="lb-card-left">
-                <span className={s.rank === 1 ? 'rank-num rank-1' : 'rank-num'}>{s.rank}</span>
+                <span className={rankClass(s.rank)}>{s.rank}</span>
                 <span className="player-name">
                   {onSelectPlayer ? (
                     <button className="editable-name" onClick={() => onSelectPlayer(s.playerId)}>
