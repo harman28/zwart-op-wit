@@ -544,12 +544,27 @@ table.pairings td:nth-child(4) {
   white-space: nowrap;
   display: inline-block;
 }
+/* Same low-contrast pairing as .result-toggle's selected buttons (see
+   there): white-win's real piece-color fill nearly vanishes on light
+   mode's own light page, black-win's on dark mode's own dark page. Swap
+   that pairing to the same solid accent look as primary buttons; the
+   pairing that already reads fine keeps its real piece color. */
 .result-pill.white-win {
   background: var(--result-white-bg);
   color: var(--result-white-text);
   border: 1px solid var(--result-black-border);
 }
 .result-pill.black-win {
+  background: var(--accent);
+  color: var(--accent-text);
+  border: 1px solid var(--accent);
+}
+:root[data-theme='light'] .result-pill.white-win {
+  background: var(--accent);
+  color: var(--accent-text);
+  border: 1px solid var(--accent);
+}
+:root[data-theme='light'] .result-pill.black-win {
   background: var(--result-black-bg);
   color: var(--result-black-text);
   border: 1px solid var(--result-black-border);
