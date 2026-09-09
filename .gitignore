@@ -8,4 +8,5 @@ build/
 .DS_Store
 server/generated/
 web/dist/
+web/public/commit.txt
 *.tsbuildinfo
