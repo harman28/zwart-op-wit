@@ -315,27 +315,12 @@ table.board tbody tr:nth-child(even) {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.lb-card-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 1px;
-  justify-self: end;
-}
 .lb-card-top .lb-points {
   font-family: var(--font-mono);
   font-weight: 700;
   color: var(--accent);
   font-size: 15px;
-}
-/* A first-class number too — same treatment as Points, one notch down in
-   size/weight and a duller share of the accent so Points still reads as
-   the headline figure. */
-.lb-card-value {
-  font-family: var(--font-mono);
-  font-weight: 700;
-  font-size: 12px;
-  color: color-mix(in srgb, var(--accent) 60%, var(--muted));
+  justify-self: end;
 }
 .lb-card-record {
   justify-self: center;
@@ -356,32 +341,6 @@ table.board tbody tr:nth-child(even) {
 .lb-card-record .rec-sep {
   color: var(--muted);
   font-weight: 400;
-}
-.lb-card-winbar-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 6px;
-}
-.lb-card-winbar-track {
-  flex: 1;
-  height: 5px;
-  border-radius: 3px;
-  background: var(--border);
-  overflow: hidden;
-}
-.lb-card-winbar-fill {
-  height: 100%;
-  background: var(--win);
-  border-radius: 3px;
-}
-.lb-card-winbar-label {
-  flex: none;
-  width: 34px;
-  text-align: right;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--muted);
 }
 .lb-card-stats {
   margin-top: 4px;
