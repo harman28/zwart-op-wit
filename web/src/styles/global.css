@@ -1525,6 +1525,14 @@ footer.note {
   .lb-cards {
     display: flex;
   }
+  /* PlayerHistoryModal reuses table.board for its own (unrelated) table and
+     has no card-based mobile fallback like the leaderboard does — without
+     this override, the rule above silently blanks its entire contents on
+     any narrow viewport. .board-wrap's overflow-x: auto lets it scroll
+     horizontally instead of needing one. */
+  .modal-body table.board {
+    display: table;
+  }
   .players-table-wrap {
     display: none;
   }
