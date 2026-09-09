@@ -87,11 +87,11 @@ export default function PlayerHistoryModal({
               <table className="board">
                 <thead>
                   <tr>
-                    <th style={{ width: 26 }}>Rnd</th>
+                    <th style={{ width: 22 }}>Rnd</th>
                     <th>Opponent</th>
-                    <th style={{ textAlign: 'center' }}>Result</th>
-                    <th style={{ textAlign: 'right' }}>Points</th>
-                    <th style={{ textAlign: 'right' }}>Running total</th>
+                    <th style={{ textAlign: 'center' }}>Res</th>
+                    <th style={{ textAlign: 'right' }}>Pts</th>
+                    <th style={{ textAlign: 'right' }}>Total</th>
                   </tr>
                 </thead>
                 <tbody>
