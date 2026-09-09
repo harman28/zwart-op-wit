@@ -124,6 +124,12 @@ button {
 .site-nav .links {
   display: flex;
   gap: 22px;
+  /* Without this, four links (Rounds/Leaderboard/Players/Settings) at a
+     fixed 22px gap refuse to shrink and push the last one off-screen on a
+     narrow phone — wrapping onto a second line keeps everything reachable
+     instead of requiring horizontal scroll. */
+  flex-wrap: wrap;
+  row-gap: 8px;
 }
 .site-nav a.link {
   font-size: 13px;
@@ -507,13 +513,6 @@ table.pairings td {
   border-top: 1px solid var(--border);
   vertical-align: middle;
 }
-table.pairings th:last-child,
-table.pairings td:last-child {
-  text-align: right;
-}
-tr.unpaired-row td:last-child {
-  text-align: left;
-}
 .table-no {
   font-family: var(--font-mono);
   color: var(--muted);
@@ -534,6 +533,10 @@ table.pairings td:nth-child(3) {
 table.pairings th:nth-child(4),
 table.pairings td:nth-child(4) {
   width: 40%;
+  /* Black is always the 4th column — relying on :last-child instead broke
+     this in admin view, where a trailing "remove matchup" column pushes
+     Black off of last-child. */
+  text-align: right;
 }
 .result-pill {
   font-family: var(--font-mono);
@@ -544,18 +547,33 @@ table.pairings td:nth-child(4) {
   white-space: nowrap;
   display: inline-block;
 }
+/* Same low-contrast pairing as .result-toggle's selected buttons (see
+   there): white-win's real piece-color fill nearly vanishes on light
+   mode's own light page, black-win's on dark mode's own dark page. Swap
+   that pairing to the same solid accent look as primary buttons; the
+   pairing that already reads fine keeps its real piece color. */
 .result-pill.white-win {
   background: var(--result-white-bg);
   color: var(--result-white-text);
   border: 1px solid var(--result-black-border);
 }
 .result-pill.black-win {
+  background: var(--accent);
+  color: var(--accent-text);
+  border: 1px solid var(--accent);
+}
+:root[data-theme='light'] .result-pill.white-win {
+  background: var(--accent);
+  color: var(--accent-text);
+  border: 1px solid var(--accent);
+}
+:root[data-theme='light'] .result-pill.black-win {
   background: var(--result-black-bg);
   color: var(--result-black-text);
   border: 1px solid var(--result-black-border);
 }
 .result-pill.draw {
-  background: color-mix(in srgb, var(--draw) 18%, transparent);
+  background: color-mix(in srgb, var(--draw) 32%, transparent);
   color: var(--draw);
 }
 
@@ -724,20 +742,10 @@ table.pairings td:nth-child(4) {
 .result-toggle button:last-child {
   border-radius: 0 6px 6px 0;
 }
-.result-toggle button.sel.white-win {
-  background: var(--result-white-bg);
-  color: var(--result-white-text);
-  border-color: var(--result-white-bg);
-}
 .result-toggle button.sel.draw {
-  background: color-mix(in srgb, var(--draw) 18%, transparent);
+  background: color-mix(in srgb, var(--draw) 32%, transparent);
   color: var(--draw);
   border-color: var(--draw);
-}
-.result-toggle button.sel.black-win {
-  background: var(--result-black-bg);
-  color: var(--result-black-text);
-  border-color: var(--result-black-border);
 }
 .result-toggle button.sel.win {
   background: color-mix(in srgb, var(--win) 18%, transparent);
@@ -748,6 +756,134 @@ table.pairings td:nth-child(4) {
   background: color-mix(in srgb, var(--loss) 18%, transparent);
   color: var(--loss);
   border-color: var(--loss);
+}
+
+/* Base style for a single result button — used both as the mobile pill
+   trigger (.result-picker below) and for each option inside its popover
+   menu, so the currently-picked value looks the same whichever role it's
+   playing. */
+.result-cycle-btn {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.result-cycle-btn.draw {
+  background: color-mix(in srgb, var(--draw) 32%, transparent);
+  color: var(--draw);
+  border-color: var(--draw);
+}
+/* White/black-win fills are the real (constant) chess-piece colors — each
+   reads fine against the page whose own background is the *opposite*
+   shade, but nearly vanishes against the page that matches it: white-win
+   on light mode's light page, black-win on dark mode's dark page. For
+   that losing pairing, use the same solid accent look as the primary
+   buttons instead of the barely-visible piece color; the pairing that
+   already contrasts well keeps its real piece color. */
+.result-cycle-btn.white-win {
+  background: var(--result-white-bg);
+  color: var(--result-white-text);
+  border-color: var(--result-white-bg);
+}
+.result-cycle-btn.black-win {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+:root[data-theme='light'] .result-cycle-btn.white-win {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+:root[data-theme='light'] .result-cycle-btn.black-win {
+  background: var(--result-black-bg);
+  color: var(--result-black-text);
+  border-color: var(--result-black-border);
+}
+
+/* Desktop: all three options always visible as one button group. Mobile
+   (see the max-width: 640px block below) hides this and shows the
+   .result-picker pill instead — three buttons don't fit next to long
+   names at that width. */
+.result-toggle-desktop {
+  display: inline-flex;
+  gap: 4px;
+}
+.result-toggle-btn {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.result-toggle-btn.sel.draw {
+  background: color-mix(in srgb, var(--draw) 32%, transparent);
+  color: var(--draw);
+  border-color: var(--draw);
+}
+/* Same accent-swap as .result-cycle-btn below — see the comment there. */
+.result-toggle-btn.sel.white-win {
+  background: var(--result-white-bg);
+  color: var(--result-white-text);
+  border-color: var(--result-white-bg);
+}
+.result-toggle-btn.sel.black-win {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+:root[data-theme='light'] .result-toggle-btn.sel.white-win {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+:root[data-theme='light'] .result-toggle-btn.sel.black-win {
+  background: var(--result-black-bg);
+  color: var(--result-black-text);
+  border-color: var(--result-black-border);
+}
+
+/* Mobile-only pill + popover of the three options, opened by tapping the
+   .result-cycle-btn pill. Options reuse .result-cycle-btn itself (plain
+   when unpicked, the same colored fill as the trigger when it's the
+   current value) so picking the already-current option and unsetting it
+   look like the same button. Hidden on desktop widths, see below. */
+.result-picker {
+  position: relative;
+  display: none;
+}
+.result-picker-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 20;
+  display: flex;
+  gap: 4px;
+  padding: 5px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+}
+@media (max-width: 640px) {
+  .result-toggle-desktop {
+    display: none;
+  }
+  .result-picker {
+    display: inline-block;
+  }
 }
 
 /* ---- cards / forms ---- */
