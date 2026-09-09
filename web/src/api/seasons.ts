@@ -40,6 +40,13 @@ export function getEnrolledPlayers(id: number) {
   return api.get<Player[]>(`/admin/seasons/${id}/players`);
 }
 
+/** Adds a player to this season's roster — a name matching an existing
+ * (possibly archived) player reuses and unarchives them instead of erroring
+ * or duplicating; a new name creates a fresh identity. */
+export function enrollPlayer(id: number, data: { name: string; membershipType?: MembershipType; startingValue: number }) {
+  return api.post<{ playerId: number }>(`/admin/seasons/${id}/players`, data);
+}
+
 export interface RosterEntryInput {
   playerId?: number;
   newPlayerName?: string;
