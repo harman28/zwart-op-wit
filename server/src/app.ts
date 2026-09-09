@@ -68,6 +68,14 @@ export function buildApp() {
 
   app.get('/health', async () => ({ ok: true }));
 
+  // Which commit is actually running — Railway sets this automatically for
+  // services deployed from a GitHub repo. Lives under /api (not bare
+  // /commit.txt) because that's the only path space web's proxy forwards to
+  // this service; the web service serves its own bare /commit.txt directly.
+  app.get('/api/commit.txt', async (_request, reply) => {
+    reply.type('text/plain').send(process.env.RAILWAY_GIT_COMMIT_SHA ?? 'unknown');
+  });
+
   // Admin action log: one generic pair of hooks covers every mutating admin
   // route (and the differently-prefixed change-password route) rather than
   // threading a log call into each individual handler. The lookup runs
