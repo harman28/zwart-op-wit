@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import * as seasonsApi from '../api/seasons.js';
 import type { Leaderboard, Season } from '../api/types.js';
 import CustomSelect from '../components/CustomSelect.js';
+import LeaderboardExplainer from '../components/LeaderboardExplainer.js';
 import LeaderboardView from '../components/LeaderboardView.js';
 import PlayerHistoryModal from '../components/PlayerHistoryModal.js';
 import { useAdmin } from '../context/AdminContext.js';
@@ -82,9 +83,12 @@ export default function LeaderboardPage() {
           marginBottom: 16,
         }}
       >
-        <h1 className="page-title" style={{ margin: 0 }}>
-          Standings — {season.name}
-        </h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <h1 className="page-title" style={{ margin: 0 }}>
+            Standings — {season.name}
+          </h1>
+          <LeaderboardExplainer />
+        </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {isAdmin && allSeasons.length > 1 && (
             <CustomSelect
