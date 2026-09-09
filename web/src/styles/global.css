@@ -1688,10 +1688,19 @@ footer.note {
   /* PlayerHistoryModal reuses table.board for its own (unrelated) table and
      has no card-based mobile fallback like the leaderboard does — without
      this override, the rule above silently blanks its entire contents on
-     any narrow viewport. .board-wrap's overflow-x: auto lets it scroll
-     horizontally instead of needing one. */
+     any narrow viewport. */
   .modal-body table.board {
     display: table;
+  }
+  /* table.board's normal 12px/10px cell padding is sized for the full-width
+     desktop leaderboard — inside the cramped modal it pushed the 5-column
+     round-by-round table wider than the screen, leaving the last column
+     (Running total) scrolled out of view by default. Tighter padding and
+     type gets all 5 columns to fit without needing that scroll at all. */
+  .modal-body table.board td,
+  .modal-body table.board th {
+    padding: 6px 3px;
+    font-size: 12.5px;
   }
   .players-table-wrap {
     display: none;
