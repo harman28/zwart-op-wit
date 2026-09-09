@@ -90,11 +90,19 @@ export default function LeaderboardView({
                 <span className="rec-sep">/</span>
                 <span className="rec-l">{s.losses}L</span>
               </span>
-              <span className="lb-points">{formatNumber(s.score)}</span>
+              <div className="lb-card-right">
+                <span className="lb-points">{formatNumber(s.score)}</span>
+                <span className="lb-card-value">Value {s.value}</span>
+              </div>
+            </div>
+            <div className="lb-card-winbar-row">
+              <div className="lb-card-winbar-track">
+                <div className="lb-card-winbar-fill" style={{ width: `${s.winPercent}%` }} />
+              </div>
+              <span className="lb-card-winbar-label">{formatNumber(s.winPercent)}%</span>
             </div>
             <div className="lb-card-stats">
-              Value {s.value} · Played {s.played} · {formatNumber(s.winPercent)}% · Color {s.colorNumber} · Odd{' '}
-              {s.pairingByeUsed ? 1 : 0}
+              Played {s.played} · Color {s.colorNumber} · Odd {s.pairingByeUsed ? 1 : 0}
             </div>
           </div>
         ))}
