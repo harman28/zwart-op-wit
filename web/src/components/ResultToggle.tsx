@@ -58,7 +58,7 @@ export default function ResultToggle({
           className={`result-cycle-btn${value ? ` ${resultClass(value)}` : ''}`}
           onClick={() => setOpen((o) => !o)}
         >
-          {value ? resultLabel(value) : 'Set result'}
+          {value ? resultLabel(value) : '–'}
         </button>
         {open && (
           <div className="result-picker-menu">
