@@ -64,6 +64,21 @@ button {
   font-size: 12px;
   flex-shrink: 0;
 }
+.theme-toggle {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  border-radius: 6px;
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+.theme-toggle:hover {
+  color: var(--accent);
+}
 .wordmark {
   font-weight: 800;
   font-size: 20px;
