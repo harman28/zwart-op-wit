@@ -7,10 +7,14 @@
     <title>Zwart op Wit — Internal Competition</title>
     <script>
       // Applied before React mounts (and before first paint) so there's no
-      // flash of the wrong theme — ThemeContext just reads this back.
+      // flash of the wrong theme — ThemeContext just reads this back. An
+      // explicit stored choice (from the toggle) always wins; absent that,
+      // follow the OS/browser's own light-vs-dark preference.
       (function () {
         var stored = localStorage.getItem('zow:theme');
-        if (stored === 'light') document.documentElement.dataset.theme = 'light';
+        var prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+        var light = stored ? stored === 'light' : prefersLight;
+        if (light) document.documentElement.dataset.theme = 'light';
       })();
     </script>
   </head>

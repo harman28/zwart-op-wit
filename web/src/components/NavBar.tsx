@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router';
 import { useAdmin } from '../context/AdminContext.js';
 import { useLatestSeason } from '../hooks/useSeason.js';
+import ThemeToggle from './ThemeToggle.js';
 
 export default function NavBar() {
   const { isAdmin, logout } = useAdmin();
@@ -33,6 +34,7 @@ export default function NavBar() {
               Admin
             </Link>
           )}
+          <ThemeToggle />
         </div>
       </div>
       <div className="site-nav" style={{ marginBottom: 0, paddingTop: 10 }}>
