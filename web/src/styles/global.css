@@ -519,6 +519,22 @@ tr.unpaired-row td:last-child {
   color: var(--muted);
   width: 26px;
 }
+/* Without explicit widths, the browser sizes White/Result/Black purely off
+   content length — a long name on one side pushes Result visibly off-center
+   even though its own cell is text-align:center. Fixed proportions keep
+   Result centered between the two name columns regardless of name length. */
+table.pairings th:nth-child(2),
+table.pairings td:nth-child(2) {
+  width: 40%;
+}
+table.pairings th:nth-child(3),
+table.pairings td:nth-child(3) {
+  width: 20%;
+}
+table.pairings th:nth-child(4),
+table.pairings td:nth-child(4) {
+  width: 40%;
+}
 .result-pill {
   font-family: var(--font-mono);
   font-size: 12px;
