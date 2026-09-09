@@ -96,12 +96,13 @@ export default function PlayerHistoryModal({
                 </thead>
                 <tbody>
                   <tr>
-                    <td className="rank-num" colSpan={2} style={{ whiteSpace: 'nowrap' }}>
-                      Start
-                    </td>
                     <td></td>
-                    <td className="num value-cell"></td>
-                    <td className="num score-cell">{formatNumber(history.startingValue)}</td>
+                    <td></td>
+                    <td></td>
+                    <td colSpan={2} className="num score-cell" style={{ whiteSpace: 'nowrap' }}>
+                      <span className="modal-starting-value-label">Starting value</span>{' '}
+                      {formatNumber(history.startingValue)}
+                    </td>
                   </tr>
                   {(() => {
                     let running = history.startingValue;
