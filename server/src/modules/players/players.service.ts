@@ -1,6 +1,7 @@
 import type { Gender, MembershipType } from '@prisma/client';
 import { prisma } from '../../db/client.js';
 import { HttpError } from '../../lib/errors.js';
+import { enrollExistingPlayer } from '../seasons/seasons.service.js';
 
 /**
  * Case-insensitive, since the roster-reuse logic elsewhere (matching an
@@ -81,6 +82,16 @@ export async function archivePlayer(id: number) {
   return prisma.player.update({ where: { id }, data: { archivedAt: new Date() } });
 }
 
+/**
+ * Restoring a player means they're active again — if there's a season
+ * currently running, that means back on this season's leaderboard too, not
+ * just visible again in the roster list. A no-op enrollment-wise if they're
+ * already enrolled (e.g. archived mid-season without ever losing their
+ * enrollment — see archivePlayer).
+ */
 export async function unarchivePlayer(id: number) {
-  return prisma.player.update({ where: { id }, data: { archivedAt: null } });
+  const player = await prisma.player.update({ where: { id }, data: { archivedAt: null } });
+  const currentSeason = await prisma.season.findFirst({ where: { endedAt: null }, orderBy: { startedAt: 'desc' } });
+  if (currentSeason) await enrollExistingPlayer(currentSeason.id, id);
+  return player;
 }

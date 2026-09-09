@@ -166,14 +166,17 @@ export default function PlayersPage() {
     if (!newName.trim()) return;
     setError(null);
     try {
-      const startingValue = newStartingValue.trim() ? Number(newStartingValue) : null;
-      // A starting value (and an active season to enroll into) means this is
-      // "add and enroll now" — same reuse-by-name/unarchive behavior as "add
-      // an unregistered player" on Create Round, so a name matching an
-      // existing (even archived) player picks them back up instead of either
-      // erroring or creating a duplicate. No starting value just creates the
-      // bare identity, same as before.
-      if (startingValue != null && currentSeasonId != null) {
+      const startingValue = newStartingValue.trim() ? Number(newStartingValue) : undefined;
+      // Adding a player here means entering them in the current season — an
+      // admin has no reason to add someone to the roster otherwise. Same
+      // reuse-by-name/unarchive behavior as "add an unregistered player" on
+      // Create Round, so a name matching an existing (even archived) player
+      // picks them back up instead of either erroring or creating a
+      // duplicate. Leaving the value blank lets the server default it to the
+      // median of the current standings. Only when there's no active season
+      // at all (nothing to enroll into) does this just create the bare
+      // identity.
+      if (currentSeasonId != null) {
         await seasonsApi.enrollPlayer(currentSeasonId, { name: newName.trim(), membershipType: newMembership, startingValue });
       } else {
         await playersApi.createPlayer(newName.trim(), newMembership);
@@ -344,7 +347,7 @@ export default function PlayersPage() {
             </div>
             {currentSeasonId != null && (
               <div className="field">
-                <label htmlFor="new-starting-value">Starting value (optional)</label>
+                <label htmlFor="new-starting-value">Starting value</label>
                 <input
                   id="new-starting-value"
                   type="text"
@@ -353,7 +356,7 @@ export default function PlayersPage() {
                   value={newStartingValue}
                   onChange={(e) => setNewStartingValue(e.target.value.replace(/[^0-9]/g, ''))}
                   onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-                  placeholder="Leave blank to skip"
+                  placeholder="Middle of standings"
                 />
               </div>
             )}
@@ -363,8 +366,9 @@ export default function PlayersPage() {
           </div>
           {currentSeasonId != null && (
             <p style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: -8 }}>
-              Giving a starting value enrolls them in the current season now. A name matching an existing player —
-              archived or not — reuses that player (unarchiving them if needed) instead of creating a duplicate.
+              Enrolls them in the current season now. Leave the starting value blank to default to the median of the
+              current standings. A name matching an existing player — archived or not — reuses that player
+              (unarchiving them if needed) instead of creating a duplicate.
             </p>
           )}
         </div>
