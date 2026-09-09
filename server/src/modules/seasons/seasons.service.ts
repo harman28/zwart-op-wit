@@ -195,6 +195,26 @@ export async function getEnrolledPlayers(seasonId: number) {
 }
 
 /**
+ * A newcomer's starting value when the admin doesn't give one explicitly:
+ * the median of the season's current live standings, rounded to the
+ * nearest integer — i.e. parachute them into the middle of the pack rather
+ * than requiring the admin to eyeball a number. Before anyone has a
+ * standing yet (brand-new season, empty roster), there's no "middle" to
+ * compute, so the season's topValue is the only sensible fallback.
+ */
+async function defaultStartingValue(seasonId: number): Promise<number> {
+  const [leaderboard, season] = await Promise.all([
+    getLiveLeaderboard(seasonId),
+    prisma.season.findUniqueOrThrow({ where: { id: seasonId } }),
+  ]);
+  const values = leaderboard.standings.map((s) => s.value).sort((a, b) => a - b);
+  if (values.length === 0) return season.topValue;
+  const mid = Math.floor(values.length / 2);
+  const median = values.length % 2 === 0 ? (values[mid - 1]! + values[mid]!) / 2 : values[mid]!;
+  return Math.round(median);
+}
+
+/**
  * Resolves a name to a playerId enrolled in this season — shared by "add an
  * unregistered player" (Create Round, swap-opponent, assign-opponent) and
  * the Players tab's "+ Add player". A name matching an existing player
@@ -207,11 +227,12 @@ export async function getEnrolledPlayers(seasonId: number) {
  * silently counted as a full member; the players page's "rounds played this
  * season" hint on guests is what surfaces "they should probably be upgraded
  * now" once they've turned up a few times. An existing player's membership
- * type is left untouched.
+ * type is left untouched. `startingValue` is optional — omit it to default
+ * to the median of the current standings (see defaultStartingValue).
  */
 export async function enrollNewOrReturningPlayer(
   seasonId: number,
-  data: { name: string; membershipType?: MembershipType; startingValue: number },
+  data: { name: string; membershipType?: MembershipType; startingValue?: number },
 ) {
   const name = data.name.trim();
   const existingPlayer = await prisma.player.findFirst({ where: { name: { equals: name, mode: 'insensitive' } } });
@@ -233,10 +254,28 @@ export async function enrollNewOrReturningPlayer(
     playerId = player.id;
   }
 
+  const startingValue = data.startingValue ?? (await defaultStartingValue(seasonId));
   const enrollment = await prisma.seasonEnrollment.create({
-    data: { seasonId, playerId, startingValue: data.startingValue },
+    data: { seasonId, playerId, startingValue },
   });
   return { playerId, enrollment };
+}
+
+/**
+ * Enrolls an already-known player (by id, not name) into a season — used by
+ * unarchivePlayer so restoring someone puts them back in the current
+ * season's standings immediately, rather than leaving them visible in the
+ * roster but absent everywhere season-related until separately re-added. A
+ * no-op if they're already enrolled. Omit startingValue to default to the
+ * median of the current standings.
+ */
+export async function enrollExistingPlayer(seasonId: number, playerId: number, startingValue?: number) {
+  const existing = await prisma.seasonEnrollment.findUnique({
+    where: { seasonId_playerId: { seasonId, playerId } },
+  });
+  if (existing) return existing;
+  const value = startingValue ?? (await defaultStartingValue(seasonId));
+  return prisma.seasonEnrollment.create({ data: { seasonId, playerId, startingValue: value } });
 }
 
 /**

@@ -43,7 +43,9 @@ const createSeasonBody = z.object({
 const enrollPlayerBody = z.object({
   name: z.string().min(1),
   membershipType: z.enum(['FULL', 'INTERNAL_ONLY', 'GUEST']).optional(),
-  startingValue: z.number().int(),
+  // Omit to default to the median of the season's current standings — see
+  // defaultStartingValue in seasons.service.ts.
+  startingValue: z.number().int().optional(),
 });
 const updateSettingsBody = z.object({
   repeatPairingWindow: z.number().int().optional(),
