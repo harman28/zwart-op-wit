@@ -507,13 +507,6 @@ table.pairings td {
   border-top: 1px solid var(--border);
   vertical-align: middle;
 }
-table.pairings th:last-child,
-table.pairings td:last-child {
-  text-align: right;
-}
-tr.unpaired-row td:last-child {
-  text-align: left;
-}
 .table-no {
   font-family: var(--font-mono);
   color: var(--muted);
@@ -534,6 +527,10 @@ table.pairings td:nth-child(3) {
 table.pairings th:nth-child(4),
 table.pairings td:nth-child(4) {
   width: 40%;
+  /* Black is always the 4th column — relying on :last-child instead broke
+     this in admin view, where a trailing "remove matchup" column pushes
+     Black off of last-child. */
+  text-align: right;
 }
 .result-pill {
   font-family: var(--font-mono);
