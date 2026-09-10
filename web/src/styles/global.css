@@ -476,8 +476,11 @@ table.board tbody tr:nth-child(even) {
 /* Desktop table's Color column: a fixed-width slot for the swatch (present
    or not) plus a fixed-width number keeps every row's swatch and digits
    lined up vertically — without these, "-1" being wider than "0" or "1"
-   shifted the swatch left/right row to row. */
-table.board td.color-cell {
+   shifted the swatch left/right row to row. The flex layout lives on an
+   inner span, not the <td> itself — a flexed <td> drops out of the table's
+   row layout and its own border-bottom stops lining up with the rest of
+   the row. */
+.color-cell-inner {
   display: flex;
   align-items: center;
   justify-content: flex-end;
