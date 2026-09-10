@@ -65,10 +65,12 @@ export default function LeaderboardView({
                   </span>
                 </td>
                 <td className="num value-cell color-cell">
-                  <span className="lb-color-swatch-slot">
-                    <ColorSwatch n={s.colorNumber} />
+                  <span className="color-cell-inner">
+                    <span className="lb-color-swatch-slot">
+                      <ColorSwatch n={s.colorNumber} />
+                    </span>
+                    <span className="lb-color-number">{s.colorNumber}</span>
                   </span>
-                  <span className="lb-color-number">{s.colorNumber}</span>
                 </td>
                 <td className="num value-cell">{s.pairingByeUsed ? 1 : 0}</td>
               </tr>
