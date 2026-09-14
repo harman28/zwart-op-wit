@@ -1,9 +1,9 @@
 import { api } from './client.js';
 
-export function exportBackup(seasonId: number) {
-  return api.get<unknown>(`/admin/seasons/${seasonId}/backup`);
+export function exportBackup() {
+  return api.get<unknown>('/admin/backup');
 }
 
-export function importBackupReplace(seasonId: number, file: unknown) {
-  return api.post(`/admin/backup/import?seasonId=${seasonId}`, file);
+export function importBackupReplace(file: unknown) {
+  return api.post('/admin/backup/import', file);
 }
