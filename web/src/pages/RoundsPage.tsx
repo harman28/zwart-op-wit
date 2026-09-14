@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router';
+import { Link, useParams } from 'react-router';
 import * as roundsApi from '../api/rounds.js';
 import * as seasonsApi from '../api/seasons.js';
 import type { ExternalOutcome, GameResult, MembershipType, Player, Round, RoundEntry, Season } from '../api/types.js';
@@ -312,13 +312,15 @@ export default function RoundsPage() {
         const open = openRoundIds.has(round.id);
         return (
           <div className={open ? 'round open' : 'round'} key={round.id}>
-            <button className="round-head" onClick={() => toggleRound(round.id)}>
-              <div className="round-head-left">
-                <span className="round-title">Round {round.number}</span>
+            <div className="round-head-row">
+              <Link to={`/round/${round.number}`} className="round-title-link" title="Permalink to this round">
+                Round {round.number}
+              </Link>
+              <button className="round-head" onClick={() => toggleRound(round.id)}>
                 <span className="round-date">{formatDate(round.date)}</span>
-              </div>
-              <span className="chevron">▶</span>
-            </button>
+                <span className="chevron">▶</span>
+              </button>
+            </div>
             {open && (
               <div className="round-body">
                 <table className="pairings">
