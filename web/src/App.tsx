@@ -25,6 +25,7 @@ function AppRoutes() {
       <NavBar />
       <Routes>
         <Route path="/" element={<RoundsPage />} />
+        <Route path="/round/:number" element={<RoundsPage />} />
         <Route path="/leaderboard" element={<LeaderboardPage />} />
         <Route path="/admin/login" element={<LoginPage />} />
         <Route
