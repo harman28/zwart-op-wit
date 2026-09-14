@@ -31,3 +31,6 @@ export function archivePlayer(id: number) {
 export function unarchivePlayer(id: number) {
   return api.post<Player>(`/admin/players/${id}/unarchive`);
 }
+export function deletePlayer(id: number) {
+  return api.delete<void>(`/admin/players/${id}`);
+}
