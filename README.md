@@ -33,15 +33,30 @@ it encodes the club's actual rules doc and a real worked example. It should very
 rarely need to change; if a change to it feels necessary, treat that as a signal to
 double check the rules doc rather than the other way around.
 
-## Going live
+## Environments & deploy
 
-The deployed site currently runs on disposable sample data for review/feedback
-purposes. See [`PRELAUNCH.md`](./PRELAUNCH.md) for the checklist before switching
-to real club data — including an important note about the shared dev/prod database.
+Three separate environments, each with its own Postgres:
+
+- **production** — Railway `production` environment (`web`, `server`, `Postgres`).
+  Live at https://zwartopwit.up.railway.app — the real club competition.
+- **staging** — Railway `staging` environment, a full duplicate of production's
+  service shape with its own Postgres. Live at https://zwartopklad.up.railway.app
+  ("klad" = Dutch for a rough draft). `server/.env` (local dev) points here, never
+  at production. All feature work and manual verification happens against this DB.
+- **test** — a local/CI-only Postgres, used only by the vitest suite
+  (`server/.env.test`). Fully disposable, isolated from both staging and production.
+
+Deploys are branch-based, no one needs standing Railway access to ship a change:
+feature branches merge (via PR) into `staging`, which auto-deploys to
+zwartopklad.up.railway.app; once reviewed there, `staging` merges (via PR) into
+`main`, which auto-deploys to production.
 
 ## Backup / restore
 
-Every season can be exported to a single JSON file (`GET /api/admin/seasons/:id/backup`)
-containing the full player list and round-by-round game history. If the live system
-ever breaks, that file can be re-imported to fully reconstruct the season — see the
-plan doc for the exact format.
+The whole instance — every season, every player (active and archived, with every
+field), and the club-wide defaults — can be exported to a single JSON file
+(`GET /api/admin/backup`, or Settings → Export backup). If the live system ever
+breaks, or to bring staging in line with real data, that file can be re-imported
+(`POST /api/admin/backup/import`, or Settings → Replace with backup) to fully wipe
+and rebuild the instance from it. See `server/src/modules/backup/backup.schema.ts`
+for the exact format.
