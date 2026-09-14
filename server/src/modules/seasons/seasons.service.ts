@@ -173,6 +173,22 @@ async function getPublishedRoundsForReplay(season: SeasonWithEnrollments) {
     : publishedRounds.map((r) => ({ ...r, entries: r.entries.filter((e) => e.kind !== 'EXTERNAL_BYE') }));
 }
 
+/**
+ * A round "has started" once an admin has actually recorded something in
+ * it — a GAME result or an EXTERNAL_BYE outcome. PAIRING_BYE/REGULAR_BYE
+ * entries don't count: they're auto-resolved the instant the round is
+ * created/published, with no admin action needed, so a freshly published
+ * round can otherwise look "started" (its bye recipient already credited)
+ * while every actual game still shows no result at all.
+ */
+function roundHasRecordedResult(round: {
+  entries: { kind: string; result: string | null; externalOutcome: string | null }[];
+}): boolean {
+  return round.entries.some(
+    (e) => (e.kind === 'GAME' && e.result !== null) || (e.kind === 'EXTERNAL_BYE' && e.externalOutcome !== null),
+  );
+}
+
 async function getSeasonWithEnrollments(seasonId: number): Promise<SeasonWithEnrollments> {
   const season = await prisma.season.findUnique({
     where: { id: seasonId },
@@ -289,7 +305,17 @@ export async function enrollExistingPlayer(seasonId: number, playerId: number, s
  * published round, instead of the season's current state — the engine
  * already computes every round's snapshot in one replay (`byRound`), so this
  * is just picking a different snapshot out of the same result, not a
- * separate/heavier computation.
+ * separate/heavier computation. `afterRound` is an explicit ask and always
+ * honored as-is, even for a round with nothing recorded yet.
+ *
+ * The default "current" view is different: publishing a round immediately
+ * auto-resolves its pairing bye (see roundHasRecordedResult), which would
+ * otherwise nudge the live board the moment a round goes out — before
+ * anyone's actually played — making it look like the season jumped ahead on
+ * its own. So "current" freezes at the last round that has at least one
+ * recorded GAME result or EXTERNAL_BYE outcome, not just the last published
+ * one, and moves forward again as soon as the first result of the new round
+ * is entered.
  */
 export async function getLiveLeaderboard(seasonId: number, afterRound?: number) {
   const season = await getSeasonWithEnrollments(seasonId);
@@ -306,6 +332,12 @@ export async function getLiveLeaderboard(seasonId: number, afterRound?: number) 
     const found = replay.byRound.find((r) => r.roundNumber === afterRound);
     if (!found) throw new HttpError(404, `Round ${afterRound} has no published standings in this season`);
     snapshot = found;
+  } else {
+    const lastStartedRound = [...roundsForReplay].reverse().find(roundHasRecordedResult);
+    snapshot = lastStartedRound
+      ? replay.byRound.find((r) => r.roundNumber === lastStartedRound.number)!
+      : replaySeason({ topValue: season.topValue, baselines: mapEnrollmentsToBaselines(season.enrollments), rounds: [] })
+          .current;
   }
 
   const playerById = new Map(season.enrollments.map((e) => [e.playerId, e.player]));
