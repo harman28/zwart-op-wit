@@ -698,8 +698,9 @@ table.board td.winpct-cell .lb-card-tiny-bar {
 
 table.pairings {
   width: 100%;
+  max-width: 560px;
+  margin: 4px auto 0;
   border-collapse: collapse;
-  margin-top: 4px;
 }
 table.pairings th {
   text-align: left;
@@ -728,6 +729,12 @@ table.pairings td {
 table.pairings th:nth-child(2),
 table.pairings td:nth-child(2) {
   width: 40%;
+  /* White hugs Result from the left, instead of sitting flush against the
+     row's own left edge — on a wide screen (or a round with many players,
+     each table row spanning the full card width) a pairing's two names
+     could otherwise end up at opposite ends of the row, far enough apart
+     that they stopped reading as opponents. */
+  text-align: right;
 }
 table.pairings th:nth-child(3),
 table.pairings td:nth-child(3) {
@@ -738,8 +745,9 @@ table.pairings td:nth-child(4) {
   width: 40%;
   /* Black is always the 4th column — relying on :last-child instead broke
      this in admin view, where a trailing "remove matchup" column pushes
-     Black off of last-child. */
-  text-align: right;
+     Black off of last-child. Left-aligned so it hugs Result from the
+     right, mirroring White — see the note above. */
+  text-align: left;
 }
 .result-pill {
   font-family: var(--font-mono);
