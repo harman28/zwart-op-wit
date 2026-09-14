@@ -108,3 +108,33 @@ export async function unarchivePlayer(id: number) {
   if (currentSeason) await enrollExistingPlayer(currentSeason.id, id);
   return player;
 }
+
+/**
+ * A real delete — for a typo'd or test player that never actually played
+ * anything, "archive forever" is a worse outcome than just removing them.
+ * Only allowed when the player has zero RoundEntry/RoundSignup rows: that's
+ * the actual historical data the no-delete rule exists to protect (the
+ * replay engine throws if a round entry references a player with no
+ * baseline). A player who was only ever enrolled — never actually appeared
+ * in a round — has no such history, so their enrollment rows are cleaned up
+ * as part of the same delete rather than being a separate blocker.
+ */
+export async function deletePlayer(id: number) {
+  const player = await prisma.player.findUnique({ where: { id } });
+  if (!player) throw new HttpError(404, `Player ${id} not found`);
+
+  const [entryCount, signupCount] = await Promise.all([
+    prisma.roundEntry.count({
+      where: { OR: [{ whitePlayerId: id }, { blackPlayerId: id }, { soloPlayerId: id }] },
+    }),
+    prisma.roundSignup.count({ where: { playerId: id } }),
+  ]);
+  if (entryCount > 0 || signupCount > 0) {
+    throw new HttpError(409, `${player.name} has round history and can't be deleted — archive them instead`);
+  }
+
+  await prisma.$transaction([
+    prisma.seasonEnrollment.deleteMany({ where: { playerId: id } }),
+    prisma.player.delete({ where: { id } }),
+  ]);
+}
