@@ -140,6 +140,10 @@ export default function PlayersPage() {
   const [archiving, setArchiving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  // Save/archive/delete failures belong inside the still-open modal, next to
+  // the action that failed — not the page-level banner, which can be scrolled
+  // out of view (or behind the modal overlay) by the time the error lands.
+  const [modalError, setModalError] = useState<string | null>(null);
 
   function load() {
     setLoading(true);
@@ -224,17 +228,19 @@ export default function PlayersPage() {
   function openEdit(player: Player) {
     setEditingPlayer(player);
     setDraft(draftFor(player));
+    setModalError(null);
   }
 
   function closeEdit() {
     setEditingPlayer(null);
     setDraft(null);
+    setModalError(null);
   }
 
   async function handleToggleArchive() {
     if (!editingPlayer) return;
     setArchiving(true);
-    setError(null);
+    setModalError(null);
     try {
       const updated = editingPlayer.archivedAt
         ? await playersApi.unarchivePlayer(editingPlayer.id)
@@ -242,7 +248,7 @@ export default function PlayersPage() {
       setPlayers((prev) => [...prev.filter((p) => p.id !== updated.id), updated].sort((a, b) => a.name.localeCompare(b.name)));
       closeEdit();
     } catch (err) {
-      setError(errorMessage(err));
+      setModalError(errorMessage(err));
     } finally {
       setArchiving(false);
     }
@@ -258,13 +264,13 @@ export default function PlayersPage() {
       return;
     }
     setDeleting(true);
-    setError(null);
+    setModalError(null);
     try {
       await playersApi.deletePlayer(editingPlayer.id);
       setPlayers((prev) => prev.filter((p) => p.id !== editingPlayer.id));
       closeEdit();
     } catch (err) {
-      setError(errorMessage(err));
+      setModalError(errorMessage(err));
     } finally {
       setDeleting(false);
     }
@@ -273,7 +279,7 @@ export default function PlayersPage() {
   async function handleSaveEdit() {
     if (!editingPlayer || !draft) return;
     setSaving(true);
-    setError(null);
+    setModalError(null);
     try {
       const updated = await playersApi.updatePlayer(editingPlayer.id, {
         name: draft.name.trim() || editingPlayer.name,
@@ -286,7 +292,7 @@ export default function PlayersPage() {
       setPlayers((prev) => [...prev.filter((p) => p.id !== updated.id), updated].sort((a, b) => a.name.localeCompare(b.name)));
       closeEdit();
     } catch (err) {
-      setError(errorMessage(err));
+      setModalError(errorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -428,6 +434,7 @@ export default function PlayersPage() {
 
       {editingPlayer && draft && (
         <Modal title="Edit player" onClose={closeEdit}>
+          {modalError && <div className="error-banner">{modalError}</div>}
           <div className="field">
             <label htmlFor="edit-name">Name</label>
             <input id="edit-name" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
