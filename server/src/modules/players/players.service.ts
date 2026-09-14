@@ -60,7 +60,20 @@ export async function importPlayers(
     seen.add(key);
     await assertNameAvailable(e.name);
   }
-  return prisma.$transaction(entries.map((e) => prisma.player.create({ data: e })));
+  const created = await prisma.$transaction(entries.map((e) => prisma.player.create({ data: e })));
+
+  // Importing a roster here means entering these players in the current
+  // season, same as "+ Add player" — there's no reason to bulk-import names
+  // an admin doesn't want counted (and without this, an imported player
+  // silently never shows up in Create Round's suggestions). No-op if
+  // there's no active season to enroll into.
+  const currentSeason = await prisma.season.findFirst({ where: { endedAt: null }, orderBy: { startedAt: 'desc' } });
+  if (currentSeason) {
+    for (const player of created) {
+      await enrollExistingPlayer(currentSeason.id, player.id);
+    }
+  }
+  return created;
 }
 
 export async function updatePlayer(
