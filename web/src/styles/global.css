@@ -521,10 +521,6 @@ table.board td.winpct-cell .lb-card-tiny-bar {
 .round.open {
   overflow: visible;
 }
-.round-head-row {
-  display: flex;
-  align-items: stretch;
-}
 .round-head {
   display: flex;
   align-items: center;
@@ -534,32 +530,13 @@ table.board td.winpct-cell .lb-card-tiny-bar {
   gap: 10px;
   background: none;
   border: none;
-  flex: 1;
-  min-width: 0;
+  width: 100%;
   text-align: left;
   color: inherit;
   transition: background-color 0.15s ease;
 }
 .round-head:hover {
   background: var(--card-raised);
-}
-.round-link-btn {
-  flex-shrink: 0;
-  align-self: center;
-  margin-right: 14px;
-  font-size: 12px;
-  color: var(--muted);
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 5px 10px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: color 0.15s ease, border-color 0.15s ease;
-}
-.round-link-btn:hover {
-  color: var(--accent);
-  border-color: var(--accent);
 }
 .round-head-left {
   display: flex;

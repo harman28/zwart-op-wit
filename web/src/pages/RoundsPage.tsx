@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router';
 import * as roundsApi from '../api/rounds.js';
 import * as seasonsApi from '../api/seasons.js';
@@ -32,14 +32,13 @@ function toMatchupParticipantInput(p: MatchupParticipant): roundsApi.MatchupPart
 export default function RoundsPage() {
   // Permalink to a specific round, e.g. /round/5 — shared instead of the
   // homepage's "all rounds, latest on top" view so a specific round's
-  // pairings can be linked directly. Scoped to the current season, same as
-  // the rest of the visitor-facing page; a link shared this way is meant to
-  // be used while that round's season is still the active one.
+  // pairings can be shared on their own, with nothing else on the page.
+  // Scoped to the current season, same as the rest of the visitor-facing
+  // page; a link shared this way is meant to be used while that round's
+  // season is still the active one.
   const { number: roundNumberParam } = useParams();
   const targetRoundNumber = roundNumberParam ? Number(roundNumberParam) : null;
   const [roundNotFound, setRoundNotFound] = useState(false);
-  const didScrollRef = useRef(false);
-  const [copiedRoundId, setCopiedRoundId] = useState<number | null>(null);
 
   const { season: latestSeason, loading: seasonLoading } = useLatestSeason();
   const { isAdmin } = useAdmin();
@@ -98,33 +97,6 @@ export default function RoundsPage() {
       cancelled = true;
     };
   }, [season, isAdmin, adminMode, targetRoundNumber]);
-
-  // Scroll the linked round into view once its data has actually arrived —
-  // only once per page load, so re-fetches from later edits (entering a
-  // result, etc.) don't keep yanking the page back to it.
-  useEffect(() => {
-    if (targetRoundNumber == null || didScrollRef.current || rounds.length === 0) return;
-    const el = document.getElementById(`round-${targetRoundNumber}`);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      didScrollRef.current = true;
-    }
-  }, [rounds, targetRoundNumber]);
-
-  async function handleCopyLink(round: Round) {
-    const url = `${window.location.origin}/round/${round.number}`;
-    try {
-      await navigator.clipboard.writeText(url);
-    } catch {
-      // Clipboard API can be unavailable (insecure context, denied
-      // permission) — fall back to a prompt so the link can still be grabbed
-      // manually instead of silently doing nothing.
-      window.prompt('Copy this link:', url);
-      return;
-    }
-    setCopiedRoundId(round.id);
-    setTimeout(() => setCopiedRoundId((prev) => (prev === round.id ? null : prev)), 1500);
-  }
 
   useEffect(() => {
     if (adminMode && season) seasonsApi.getEnrolledPlayers(season.id).then(setAllPlayers).catch(() => {});
@@ -293,6 +265,10 @@ export default function RoundsPage() {
     );
   }
 
+  // A permalink shows only that one round — not the full list with just it
+  // expanded. If it's not found, this is empty and the banner above covers it.
+  const displayRounds = targetRoundNumber != null ? rounds.filter((r) => r.number === targetRoundNumber) : rounds;
+
   return (
     <div className="app">
       {isAdmin && (
@@ -320,9 +296,11 @@ export default function RoundsPage() {
       {roundNotFound && (
         <div className="error-banner">Round {targetRoundNumber} isn't available in the current season.</div>
       )}
-      {rounds.length === 0 && <p style={{ color: 'var(--muted)' }}>No rounds published yet.</p>}
+      {rounds.length === 0 && targetRoundNumber == null && (
+        <p style={{ color: 'var(--muted)' }}>No rounds published yet.</p>
+      )}
 
-      {rounds.map((round) => {
+      {displayRounds.map((round) => {
         const games = [...round.entries]
           .filter((e) => e.kind === 'GAME')
           .sort((a, b) => (a.tableNumber ?? 0) - (b.tableNumber ?? 0));
@@ -333,25 +311,14 @@ export default function RoundsPage() {
         const externalCandidates = allPlayers.filter((p) => !pairedIds.has(p.id) && !externalIds.has(p.id));
         const open = openRoundIds.has(round.id);
         return (
-          <div className={open ? 'round open' : 'round'} key={round.id} id={`round-${round.number}`}>
-            <div className="round-head-row">
-              <button className="round-head" onClick={() => toggleRound(round.id)}>
-                <div className="round-head-left">
-                  <span className="round-title">Round {round.number}</span>
-                  <span className="round-date">{formatDate(round.date)}</span>
-                </div>
-                <span className="chevron">▶</span>
-              </button>
-              <button
-                type="button"
-                className="round-link-btn"
-                onClick={() => handleCopyLink(round)}
-                aria-label={`Copy link to Round ${round.number}`}
-                title="Copy link to this round"
-              >
-                {copiedRoundId === round.id ? 'Copied!' : 'Link'}
-              </button>
-            </div>
+          <div className={open ? 'round open' : 'round'} key={round.id}>
+            <button className="round-head" onClick={() => toggleRound(round.id)}>
+              <div className="round-head-left">
+                <span className="round-title">Round {round.number}</span>
+                <span className="round-date">{formatDate(round.date)}</span>
+              </div>
+              <span className="chevron">▶</span>
+            </button>
             {open && (
               <div className="round-body">
                 <table className="pairings">
