@@ -4,6 +4,7 @@ import { requireAdmin } from '../../lib/requireAdmin.js';
 import {
   archivePlayer,
   createPlayer,
+  deletePlayer,
   importPlayers,
   listPlayersWithGuestCounts,
   unarchivePlayer,
@@ -34,8 +35,11 @@ const updateBody = z.object({
 });
 const idParams = z.object({ id: z.coerce.number().int() });
 
-// No DELETE — players are historical identities referenced by RoundEntry
-// rows forever. Fix a typo'd name with PATCH, don't recreate the player.
+// DELETE is real but conditional — see deletePlayer in players.service.ts.
+// A player who has ever actually appeared in a round (a real RoundEntry or
+// RoundSignup) is a historical identity referenced forever; only a player
+// with none of that (a typo, a test player, an accidental duplicate) can
+// actually be removed. Fix a typo'd name with PATCH instead of delete+recreate.
 export async function playersRoutes(app: FastifyInstance): Promise<void> {
   app.get('/api/admin/players', { preHandler: requireAdmin }, async () => listPlayersWithGuestCounts());
 
@@ -64,4 +68,9 @@ export async function playersRoutes(app: FastifyInstance): Promise<void> {
   app.post('/api/admin/players/:id/unarchive', { preHandler: requireAdmin }, async (request) =>
     unarchivePlayer(idParams.parse(request.params).id),
   );
+
+  app.delete('/api/admin/players/:id', { preHandler: requireAdmin }, async (request, reply) => {
+    await deletePlayer(idParams.parse(request.params).id);
+    reply.code(204);
+  });
 }

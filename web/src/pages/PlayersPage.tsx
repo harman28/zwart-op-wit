@@ -138,6 +138,7 @@ export default function PlayersPage() {
   const [draft, setDraft] = useState<EditDraft | null>(null);
   const [saving, setSaving] = useState(false);
   const [archiving, setArchiving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
 
   function load() {
@@ -244,6 +245,28 @@ export default function PlayersPage() {
       setError(errorMessage(err));
     } finally {
       setArchiving(false);
+    }
+  }
+
+  async function handleDeletePlayer() {
+    if (!editingPlayer) return;
+    if (
+      !window.confirm(
+        `Delete ${editingPlayer.name} entirely? This can't be undone. Only works if they've never actually played a round — if they have, you'll get an error and should archive them instead.`,
+      )
+    ) {
+      return;
+    }
+    setDeleting(true);
+    setError(null);
+    try {
+      await playersApi.deletePlayer(editingPlayer.id);
+      setPlayers((prev) => prev.filter((p) => p.id !== editingPlayer.id));
+      closeEdit();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -453,9 +476,14 @@ export default function PlayersPage() {
             </div>
           </div>
           <div className="btn-row" style={{ marginTop: 4, justifyContent: 'space-between' }}>
-            <button className="btn btn-ghost" onClick={handleToggleArchive} disabled={archiving}>
-              {archiving ? 'Saving…' : editingPlayer.archivedAt ? 'Restore player' : 'Archive player'}
-            </button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn btn-ghost" onClick={handleToggleArchive} disabled={archiving}>
+                {archiving ? 'Saving…' : editingPlayer.archivedAt ? 'Restore player' : 'Archive player'}
+              </button>
+              <button className="btn btn-ghost" onClick={handleDeletePlayer} disabled={deleting}>
+                {deleting ? 'Deleting…' : 'Delete player'}
+              </button>
+            </div>
             <button className="btn btn-primary" onClick={handleSaveEdit} disabled={saving}>
               {saving ? 'Saving…' : 'Save'}
             </button>
