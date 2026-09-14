@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router';
 import * as roundsApi from '../api/rounds.js';
 import * as seasonsApi from '../api/seasons.js';
 import type { ExternalOutcome, GameResult, MembershipType, Player, Round, RoundEntry, Season } from '../api/types.js';
@@ -29,6 +30,16 @@ function toMatchupParticipantInput(p: MatchupParticipant): roundsApi.MatchupPart
 }
 
 export default function RoundsPage() {
+  // Permalink to a specific round, e.g. /round/5 — shared instead of the
+  // homepage's "all rounds, latest on top" view so a specific round's
+  // pairings can be shared on their own, with nothing else on the page.
+  // Scoped to the current season, same as the rest of the visitor-facing
+  // page; a link shared this way is meant to be used while that round's
+  // season is still the active one.
+  const { number: roundNumberParam } = useParams();
+  const targetRoundNumber = roundNumberParam ? Number(roundNumberParam) : null;
+  const [roundNotFound, setRoundNotFound] = useState(false);
+
   const { season: latestSeason, loading: seasonLoading } = useLatestSeason();
   const { isAdmin } = useAdmin();
   const [rounds, setRounds] = useState<Round[]>([]);
@@ -64,7 +75,17 @@ export default function RoundsPage() {
       .then((data) => {
         if (cancelled) return;
         setRounds(data);
-        if (data[0]) setOpenRoundIds((prev) => (prev.size === 0 ? new Set([data[0].id]) : prev));
+        if (targetRoundNumber != null) {
+          const target = data.find((r) => r.number === targetRoundNumber);
+          if (target) {
+            setOpenRoundIds(new Set([target.id]));
+            setRoundNotFound(false);
+          } else {
+            setRoundNotFound(true);
+          }
+        } else if (data[0]) {
+          setOpenRoundIds((prev) => (prev.size === 0 ? new Set([data[0].id]) : prev));
+        }
       })
       .catch((err: unknown) => {
         if (!cancelled) setError(errorMessage(err));
@@ -75,7 +96,7 @@ export default function RoundsPage() {
     return () => {
       cancelled = true;
     };
-  }, [season, isAdmin, adminMode]);
+  }, [season, isAdmin, adminMode, targetRoundNumber]);
 
   useEffect(() => {
     if (adminMode && season) seasonsApi.getEnrolledPlayers(season.id).then(setAllPlayers).catch(() => {});
@@ -244,6 +265,10 @@ export default function RoundsPage() {
     );
   }
 
+  // A permalink shows only that one round — not the full list with just it
+  // expanded. If it's not found, this is empty and the banner above covers it.
+  const displayRounds = targetRoundNumber != null ? rounds.filter((r) => r.number === targetRoundNumber) : rounds;
+
   return (
     <div className="app">
       {isAdmin && (
@@ -268,9 +293,14 @@ export default function RoundsPage() {
       )}
 
       {error && <div className="error-banner">{error}</div>}
-      {rounds.length === 0 && <p style={{ color: 'var(--muted)' }}>No rounds published yet.</p>}
+      {roundNotFound && (
+        <div className="error-banner">Round {targetRoundNumber} isn't available in the current season.</div>
+      )}
+      {rounds.length === 0 && targetRoundNumber == null && (
+        <p style={{ color: 'var(--muted)' }}>No rounds published yet.</p>
+      )}
 
-      {rounds.map((round) => {
+      {displayRounds.map((round) => {
         const games = [...round.entries]
           .filter((e) => e.kind === 'GAME')
           .sort((a, b) => (a.tableNumber ?? 0) - (b.tableNumber ?? 0));
@@ -282,13 +312,15 @@ export default function RoundsPage() {
         const open = openRoundIds.has(round.id);
         return (
           <div className={open ? 'round open' : 'round'} key={round.id}>
-            <button className="round-head" onClick={() => toggleRound(round.id)}>
-              <div className="round-head-left">
-                <span className="round-title">Round {round.number}</span>
+            <div className="round-head-row">
+              <Link to={`/round/${round.number}`} className="round-title-link" title="Permalink to this round">
+                Round {round.number}
+              </Link>
+              <button className="round-head" onClick={() => toggleRound(round.id)}>
                 <span className="round-date">{formatDate(round.date)}</span>
-              </div>
-              <span className="chevron">▶</span>
-            </button>
+                <span className="chevron">▶</span>
+              </button>
+            </div>
             {open && (
               <div className="round-body">
                 <table className="pairings">

@@ -38,6 +38,10 @@ export default function PlayerAutocomplete({
 }: Props) {
   const [query, setQuery] = useState('');
   const [focused, setFocused] = useState(false);
+  // -1 = nothing highlighted (typing hasn't been followed by an arrow key
+  // yet). Reset to -1 whenever the query changes so a highlight never
+  // silently carries over onto an unrelated suggestion at the same index.
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -76,13 +80,26 @@ export default function PlayerAutocomplete({
   function select(player: Player) {
     onSelect(player);
     setQuery('');
+    setHighlightedIndex(-1);
     // Refocus so the admin can keep typing the next name without reaching for the mouse.
     requestAnimationFrame(() => inputRef.current?.focus());
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter') {
+    if (e.key === 'ArrowDown') {
+      if (suggestions.length === 0) return;
       e.preventDefault();
+      setHighlightedIndex((i) => (i + 1) % suggestions.length);
+    } else if (e.key === 'ArrowUp') {
+      if (suggestions.length === 0) return;
+      e.preventDefault();
+      setHighlightedIndex((i) => (i <= 0 ? suggestions.length - 1 : i - 1));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (highlightedIndex >= 0 && suggestions[highlightedIndex]) {
+        select(suggestions[highlightedIndex]);
+        return;
+      }
       if (suggestions.length === 1) {
         select(suggestions[0]!);
         return;
@@ -91,6 +108,7 @@ export default function PlayerAutocomplete({
       if (exact) select(exact);
     } else if (e.key === 'Escape') {
       setQuery('');
+      setHighlightedIndex(-1);
       inputRef.current?.blur();
     }
   }
@@ -104,15 +122,23 @@ export default function PlayerAutocomplete({
           placeholder={placeholder}
           value={query}
           autoFocus={autoFocus}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setHighlightedIndex(-1);
+          }}
           onFocus={handleFocus}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
         />
         {focused && suggestions.length > 0 && (
           <div className="autocomplete">
-            {suggestions.map((p) => (
-              <div key={p.id} onMouseDown={() => select(p)}>
+            {suggestions.map((p, i) => (
+              <div
+                key={p.id}
+                className={i === highlightedIndex ? 'active' : undefined}
+                onMouseDown={() => select(p)}
+                onMouseEnter={() => setHighlightedIndex(i)}
+              >
                 {p.name}
               </div>
             ))}
