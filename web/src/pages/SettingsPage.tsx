@@ -264,14 +264,12 @@ export default function SettingsPage() {
   const canSavePassword = currentPassword && newPassword && confirmPassword;
 
   async function handleExportBackup() {
-    if (!season) return;
     setError(null);
     try {
-      const data = await backupApi.exportBackup(season.id);
+      const data = await backupApi.exportBackup();
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      const slug = season.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
       const now = new Date();
       const stamp = [now.getFullYear(), now.getMonth() + 1, now.getDate()]
         .map((n) => String(n).padStart(2, '0'))
@@ -279,7 +277,7 @@ export default function SettingsPage() {
         '-' +
         [now.getHours(), now.getMinutes()].map((n) => String(n).padStart(2, '0')).join('');
       a.href = url;
-      a.download = `${slug || 'season'}-backup-${stamp}.json`;
+      a.download = `zwart-op-wit-backup-${stamp}.json`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -288,7 +286,7 @@ export default function SettingsPage() {
   }
 
   async function handleImportBackup() {
-    if (!importFile || !season) return;
+    if (!importFile) return;
     setError(null);
     setNotice(null);
     let parsed: unknown;
@@ -300,14 +298,14 @@ export default function SettingsPage() {
     }
     if (
       !window.confirm(
-        `Replace the current season "${season.name}" with this backup? Everything currently in it will be gone — this can't be undone.`,
+        'Replace EVERYTHING with this backup? Every season, every player, every round on this site will be gone and rebuilt from the file — this can\'t be undone.',
       )
     ) {
       return;
     }
     setImportBusy(true);
     try {
-      await backupApi.importBackupReplace(season.id, parsed);
+      await backupApi.importBackupReplace(parsed);
       setNotice('Backup imported.');
       setImportFile(null);
       setShowImportForm(false);
@@ -520,19 +518,24 @@ export default function SettingsPage() {
         <div className="section-label">Backup</div>
         <div className="settings-row">
           <div>
-            <div className="label">Export this season</div>
-            <div className="help">Everything — players, rounds, results — as one JSON file you can keep or hand off.</div>
+            <div className="label">Export everything</div>
+            <div className="help">
+              Every season, every player (active and archived), every round and result, and the club-wide defaults —
+              one JSON file with the whole instance. Doesn't include the admin password.
+            </div>
           </div>
-          <button className="btn btn-ghost" onClick={handleExportBackup} disabled={!season}>
+          <button className="btn btn-ghost" onClick={handleExportBackup}>
             Export backup
           </button>
         </div>
         <div className="settings-row">
           <div>
-            <div className="label">Replace with a backup</div>
-            <div className="help">Restore the current season from a previously exported file.</div>
+            <div className="label">Replace everything with a backup</div>
+            <div className="help">
+              Wipes this whole site — every season, every player — and rebuilds it from a previously exported file.
+            </div>
           </div>
-          <button className="btn btn-ghost" onClick={() => setShowImportForm((v) => !v)} disabled={!season}>
+          <button className="btn btn-ghost" onClick={() => setShowImportForm((v) => !v)}>
             Replace with backup…
           </button>
         </div>
@@ -546,7 +549,7 @@ export default function SettingsPage() {
                 onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
               />
               <button className="btn btn-primary" onClick={handleImportBackup} disabled={!importFile || importBusy}>
-                Replace current season
+                Replace everything
               </button>
               <button className="btn btn-ghost" onClick={() => setShowImportForm(false)}>
                 Cancel
