@@ -783,6 +783,15 @@ table.pairings td:nth-child(4) {
   background: var(--draw);
   color: var(--accent-text);
 }
+/* --draw and --accent are both warm gold/brown in light mode, so the solid
+   fill above reads as near-identical to white-win's light-mode swap (same
+   --accent-text on top of it) — an outlined chip instead of a solid fill
+   keeps draw legible without competing with either win color. */
+:root[data-theme='light'] .result-pill.draw {
+  background: var(--card-raised);
+  color: var(--accent-hover);
+  border: 1px solid var(--draw);
+}
 
 /* Win/draw/loss from ONE player's own perspective — distinct from
    .result-pill's white/black-piece framing, which says nothing about who won. */
@@ -988,6 +997,12 @@ table.pairings td:nth-child(4) {
   color: var(--accent-text);
   border-color: var(--draw);
 }
+/* Outlined instead of solid in light mode — see .result-pill.draw's light-mode comment. */
+:root[data-theme='light'] .result-cycle-btn.draw {
+  background: var(--card-raised);
+  color: var(--accent-hover);
+  border-color: var(--draw);
+}
 /* White/black-win fills are the real (constant) chess-piece colors — each
    reads fine against the page whose own background is the *opposite*
    shade, but nearly vanishes against the page that matches it: white-win
@@ -1034,12 +1049,20 @@ table.pairings td:nth-child(4) {
   background: var(--bg);
   color: var(--muted);
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 /* Solid fill, not a translucent tint — see .result-pill.draw's comment. */
 .result-toggle-btn.sel.draw {
   background: var(--draw);
   color: var(--accent-text);
+  border-color: var(--draw);
+}
+/* Outlined instead of solid in light mode — see .result-pill.draw's light-mode comment. */
+:root[data-theme='light'] .result-toggle-btn.sel.draw {
+  background: var(--card-raised);
+  color: var(--accent-hover);
   border-color: var(--draw);
 }
 /* Same accent-swap as .result-cycle-btn below — see the comment there. */
