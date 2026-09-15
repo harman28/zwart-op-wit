@@ -215,6 +215,22 @@ export async function getEnrolledPlayers(seasonId: number) {
 }
 
 /**
+ * One-off catch-up for enrollments that predate backfillMissedRounds
+ * existing at all (or any future case where it somehow got skipped) —
+ * re-runs the exact same backfill for every currently enrolled player.
+ * Safe to call repeatedly: a player with nothing missing, or already at
+ * their regularByeCap, is a no-op. Admin-triggered (Settings), not
+ * automatic — this is a data-repair tool, not something that should run on
+ * every request.
+ */
+export async function backfillMissedByesForSeason(seasonId: number) {
+  const season = await getSeasonWithEnrollments(seasonId);
+  for (const enrollment of season.enrollments) {
+    await backfillMissedRounds(seasonId, enrollment.playerId);
+  }
+}
+
+/**
  * A newcomer's starting value when the admin doesn't give one explicitly:
  * the median of the season's current live standings, rounded to the
  * nearest integer — i.e. parachute them into the middle of the pack rather

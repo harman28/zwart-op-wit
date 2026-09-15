@@ -111,6 +111,18 @@ export default function SettingsPage() {
     setByeCapDraft(String(updated.regularByeCap));
   }
 
+  async function handleBackfillByes() {
+    if (!season) return;
+    setError(null);
+    setNotice(null);
+    try {
+      await seasonsApi.backfillMissedByes(season.id);
+      setNotice('Missing byes backfilled for every enrolled player (up to their regular bye cap).');
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
+
   async function applyTournamentName() {
     if (!season) return;
     const value = tournamentNameDraft.trim();
@@ -368,6 +380,19 @@ export default function SettingsPage() {
                 onBlur={applyByeCap}
                 onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
               />
+            </div>
+            <div className="settings-row">
+              <div>
+                <div className="label">Backfill missing byes</div>
+                <div className="help">
+                  One-off repair: gives every currently enrolled player a regular bye for any already-existing round
+                  they have no entry in (up to the cap above). Use this after adding players to the roster before this
+                  ran automatically, or any time the numbers look off. Safe to run more than once.
+                </div>
+              </div>
+              <button className="btn btn-ghost" onClick={handleBackfillByes}>
+                Run
+              </button>
             </div>
           </>
         ) : (

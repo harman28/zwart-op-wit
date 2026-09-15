@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requireAdmin } from '../../lib/requireAdmin.js';
 import {
+  backfillMissedByesForSeason,
   createSeason,
   endSeason,
   enrollNewOrReturningPlayer,
@@ -86,6 +87,16 @@ export async function seasonsRoutes(app: FastifyInstance): Promise<void> {
     const body = enrollPlayerBody.parse(request.body);
     reply.code(201);
     return enrollNewOrReturningPlayer(params.id, body);
+  });
+
+  // Data-repair tool: catches up any currently enrolled player whose
+  // retroactive byes never got backfilled (e.g. enrolled before this
+  // feature existed). Safe to call more than once — see
+  // backfillMissedByesForSeason's docstring.
+  app.post('/api/admin/seasons/:id/backfill-byes', { preHandler: requireAdmin }, async (request) => {
+    const params = idParams.parse(request.params);
+    await backfillMissedByesForSeason(params.id);
+    return { ok: true };
   });
 
   app.post('/api/admin/seasons', { preHandler: requireAdmin }, async (request, reply) => {
