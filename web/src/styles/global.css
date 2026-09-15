@@ -775,9 +775,13 @@ table.pairings td:nth-child(4) {
   color: var(--result-black-text);
   border: 1px solid var(--result-black-border);
 }
+/* A translucent tint of --draw with text in that same --draw color caps
+   contrast around 3:1 regardless of how opaque the tint is (foreground and
+   background converge on the same hue) — same fix as white-win/black-win
+   above: a solid fill paired with a genuinely contrasting text color. */
 .result-pill.draw {
-  background: color-mix(in srgb, var(--draw) 32%, transparent);
-  color: var(--draw);
+  background: var(--draw);
+  color: var(--accent-text);
 }
 
 /* Win/draw/loss from ONE player's own perspective — distinct from
@@ -978,9 +982,10 @@ table.pairings td:nth-child(4) {
   white-space: nowrap;
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
+/* Solid fill, not a translucent tint — see .result-pill.draw's comment. */
 .result-cycle-btn.draw {
-  background: color-mix(in srgb, var(--draw) 32%, transparent);
-  color: var(--draw);
+  background: var(--draw);
+  color: var(--accent-text);
   border-color: var(--draw);
 }
 /* White/black-win fills are the real (constant) chess-piece colors — each
@@ -1031,9 +1036,10 @@ table.pairings td:nth-child(4) {
   cursor: pointer;
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
+/* Solid fill, not a translucent tint — see .result-pill.draw's comment. */
 .result-toggle-btn.sel.draw {
-  background: color-mix(in srgb, var(--draw) 32%, transparent);
-  color: var(--draw);
+  background: var(--draw);
+  color: var(--accent-text);
   border-color: var(--draw);
 }
 /* Same accent-swap as .result-cycle-btn below — see the comment there. */
