@@ -775,20 +775,26 @@ table.pairings td:nth-child(4) {
   color: var(--result-black-text);
   border: 1px solid var(--result-black-border);
 }
-/* Two earlier attempts didn't hold up: a translucent tint of --draw with
-   text in that same --draw color caps contrast around 3:1 (foreground and
-   background converge on the same hue); a solid --draw fill then read as
-   near-identical to white-win's light-mode swap to --accent (same hue
-   family); an outlined chip fixed that collision but then read as barely
-   different from an unselected button. This is the literal midpoint of
-   --result-white-bg and --result-black-bg — "half of each piece color" —
-   which is why it works in both themes without a light/dark override:
-   it's already miles from white-win's pale cream (dark theme) / bold gold
-   (light theme) and from black-win's bold gold (dark theme) / near-black
-   (light theme), while still reading as a solid, clearly-selected fill. */
+/* Earlier attempts: a translucent tint of --draw with text in that same
+   --draw color caps contrast around 3:1 (foreground/background converge on
+   the same hue); a solid --draw fill then read as near-identical to
+   white-win's light-mode swap to --accent (same hue family); an outlined
+   chip fixed that but read as barely different from an unselected button;
+   a single theme-invariant fill (a 50/50 white/black-win mix) fixed both
+   of those but doesn't actually work in both themes — dark mode's own
+   white-win/black-win are light/bright fills with DARK text, light mode's
+   are dark/saturated fills with LIGHT text (neither theme's pattern is
+   "always light text"), so one fixed fill+text pairing can only match one
+   theme's pattern at a time. Dark mode keeps the original --draw fill
+   (confirmed good); light mode gets its own override below, black-weighted
+   so light text actually has something dark enough to sit on. */
 .result-pill.draw {
-  background: color-mix(in srgb, var(--result-white-bg), var(--result-black-bg));
-  color: var(--result-white-text);
+  background: var(--draw);
+  color: var(--accent-text);
+}
+:root[data-theme='light'] .result-pill.draw {
+  background: color-mix(in srgb, var(--result-white-bg) 30%, var(--result-black-bg) 70%);
+  color: var(--result-black-text);
 }
 
 /* Win/draw/loss from ONE player's own perspective — distinct from
@@ -989,10 +995,15 @@ table.pairings td:nth-child(4) {
   white-space: nowrap;
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
-/* Midpoint of white/black-win — see .result-pill.draw's comment. */
+/* Dark mode keeps the original --draw fill; light mode overrides below — see .result-pill.draw's comment. */
 .result-cycle-btn.draw {
-  background: color-mix(in srgb, var(--result-white-bg), var(--result-black-bg));
-  color: var(--result-white-text);
+  background: var(--draw);
+  color: var(--accent-text);
+  border-color: var(--draw);
+}
+:root[data-theme='light'] .result-cycle-btn.draw {
+  background: color-mix(in srgb, var(--result-white-bg) 30%, var(--result-black-bg) 70%);
+  color: var(--result-black-text);
   border-color: transparent;
 }
 /* White/black-win fills are the real (constant) chess-piece colors — each
@@ -1045,10 +1056,15 @@ table.pairings td:nth-child(4) {
   flex-shrink: 0;
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
-/* Midpoint of white/black-win — see .result-pill.draw's comment. */
+/* Dark mode keeps the original --draw fill; light mode overrides below — see .result-pill.draw's comment. */
 .result-toggle-btn.sel.draw {
-  background: color-mix(in srgb, var(--result-white-bg), var(--result-black-bg));
-  color: var(--result-white-text);
+  background: var(--draw);
+  color: var(--accent-text);
+  border-color: var(--draw);
+}
+:root[data-theme='light'] .result-toggle-btn.sel.draw {
+  background: color-mix(in srgb, var(--result-white-bg) 30%, var(--result-black-bg) 70%);
+  color: var(--result-black-text);
   border-color: transparent;
 }
 /* Same accent-swap as .result-cycle-btn below — see the comment there. */
