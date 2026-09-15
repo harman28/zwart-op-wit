@@ -215,6 +215,23 @@ export async function getEnrolledPlayers(seasonId: number) {
 }
 
 /**
+ * THROWAWAY — one-time data repair, not a permanent feature. Re-runs
+ * backfillMissedRounds for every currently enrolled player in a season, to
+ * catch up enrollments made before that backfill existed (or via any path
+ * that bypasses enrollNewOrReturningPlayer/enrollExistingPlayer, e.g. a
+ * season's initial roster or a raw seed). Idempotent. Delete this function,
+ * its route in seasons.routes.ts, and server/scripts/backfill-byes-once.mjs
+ * once the one-time catch-up has been run against every environment that
+ * needs it — this should not survive as a standing admin feature.
+ */
+export async function backfillMissedByesForSeason(seasonId: number) {
+  const season = await getSeasonWithEnrollments(seasonId);
+  for (const enrollment of season.enrollments) {
+    await backfillMissedRounds(seasonId, enrollment.playerId);
+  }
+}
+
+/**
  * A newcomer's starting value when the admin doesn't give one explicitly:
  * the median of the season's current live standings, rounded to the
  * nearest integer — i.e. parachute them into the middle of the pack rather
