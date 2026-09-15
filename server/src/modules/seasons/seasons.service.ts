@@ -235,6 +235,45 @@ async function defaultStartingValue(seasonId: number): Promise<number> {
 }
 
 /**
+ * A player who enrolls after round N already exists never chose to miss
+ * rounds 1..N-1 — they weren't part of the season yet — so credit them the
+ * same way an enrolled-but-absent player is credited going forward: a
+ * REGULAR_BYE for every already-existing round they have no entry in, up to
+ * the season's regularByeCap (same cap createRound's own absentUnderCap
+ * enforces going forward). The cap is "how many byes this player can ever
+ * bank in the season", so rounds before they joined count against it
+ * exactly like rounds they later choose to skip — earliest missing round
+ * first, so a partial backfill (enrolling very late) covers the rounds
+ * closest to their actual debut rather than an arbitrary subset.
+ * `excludeRoundId` is the round the enrollment itself is happening in order
+ * to add someone to (a real GAME entry follows immediately after, e.g.
+ * assignOpponent/addMatchup) — that round must never get a bye of its own.
+ */
+async function backfillMissedRounds(seasonId: number, playerId: number, excludeRoundId?: number) {
+  const season = await prisma.season.findUniqueOrThrow({ where: { id: seasonId } });
+  const rounds = await prisma.round.findMany({
+    where: { seasonId, ...(excludeRoundId != null ? { id: { not: excludeRoundId } } : {}) },
+    include: { entries: true },
+    orderBy: { number: 'asc' },
+  });
+
+  const regularByesUsed = rounds.reduce(
+    (count, round) => count + round.entries.filter((e) => e.kind === 'REGULAR_BYE' && e.soloPlayerId === playerId).length,
+    0,
+  );
+  const missingRounds = rounds.filter(
+    (round) =>
+      !round.entries.some((e) => e.whitePlayerId === playerId || e.blackPlayerId === playerId || e.soloPlayerId === playerId),
+  );
+  const toBackfill = missingRounds.slice(0, Math.max(0, season.regularByeCap - regularByesUsed));
+  if (toBackfill.length === 0) return;
+
+  await prisma.roundEntry.createMany({
+    data: toBackfill.map((round) => ({ roundId: round.id, kind: 'REGULAR_BYE' as const, soloPlayerId: playerId })),
+  });
+}
+
+/**
  * Resolves a name to a playerId enrolled in this season — shared by "add an
  * unregistered player" (Create Round, swap-opponent, assign-opponent) and
  * the Players tab's "+ Add player". A name matching an existing player
@@ -250,33 +289,6 @@ async function defaultStartingValue(seasonId: number): Promise<number> {
  * type is left untouched. `startingValue` is optional — omit it to default
  * to the median of the current standings (see defaultStartingValue).
  */
-/**
- * A player who enrolls after round N already exists never chose to miss
- * rounds 1..N-1 — they weren't part of the season yet — so credit them the
- * same way an enrolled-but-absent player is credited going forward: a
- * REGULAR_BYE for every already-existing round they have no entry in.
- * Deliberately NOT capped by the season's regularByeCap — that cap governs
- * an enrolled player resting rounds they could have played, not rounds that
- * happened before they even joined. `excludeRoundId` is the round the
- * enrollment itself is happening in order to add someone to (a real GAME
- * entry follows immediately after, e.g. assignOpponent/addMatchup) — that
- * round must never get a bye of its own.
- */
-async function backfillMissedRounds(seasonId: number, playerId: number, excludeRoundId?: number) {
-  const rounds = await prisma.round.findMany({
-    where: { seasonId, ...(excludeRoundId != null ? { id: { not: excludeRoundId } } : {}) },
-    include: { entries: true },
-  });
-  const missingRounds = rounds.filter(
-    (round) =>
-      !round.entries.some((e) => e.whitePlayerId === playerId || e.blackPlayerId === playerId || e.soloPlayerId === playerId),
-  );
-  if (missingRounds.length === 0) return;
-  await prisma.roundEntry.createMany({
-    data: missingRounds.map((round) => ({ roundId: round.id, kind: 'REGULAR_BYE' as const, soloPlayerId: playerId })),
-  });
-}
-
 export async function enrollNewOrReturningPlayer(
   seasonId: number,
   data: { name: string; membershipType?: MembershipType; startingValue?: number },
