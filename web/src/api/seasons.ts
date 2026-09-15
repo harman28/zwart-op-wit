@@ -73,13 +73,6 @@ export function createSeason(input: {
 export function endSeason(id: number) {
   return api.post<Season>(`/admin/seasons/${id}/end`);
 }
-
-/** One-off data repair: backfills retroactive byes for any currently
- * enrolled player who joined before that feature existed (or otherwise
- * missed it). Safe to call more than once. */
-export function backfillMissedByes(id: number) {
-  return api.post<{ ok: true }>(`/admin/seasons/${id}/backfill-byes`);
-}
 export function updateSeasonSettings(
   id: number,
   data: {
