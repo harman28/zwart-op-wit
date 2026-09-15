@@ -159,5 +159,89 @@ describe('retroactive byes (real Postgres): a player enrolled mid-season is back
     expect(daveEntries.find((e) => e.roundNumber === 1)!.kind).toBe('REGULAR_BYE');
     expect(daveEntries.find((e) => e.roundNumber === 2)!.kind).toBe('REGULAR_BYE');
     expect(daveEntries.find((e) => e.roundNumber === 3)!.kind).toBe('GAME');
+
+    // Only one season can be active at a time — free the slot for the next test.
+    await app.inject({ method: 'POST', url: `/api/admin/seasons/${seasonId}/end`, headers: { cookie } });
+  });
+
+  it("respects the season's regularByeCap — a player joining after more rounds than the cap allows only gets backfilled up to the cap, earliest round first", async () => {
+    const names = ['CapAlice', 'CapBob'];
+    const playerIds: number[] = [];
+    for (const name of names) {
+      const res = await app.inject({ method: 'POST', url: '/api/admin/players', headers: { cookie }, payload: { name } });
+      playerIds.push(res.json().id);
+    }
+    createdPlayerIds.push(...playerIds);
+    const [alice, bob] = playerIds as [number, number];
+
+    const seasonRes = await app.inject({
+      method: 'POST',
+      url: '/api/admin/seasons',
+      headers: { cookie },
+      payload: {
+        name: 'Retro Bye Cap Test Season',
+        topValue: 105,
+        regularByeCap: 1,
+        roster: [
+          { playerId: alice, startingValue: 105 },
+          { playerId: bob, startingValue: 104 },
+        ],
+      },
+    });
+    const capSeasonId = seasonRes.json().id;
+
+    // Rounds 1 and 2: just Alice and Bob, played out and published — two
+    // rounds a debutant in round 3 will have missed.
+    for (const [number, date] of [[1, '2026-03-01'], [2, '2026-03-08']] as [number, string][]) {
+      const round = await app.inject({
+        method: 'POST',
+        url: `/api/admin/seasons/${capSeasonId}/rounds`,
+        headers: { cookie },
+        payload: { number, date, signedUpPlayerIds: [alice, bob] },
+      });
+      const game = round.json().entries.find((e: { kind: string }) => e.kind === 'GAME');
+      await app.inject({
+        method: 'PATCH',
+        url: `/api/admin/rounds/${round.json().id}/entries/${game.id}`,
+        headers: { cookie },
+        payload: { result: 'WHITE_WIN' },
+      });
+      await app.inject({ method: 'POST', url: `/api/admin/rounds/${round.json().id}/publish`, headers: { cookie } });
+    }
+    const round1 = await prisma.round.findFirstOrThrow({ where: { seasonId: capSeasonId, number: 1 } });
+    const round2 = await prisma.round.findFirstOrThrow({ where: { seasonId: capSeasonId, number: 2 } });
+
+    // Round 3: a brand-new player joins, with regularByeCap = 1 — they
+    // missed 2 rounds but can only ever bank 1 regular bye.
+    const round3 = await app.inject({
+      method: 'POST',
+      url: `/api/admin/seasons/${capSeasonId}/rounds`,
+      headers: { cookie },
+      payload: {
+        number: 3,
+        date: '2026-03-15',
+        signedUpPlayerIds: [alice, bob],
+        newPlayers: [{ name: 'CapCarol', startingValue: 100 }],
+      },
+    });
+    expect(round3.statusCode).toBe(201);
+
+    const enrolled = await app.inject({ method: 'GET', url: `/api/admin/seasons/${capSeasonId}/players`, headers: { cookie } });
+    const carol = enrolled.json().find((p: { name: string }) => p.name === 'CapCarol');
+    createdPlayerIds.push(carol.id);
+
+    // Only round 1 (the earliest miss) gets backfilled; round 2 gets nothing
+    // — the cap is spent, exactly as it would be for an absentee who was
+    // already enrolled.
+    const round1Admin = await app.inject({ method: 'GET', url: `/api/admin/rounds/${round1.id}`, headers: { cookie } });
+    const carolInRound1 = round1Admin.json().entries.filter((e: { soloPlayerId: number | null }) => e.soloPlayerId === carol.id);
+    expect(carolInRound1).toHaveLength(1);
+    expect(carolInRound1[0].kind).toBe('REGULAR_BYE');
+
+    const round2Admin = await app.inject({ method: 'GET', url: `/api/admin/rounds/${round2.id}`, headers: { cookie } });
+    const carolInRound2 = round2Admin.json().entries.filter((e: { soloPlayerId: number | null }) => e.soloPlayerId === carol.id);
+    expect(carolInRound2).toHaveLength(0);
+
+    await prisma.season.delete({ where: { id: capSeasonId } }).catch(() => {});
   });
 });
