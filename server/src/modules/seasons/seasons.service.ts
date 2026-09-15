@@ -174,19 +174,23 @@ async function getPublishedRoundsForReplay(season: SeasonWithEnrollments) {
 }
 
 /**
- * A round "has started" once an admin has actually recorded something in
- * it — a GAME result or an EXTERNAL_BYE outcome. PAIRING_BYE/REGULAR_BYE
- * entries don't count: they're auto-resolved the instant the round is
- * created/published, with no admin action needed, so a freshly published
- * round can otherwise look "started" (its bye recipient already credited)
- * while every actual game still shows no result at all.
+ * A round is "fully entered" once every entry that actually needs an admin
+ * to record something has one — every GAME has a result, every EXTERNAL_BYE
+ * has an outcome. PAIRING_BYE/REGULAR_BYE entries don't count: they're
+ * auto-resolved the instant the round is created/published, with no admin
+ * action needed, so a freshly published round can otherwise look "done"
+ * (its bye recipient already credited) while every actual game still shows
+ * no result at all. A round with no GAME/EXTERNAL_BYE entries at all (bye
+ * recipients only) is vacuously fully entered.
  */
-function roundHasRecordedResult(round: {
+function roundIsFullyEntered(round: {
   entries: { kind: string; result: string | null; externalOutcome: string | null }[];
 }): boolean {
-  return round.entries.some(
-    (e) => (e.kind === 'GAME' && e.result !== null) || (e.kind === 'EXTERNAL_BYE' && e.externalOutcome !== null),
-  );
+  return round.entries.every((e) => {
+    if (e.kind === 'GAME') return e.result !== null;
+    if (e.kind === 'EXTERNAL_BYE') return e.externalOutcome !== null;
+    return true;
+  });
 }
 
 async function getSeasonWithEnrollments(seasonId: number): Promise<SeasonWithEnrollments> {
@@ -211,6 +215,23 @@ export async function getEnrolledPlayers(seasonId: number) {
 }
 
 /**
+ * THROWAWAY — one-time data repair, not a permanent feature. Re-runs
+ * backfillMissedRounds for every currently enrolled player in a season, to
+ * catch up enrollments made before that backfill existed (or via any path
+ * that bypasses enrollNewOrReturningPlayer/enrollExistingPlayer, e.g. a
+ * season's initial roster or a raw seed). Idempotent. Delete this function,
+ * its route in seasons.routes.ts, and server/scripts/backfill-byes-once.mjs
+ * once the one-time catch-up has been run against every environment that
+ * needs it — this should not survive as a standing admin feature.
+ */
+export async function backfillMissedByesForSeason(seasonId: number) {
+  const season = await getSeasonWithEnrollments(seasonId);
+  for (const enrollment of season.enrollments) {
+    await backfillMissedRounds(seasonId, enrollment.playerId);
+  }
+}
+
+/**
  * A newcomer's starting value when the admin doesn't give one explicitly:
  * the median of the season's current live standings, rounded to the
  * nearest integer — i.e. parachute them into the middle of the pack rather
@@ -228,6 +249,45 @@ async function defaultStartingValue(seasonId: number): Promise<number> {
   const mid = Math.floor(values.length / 2);
   const median = values.length % 2 === 0 ? (values[mid - 1]! + values[mid]!) / 2 : values[mid]!;
   return Math.round(median);
+}
+
+/**
+ * A player who enrolls after round N already exists never chose to miss
+ * rounds 1..N-1 — they weren't part of the season yet — so credit them the
+ * same way an enrolled-but-absent player is credited going forward: a
+ * REGULAR_BYE for every already-existing round they have no entry in, up to
+ * the season's regularByeCap (same cap createRound's own absentUnderCap
+ * enforces going forward). The cap is "how many byes this player can ever
+ * bank in the season", so rounds before they joined count against it
+ * exactly like rounds they later choose to skip — earliest missing round
+ * first, so a partial backfill (enrolling very late) covers the rounds
+ * closest to their actual debut rather than an arbitrary subset.
+ * `excludeRoundId` is the round the enrollment itself is happening in order
+ * to add someone to (a real GAME entry follows immediately after, e.g.
+ * assignOpponent/addMatchup) — that round must never get a bye of its own.
+ */
+async function backfillMissedRounds(seasonId: number, playerId: number, excludeRoundId?: number) {
+  const season = await prisma.season.findUniqueOrThrow({ where: { id: seasonId } });
+  const rounds = await prisma.round.findMany({
+    where: { seasonId, ...(excludeRoundId != null ? { id: { not: excludeRoundId } } : {}) },
+    include: { entries: true },
+    orderBy: { number: 'asc' },
+  });
+
+  const regularByesUsed = rounds.reduce(
+    (count, round) => count + round.entries.filter((e) => e.kind === 'REGULAR_BYE' && e.soloPlayerId === playerId).length,
+    0,
+  );
+  const missingRounds = rounds.filter(
+    (round) =>
+      !round.entries.some((e) => e.whitePlayerId === playerId || e.blackPlayerId === playerId || e.soloPlayerId === playerId),
+  );
+  const toBackfill = missingRounds.slice(0, Math.max(0, season.regularByeCap - regularByesUsed));
+  if (toBackfill.length === 0) return;
+
+  await prisma.roundEntry.createMany({
+    data: toBackfill.map((round) => ({ roundId: round.id, kind: 'REGULAR_BYE' as const, soloPlayerId: playerId })),
+  });
 }
 
 /**
@@ -249,6 +309,7 @@ async function defaultStartingValue(seasonId: number): Promise<number> {
 export async function enrollNewOrReturningPlayer(
   seasonId: number,
   data: { name: string; membershipType?: MembershipType; startingValue?: number },
+  excludeRoundId?: number,
 ) {
   const name = data.name.trim();
   const existingPlayer = await prisma.player.findFirst({ where: { name: { equals: name, mode: 'insensitive' } } });
@@ -274,6 +335,7 @@ export async function enrollNewOrReturningPlayer(
   const enrollment = await prisma.seasonEnrollment.create({
     data: { seasonId, playerId, startingValue },
   });
+  await backfillMissedRounds(seasonId, playerId, excludeRoundId);
   return { playerId, enrollment };
 }
 
@@ -291,7 +353,9 @@ export async function enrollExistingPlayer(seasonId: number, playerId: number, s
   });
   if (existing) return existing;
   const value = startingValue ?? (await defaultStartingValue(seasonId));
-  return prisma.seasonEnrollment.create({ data: { seasonId, playerId, startingValue: value } });
+  const enrollment = await prisma.seasonEnrollment.create({ data: { seasonId, playerId, startingValue: value } });
+  await backfillMissedRounds(seasonId, playerId);
+  return enrollment;
 }
 
 /**
@@ -309,13 +373,14 @@ export async function enrollExistingPlayer(seasonId: number, playerId: number, s
  * honored as-is, even for a round with nothing recorded yet.
  *
  * The default "current" view is different: publishing a round immediately
- * auto-resolves its pairing bye (see roundHasRecordedResult), which would
+ * auto-resolves its pairing bye (see roundIsFullyEntered), which would
  * otherwise nudge the live board the moment a round goes out — before
  * anyone's actually played — making it look like the season jumped ahead on
- * its own. So "current" freezes at the last round that has at least one
- * recorded GAME result or EXTERNAL_BYE outcome, not just the last published
- * one, and moves forward again as soon as the first result of the new round
- * is entered.
+ * its own. So "current" freezes at the last round that's fully entered
+ * (every game and external result recorded), not just the last published
+ * one, and only moves forward once the round's last pending result comes in
+ * — a single result punched in isn't enough to jump the board while others
+ * in the same round are still outstanding.
  */
 export async function getLiveLeaderboard(seasonId: number, afterRound?: number) {
   const season = await getSeasonWithEnrollments(seasonId);
@@ -333,9 +398,9 @@ export async function getLiveLeaderboard(seasonId: number, afterRound?: number) 
     if (!found) throw new HttpError(404, `Round ${afterRound} has no published standings in this season`);
     snapshot = found;
   } else {
-    const lastStartedRound = [...roundsForReplay].reverse().find(roundHasRecordedResult);
-    snapshot = lastStartedRound
-      ? replay.byRound.find((r) => r.roundNumber === lastStartedRound.number)!
+    const lastCompleteRound = [...roundsForReplay].reverse().find(roundIsFullyEntered);
+    snapshot = lastCompleteRound
+      ? replay.byRound.find((r) => r.roundNumber === lastCompleteRound.number)!
       : replaySeason({ topValue: season.topValue, baselines: mapEnrollmentsToBaselines(season.enrollments), rounds: [] })
           .current;
   }

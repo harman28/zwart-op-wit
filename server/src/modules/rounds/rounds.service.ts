@@ -232,11 +232,13 @@ export interface MatchupParticipantInput {
 
 /** Shared by addMatchup and assignOpponent: resolves a participant to a
  * playerId, enrolling them (new or returning) first if it's not an
- * already-enrolled existing player. */
-async function resolveParticipant(seasonId: number, input: MatchupParticipantInput): Promise<number> {
+ * already-enrolled existing player. `roundId` is excluded from that
+ * enrollment's retroactive-bye backfill (see enrollNewOrReturningPlayer) —
+ * this round is the one they're about to get a real GAME entry in. */
+async function resolveParticipant(seasonId: number, input: MatchupParticipantInput, roundId: number): Promise<number> {
   if (input.playerId != null) return input.playerId;
   if (!input.newPlayer) throw new HttpError(400, 'Either playerId or newPlayer is required');
-  const { playerId } = await enrollNewOrReturningPlayer(seasonId, input.newPlayer);
+  const { playerId } = await enrollNewOrReturningPlayer(seasonId, input.newPlayer, roundId);
   return playerId;
 }
 
@@ -267,8 +269,8 @@ export async function addMatchup(roundId: number, participantA: MatchupParticipa
   const round = await prisma.round.findUnique({ where: { id: roundId } });
   if (!round) throw new HttpError(404, `Round ${roundId} not found`);
 
-  const playerAId = await resolveParticipant(round.seasonId, participantA);
-  const playerBId = await resolveParticipant(round.seasonId, participantB);
+  const playerAId = await resolveParticipant(round.seasonId, participantA, roundId);
+  const playerBId = await resolveParticipant(round.seasonId, participantB, roundId);
 
   const { colors, nextTable } = await computeColorsAndNextTable(roundId, round.seasonId, playerAId, playerBId);
 
@@ -305,7 +307,7 @@ export async function assignOpponent(pairingByeEntryId: number, input: AssignOpp
   const round = await prisma.round.findUnique({ where: { id: entry.roundId } });
   if (!round) throw new HttpError(404, `Round ${entry.roundId} not found`);
 
-  const opponentId = await resolveParticipant(round.seasonId, { playerId: input.opponentId, newPlayer: input.newOpponent });
+  const opponentId = await resolveParticipant(round.seasonId, { playerId: input.opponentId, newPlayer: input.newOpponent }, entry.roundId);
 
   const { colors, nextTable } = await computeColorsAndNextTable(entry.roundId, round.seasonId, entry.soloPlayerId, opponentId);
 
