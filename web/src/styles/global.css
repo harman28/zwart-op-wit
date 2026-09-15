@@ -1066,7 +1066,13 @@ table.pairings td:nth-child(4) {
   font-family: var(--font-mono);
   font-size: 11.5px;
   font-weight: 700;
+  /* flex: 0 0 24px, not just width: 24px — a plain width on a flex item is
+     only a hint (its default min-width: auto can still let it grow to match
+     siblings in some browsers); pinning flex-grow/flex-shrink/flex-basis
+     together is what actually guarantees this stays small everywhere. */
+  flex: 0 0 24px;
   width: 24px;
+  box-sizing: border-box;
   padding: 5px 0;
   border: 1px solid var(--border);
   border-radius: 6px;
