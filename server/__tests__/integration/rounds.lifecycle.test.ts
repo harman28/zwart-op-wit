@@ -98,8 +98,11 @@ describe('round lifecycle (real Postgres): create -> edit -> publish -> re-edit 
     expect(games).toHaveLength(2);
     expect(pairingBye.soloPlayerId).toBe(eve); // lowest-ranked signed-up player
 
-    // 5. Enter a result on the first game.
+    // 5. Enter a result on the first game. Also enter the second, since the
+    // live leaderboard now only reflects a round once every one of its
+    // results is in (see 10 below) — this round has exactly two games.
     const firstGame = games[0];
+    const secondGame = games[1];
     const enterResult = await app.inject({
       method: 'PATCH',
       url: `/api/admin/rounds/${roundId}/entries/${firstGame.id}`,
@@ -108,6 +111,13 @@ describe('round lifecycle (real Postgres): create -> edit -> publish -> re-edit 
     });
     expect(enterResult.statusCode).toBe(200);
     expect(enterResult.json().result).toBe('WHITE_WIN');
+    const enterSecondResult = await app.inject({
+      method: 'PATCH',
+      url: `/api/admin/rounds/${roundId}/entries/${secondGame.id}`,
+      headers: { cookie },
+      payload: { result: 'WHITE_WIN' },
+    });
+    expect(enterSecondResult.statusCode).toBe(200);
 
     // 6. Renumber tables starting at 9 (the "1-8 reserved for an external match" scenario).
     const renumbered = await app.inject({
@@ -142,7 +152,7 @@ describe('round lifecycle (real Postgres): create -> edit -> publish -> re-edit 
     expect(publicRound.entries.some((e: { kind: string }) => e.kind === 'REGULAR_BYE')).toBe(false);
     expect(publicRound.entries.some((e: { kind: string }) => e.kind === 'PAIRING_BYE')).toBe(true);
 
-    // 10. Live leaderboard reflects the one result entered so far.
+    // 10. Live leaderboard reflects round 1 now that both its results are entered.
     const leaderboardBefore = await app.inject({ method: 'GET', url: `/api/seasons/${seasonId}/leaderboard` });
     // We explicitly set WHITE_WIN above; firstGame.result itself is stale (fetched before that PATCH).
     const winnerId = firstGame.whitePlayerId;

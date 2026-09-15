@@ -3,11 +3,13 @@ import type { GameResult } from '../api/types.js';
 export function resultLabel(result: GameResult): string {
   switch (result) {
     case 'WHITE_WIN':
-    case 'WHITE_WIN_FORFEIT':
       return '1–0';
+    case 'WHITE_WIN_FORFEIT':
+      return '1–0R';
     case 'BLACK_WIN':
-    case 'BLACK_WIN_FORFEIT':
       return '0–1';
+    case 'BLACK_WIN_FORFEIT':
+      return '0–1R';
     case 'DRAW':
       return '½–½';
   }

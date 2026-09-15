@@ -10,7 +10,7 @@ function extractCookie(setCookieHeader: string | string[] | undefined): string {
   return header.split(';')[0]!;
 }
 
-describe('current leaderboard (real Postgres): stays frozen until a round actually starts', () => {
+describe('current leaderboard (real Postgres): stays frozen until a round is fully entered', () => {
   const app = buildApp();
   let cookie = '';
   const createdPlayerIds: number[] = [];
@@ -34,7 +34,7 @@ describe('current leaderboard (real Postgres): stays frozen until a round actual
     await prisma.$disconnect();
   });
 
-  it('does not move the current view when a new round is published with no results yet, then moves once one is entered', async () => {
+  it('does not move the current view until every result in the new round is entered, not just one', async () => {
     // 5 players (odd, so round 2 will have a pairing bye — the exact
     // reported scenario: "the lowest ranked player gets her unpaired bye,
     // and nobody else receives any points").
@@ -122,7 +122,10 @@ describe('current leaderboard (real Postgres): stays frozen until a round actual
     expect(explicitRound2.statusCode).toBe(200);
     expect(explicitRound2.json().standings).not.toEqual(round1Standings);
 
-    // Now enter one real result in round 2 — the current view must move forward.
+    // 5 players, 1 pairing bye => 2 GAME entries in round 2. Entering just the
+    // first one must NOT move the current view — one result isn't "the round
+    // is fully entered" while its sibling game is still outstanding.
+    expect(round2Games.length).toBe(2);
     await app.inject({
       method: 'PATCH',
       url: `/api/admin/rounds/${round2Id}/entries/${round2Games[0].id}`,
@@ -131,7 +134,19 @@ describe('current leaderboard (real Postgres): stays frozen until a round actual
     });
     const afterFirstRound2Result = await app.inject({ method: 'GET', url: `/api/seasons/${seasonId}/leaderboard` });
     expect(afterFirstRound2Result.statusCode).toBe(200);
-    expect(afterFirstRound2Result.json().standings).not.toEqual(round1Standings);
-    expect(afterFirstRound2Result.json().roundNumber).toBe(2);
+    expect(afterFirstRound2Result.json().standings).toEqual(round1Standings);
+    expect(afterFirstRound2Result.json().roundNumber).toBe(1);
+
+    // Entering the round's LAST outstanding result is what moves it forward.
+    await app.inject({
+      method: 'PATCH',
+      url: `/api/admin/rounds/${round2Id}/entries/${round2Games[1].id}`,
+      headers: { cookie },
+      payload: { result: 'WHITE_WIN' },
+    });
+    const afterAllRound2Results = await app.inject({ method: 'GET', url: `/api/seasons/${seasonId}/leaderboard` });
+    expect(afterAllRound2Results.statusCode).toBe(200);
+    expect(afterAllRound2Results.json().standings).not.toEqual(round1Standings);
+    expect(afterAllRound2Results.json().roundNumber).toBe(2);
   });
 });
