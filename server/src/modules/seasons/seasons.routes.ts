@@ -2,7 +2,6 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requireAdmin } from '../../lib/requireAdmin.js';
 import {
-  backfillMissedByesForSeason,
   createSeason,
   endSeason,
   enrollNewOrReturningPlayer,
@@ -87,14 +86,6 @@ export async function seasonsRoutes(app: FastifyInstance): Promise<void> {
     const body = enrollPlayerBody.parse(request.body);
     reply.code(201);
     return enrollNewOrReturningPlayer(params.id, body);
-  });
-
-  // THROWAWAY — see backfillMissedByesForSeason's docstring. Delete this
-  // route once the one-time catch-up has run everywhere it needs to.
-  app.post('/api/admin/seasons/:id/backfill-byes', { preHandler: requireAdmin }, async (request) => {
-    const params = idParams.parse(request.params);
-    await backfillMissedByesForSeason(params.id);
-    return { ok: true };
   });
 
   app.post('/api/admin/seasons', { preHandler: requireAdmin }, async (request, reply) => {
