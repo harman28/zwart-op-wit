@@ -1058,6 +1058,33 @@ table.pairings td:nth-child(4) {
   border-color: var(--result-black-border);
 }
 
+/* The "R" (reglementary loss / no-show) toggle appended after the base
+   result options, both in the desktop row and the mobile popover — see
+   ResultToggle's comment for why it's a flag on a win rather than its own
+   button. Disabled (nothing picked yet, or a draw) until a win side is set. */
+.result-forfeit-btn {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 700;
+  width: 24px;
+  padding: 5px 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.result-forfeit-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.result-forfeit-btn.sel {
+  background: color-mix(in srgb, var(--loss) 18%, transparent);
+  color: var(--loss);
+  border-color: var(--loss);
+}
+
 /* Mobile-only pill + popover of the three options, opened by tapping the
    .result-cycle-btn pill. Options reuse .result-cycle-btn itself (plain
    when unpicked, the same colored fill as the trigger when it's the
