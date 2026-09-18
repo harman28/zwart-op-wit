@@ -162,6 +162,12 @@ model RoundEntry {
   soloPlayer      Player?          @relation("SoloPlayer", fields: [soloPlayerId], references: [id])
   externalOutcome ExternalOutcome?
 
+  // REGULAR_BYE only — true when this bye was backfilled into a round that
+  // already existed before the player enrolled (see backfillMissedRounds),
+  // rather than auto-materialized for an already-enrolled absent player.
+  // Never counts as this player's ranked "debut" — see engine/standings.ts.
+  isRetroactive Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

@@ -30,6 +30,13 @@ export interface PairingByeEntry {
 export interface RegularByeEntry {
   kind: 'REGULAR_BYE';
   playerId: number;
+  /** True for a bye backfilled into a round that already existed before this
+   * player enrolled (see seasons.service.ts's backfillMissedRounds) — as
+   * opposed to the normal case, auto-materialized for an already-enrolled
+   * player absent from a round. A retroactive bye still contributes to the
+   * player's score, but never counts as their "debut" into the ranked
+   * standings the way every other entry kind does — see standings.ts. */
+  isRetroactive: boolean;
 }
 
 export interface ExternalByeEntry {

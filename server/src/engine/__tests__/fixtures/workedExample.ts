@@ -50,7 +50,7 @@ export const workedExampleInput: SeasonReplayInput = {
         // Maurice beats Jim
         { kind: 'GAME', whitePlayerId: MAURICE, blackPlayerId: JIM, result: 'WHITE_WIN', isSelfArranged: false },
         { kind: 'PAIRING_BYE', playerId: SEBASTIAN },
-        { kind: 'REGULAR_BYE', playerId: ROBBERT },
+        { kind: 'REGULAR_BYE', playerId: ROBBERT, isRetroactive: false },
       ],
     },
   ],

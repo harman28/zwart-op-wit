@@ -157,7 +157,7 @@ describe('replaySeason — general correctness', () => {
           number: 1,
           entries: [
             { kind: 'GAME', whitePlayerId: 1, blackPlayerId: 2, result: 'WHITE_WIN_FORFEIT', isSelfArranged: true },
-            { kind: 'REGULAR_BYE', playerId: 3 },
+            { kind: 'REGULAR_BYE', playerId: 3, isRetroactive: false },
             { kind: 'PAIRING_BYE', playerId: 4 },
           ],
         },
@@ -176,7 +176,7 @@ describe('replaySeason — general correctness', () => {
     const result = replaySeason({
       topValue: 100,
       baselines: [{ playerId: 1, startingValue: 100 }],
-      rounds: [{ number: 1, entries: [{ kind: 'REGULAR_BYE', playerId: 1 }] }],
+      rounds: [{ number: 1, entries: [{ kind: 'REGULAR_BYE', playerId: 1, isRetroactive: false }] }],
     });
     const standing = standingOf(result.byRound[0]!.standings, 1);
     expect(standing.played).toBe(0);
@@ -187,7 +187,7 @@ describe('replaySeason — general correctness', () => {
   it('18. a defensively-malformed 4th REGULAR_BYE is still scored faithfully — the engine never hides a caller-side cap bug', () => {
     const rounds: RoundInput[] = [1, 2, 3, 4].map((n) => ({
       number: n,
-      entries: [{ kind: 'REGULAR_BYE', playerId: 1 } satisfies RoundEntryInput],
+      entries: [{ kind: 'REGULAR_BYE', playerId: 1, isRetroactive: false } satisfies RoundEntryInput],
     }));
     const result = replaySeason({ topValue: 100, baselines: [{ playerId: 1, startingValue: 100 }], rounds });
     const last = standingOf(result.current.standings, 1);
@@ -323,5 +323,58 @@ describe('replaySeason — general correctness', () => {
         rounds: [],
       }),
     ).toThrow(/duplicate/i);
+  });
+
+  it("44. a retroactive REGULAR_BYE never counts as a debut, never shifts anyone else's rank/value at that round, and its credit lands only once the player truly debuts", () => {
+    const withoutRetro = replaySeason({
+      topValue: 100,
+      baselines: [
+        { playerId: 1, startingValue: 100 },
+        { playerId: 2, startingValue: 90 },
+      ],
+      rounds: [
+        {
+          number: 1,
+          entries: [{ kind: 'GAME', whitePlayerId: 1, blackPlayerId: 2, result: 'WHITE_WIN', isSelfArranged: false }],
+        },
+      ],
+    });
+
+    const withRetro = replaySeason({
+      topValue: 100,
+      baselines: [
+        { playerId: 1, startingValue: 100 },
+        { playerId: 2, startingValue: 90 },
+        { playerId: 3, startingValue: 80 },
+      ],
+      rounds: [
+        {
+          number: 1,
+          entries: [
+            { kind: 'GAME', whitePlayerId: 1, blackPlayerId: 2, result: 'WHITE_WIN', isSelfArranged: false },
+            { kind: 'REGULAR_BYE', playerId: 3, isRetroactive: true },
+          ],
+        },
+        { number: 2, entries: [{ kind: 'PAIRING_BYE', playerId: 3 }] },
+      ],
+    });
+
+    // Round 1's standings for players 1 and 2 are identical whether or not
+    // player 3 was retroactively backfilled into it — the reported bug was
+    // exactly this: adding player 3's retroactive bye shifted everyone
+    // else's round-1 rank/value.
+    expect(withRetro.byRound[0]!.standings.filter((s) => s.playerId !== 3)).toEqual(withoutRetro.byRound[0]!.standings);
+    // Player 3 doesn't appear in round 1's standings at all — they weren't really part of that round.
+    expect(withRetro.byRound[0]!.standings.some((s) => s.playerId === 3)).toBe(false);
+
+    // Round 2: player 3's real debut. Their score = own raw baseline (80,
+    // never rank-derived, since they had no rank yet) + the retroactive
+    // bye's credit computed off that SAME frozen baseline (80 * 1/3) +
+    // the pairing bye's credit (80 * 2/3).
+    const round2 = withRetro.current;
+    const p3 = round2.standings.find((s) => s.playerId === 3)!;
+    expect(p3.score).toBeCloseTo(80 + 80 * (1 / 3) + 80 * (2 / 3), 5);
+    expect(p3.regularByesUsed).toBe(1); // counted even though it never granted a ranked debut
+    expect(p3.pairingByeUsed).toBe(true);
   });
 });
