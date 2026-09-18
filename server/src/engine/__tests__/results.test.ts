@@ -17,7 +17,7 @@ describe('applyGameResult', () => {
   });
 
   it('38. throws when called on a non-GAME entry', () => {
-    const entry: RoundEntryInput = { kind: 'REGULAR_BYE', playerId: 1 };
+    const entry: RoundEntryInput = { kind: 'REGULAR_BYE', playerId: 1, isRetroactive: false };
     expect(() => applyGameResult(entry, 'WHITE_WIN')).toThrow(/only be called on a GAME entry/i);
   });
 

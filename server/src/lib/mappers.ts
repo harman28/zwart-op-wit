@@ -21,12 +21,17 @@ export function mapEntryToEngine(entry: PrismaRoundEntry): RoundEntryInput {
         isSelfArranged: entry.isSelfArranged,
       };
     }
-    case 'PAIRING_BYE':
-    case 'REGULAR_BYE': {
+    case 'PAIRING_BYE': {
       if (entry.soloPlayerId == null) {
         throw new Error(`${entry.kind} entry ${entry.id} is missing soloPlayerId`);
       }
       return { kind: entry.kind, playerId: entry.soloPlayerId };
+    }
+    case 'REGULAR_BYE': {
+      if (entry.soloPlayerId == null) {
+        throw new Error(`${entry.kind} entry ${entry.id} is missing soloPlayerId`);
+      }
+      return { kind: entry.kind, playerId: entry.soloPlayerId, isRetroactive: entry.isRetroactive };
     }
     case 'EXTERNAL_BYE': {
       if (entry.soloPlayerId == null) {

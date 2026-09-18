@@ -248,6 +248,10 @@ async function defaultStartingValue(seasonId: number): Promise<number> {
  * `excludeRoundId` is the round the enrollment itself is happening in order
  * to add someone to (a real GAME entry follows immediately after, e.g.
  * assignOpponent/addMatchup) — that round must never get a bye of its own.
+ * Marked isRetroactive: true — the engine (standings.ts) uses that to credit
+ * the bye to this player's score without treating it as their ranked debut,
+ * so it can never shift anyone else's rank/value at a round this player
+ * wasn't really part of.
  */
 async function backfillMissedRounds(seasonId: number, playerId: number, excludeRoundId?: number) {
   const season = await prisma.season.findUniqueOrThrow({ where: { id: seasonId } });
@@ -269,7 +273,12 @@ async function backfillMissedRounds(seasonId: number, playerId: number, excludeR
   if (toBackfill.length === 0) return;
 
   await prisma.roundEntry.createMany({
-    data: toBackfill.map((round) => ({ roundId: round.id, kind: 'REGULAR_BYE' as const, soloPlayerId: playerId })),
+    data: toBackfill.map((round) => ({
+      roundId: round.id,
+      kind: 'REGULAR_BYE' as const,
+      soloPlayerId: playerId,
+      isRetroactive: true,
+    })),
   });
 }
 

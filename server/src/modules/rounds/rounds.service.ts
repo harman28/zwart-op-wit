@@ -161,7 +161,7 @@ export async function createRound(seasonId: number, input: CreateRoundInput) {
                 }
               : { kind: 'PAIRING_BYE' as const, soloPlayerId: p.playerId },
           ),
-          ...absentUnderCap.map((playerId) => ({ kind: 'REGULAR_BYE' as const, soloPlayerId: playerId })),
+          ...absentUnderCap.map((playerId) => ({ kind: 'REGULAR_BYE' as const, soloPlayerId: playerId, isRetroactive: false })),
         ],
       },
     },
