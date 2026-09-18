@@ -78,8 +78,9 @@ export async function exportFullBackup(): Promise<BackupFile> {
                 tableNumber: entry.tableNumber,
               };
             case 'PAIRING_BYE':
-            case 'REGULAR_BYE':
               return { kind: entry.kind, player: entry.soloPlayer!.name };
+            case 'REGULAR_BYE':
+              return { kind: entry.kind, player: entry.soloPlayer!.name, isRetroactive: entry.isRetroactive };
             case 'EXTERNAL_BYE':
               return { kind: 'EXTERNAL_BYE' as const, player: entry.soloPlayer!.name, outcome: entry.externalOutcome };
           }
@@ -213,6 +214,14 @@ export async function importFullBackup(data: BackupFile) {
                     kind: 'EXTERNAL_BYE' as const,
                     soloPlayerId: resolvePlayerId(entry.player),
                     externalOutcome: entry.outcome,
+                  };
+                }
+                if (entry.kind === 'REGULAR_BYE') {
+                  return {
+                    roundId: createdRound.id,
+                    kind: 'REGULAR_BYE' as const,
+                    soloPlayerId: resolvePlayerId(entry.player),
+                    isRetroactive: entry.isRetroactive,
                   };
                 }
                 return { roundId: createdRound.id, kind: entry.kind, soloPlayerId: resolvePlayerId(entry.player) };

@@ -232,10 +232,29 @@ function runReplay(input: SeasonReplayInput): ReplayCore {
   let lastRoundOwnValues = new Map<number, number>();
 
   for (const round of sortedRounds) {
-    // 1. Debuts: first appearance ever uses the raw baseline, never rank-normalized.
+    // 1a. Counters exist for anyone appearing in ANY entry this round,
+    //     including a retroactive REGULAR_BYE — that's what lets a
+    //     retroactive bye still count toward regularByesUsed even before
+    //     the player has a ranked debut (see 1b).
     for (const entry of round.entries) {
       for (const playerId of playerIdsIn(entry)) {
-        if (!counters.has(playerId)) {
+        if (!counters.has(playerId)) counters.set(playerId, freshCounters());
+      }
+    }
+
+    // 1b. Ranked debut — joins `order` (and gets a raw-baseline entering
+    //     value), which is what makes a player show up in standings at all
+    //     and participate in this round's rank/value computation. First
+    //     appearance in anything EXCEPT a retroactive REGULAR_BYE triggers
+    //     this. A retroactive bye alone never does: it exists purely to
+    //     correct this player's own score for a round they weren't really
+    //     part of, not to insert them into that round's ranking and shift
+    //     everyone else's value there (see contributionsFor/valueOf below
+    //     for how its points still reach the player once they do debut).
+    for (const entry of round.entries) {
+      if (entry.kind === 'REGULAR_BYE' && entry.isRetroactive) continue;
+      for (const playerId of playerIdsIn(entry)) {
+        if (!enteringValue.has(playerId)) {
           const startingValue = baselineMap.get(playerId);
           if (startingValue === undefined) {
             throw new Error(
@@ -243,7 +262,6 @@ function runReplay(input: SeasonReplayInput): ReplayCore {
             );
           }
           enteringValue.set(playerId, startingValue);
-          counters.set(playerId, freshCounters());
           order.push(playerId);
         }
       }
@@ -259,7 +277,9 @@ function runReplay(input: SeasonReplayInput): ReplayCore {
 
     // 4. Score = own current-snapshot value + every historical contribution, all under the SAME
     //    current-snapshot (this is what makes past rounds rebase when a player's rank has since moved).
-    const valueOf = (playerId: number) => enteringValue.get(playerId)!;
+    //    valueOf falls back to the raw baseline for a player who hasn't ranked-debuted yet (1b) —
+    //    exactly the frozen value a retroactive bye's own contribution should use until then.
+    const valueOf = (playerId: number) => enteringValue.get(playerId) ?? baselineMap.get(playerId)!;
     const score = new Map<number, number>();
     const roundOwnValues = new Map<number, number>();
     for (const playerId of order) {
@@ -270,6 +290,13 @@ function runReplay(input: SeasonReplayInput): ReplayCore {
     const roundLedger: LedgerRow[] = [];
     for (const { roundNumber, entry } of historyEntries) {
       for (const [playerId, points] of contributionsFor(entry, valueOf)) {
+        // A retroactive bye from before this player's own ranked debut has
+        // no score row to add to yet at this round — they're absent from
+        // `order`/standings for it too (1b), exactly as if they weren't
+        // enrolled yet, which is the whole point. Once they do debut, this
+        // same entry gets picked up (historyEntries already has it) and
+        // correctly folded in from that round onward.
+        if (!score.has(playerId)) continue;
         score.set(playerId, score.get(playerId)! + points);
         roundLedger.push({ playerId, roundNumber, entry, points });
       }

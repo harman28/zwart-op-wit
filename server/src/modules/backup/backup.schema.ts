@@ -17,7 +17,7 @@ const backupEntrySchema = z.discriminatedUnion('kind', [
     tableNumber: z.number().int().nullable().optional(),
   }),
   z.object({ kind: z.literal('PAIRING_BYE'), player: z.string() }),
-  z.object({ kind: z.literal('REGULAR_BYE'), player: z.string() }),
+  z.object({ kind: z.literal('REGULAR_BYE'), player: z.string(), isRetroactive: z.boolean().default(false) }),
   z.object({ kind: z.literal('EXTERNAL_BYE'), player: z.string(), outcome: externalOutcomeSchema.nullable() }),
 ]);
 

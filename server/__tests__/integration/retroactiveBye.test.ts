@@ -76,6 +76,12 @@ describe('retroactive byes (real Postgres): a player enrolled mid-season is back
     });
     await app.inject({ method: 'POST', url: `/api/admin/rounds/${round1Id}/publish`, headers: { cookie } });
 
+    // Snapshot round 1's standings for Alice/Bob BEFORE Carol ever exists —
+    // the actual reported bug: backfilling Carol's retroactive bye into
+    // round 1 was shifting their rank/value at that round.
+    const round1LeaderboardBefore = await app.inject({ url: `/api/seasons/${seasonId}/leaderboard?afterRound=1` });
+    const round1StandingsBefore = round1LeaderboardBefore.json().standings;
+
     // Round 2: create it with a brand-new player added on the spot — the
     // exact reported scenario (a debutant added while pairing round 2).
     const round2 = await app.inject({
@@ -112,6 +118,18 @@ describe('retroactive byes (real Postgres): a player enrolled mid-season is back
     );
     expect(carolInRound2).toHaveLength(1);
     expect(carolInRound2[0].kind).not.toBe('REGULAR_BYE');
+
+    // Alice/Bob's round-1 rank/value must be byte-for-byte unchanged by
+    // Carol's retroactive bye landing in that same round — this is the
+    // actual bug that was reported (backfilling a new player shifted
+    // everyone else's already-published round-1 standings).
+    const round1LeaderboardAfter = await app.inject({ url: `/api/seasons/${seasonId}/leaderboard?afterRound=1` });
+    const round1StandingsAfter = round1LeaderboardAfter.json().standings.filter(
+      (s: { playerId: number }) => s.playerId !== carol.id,
+    );
+    expect(round1StandingsAfter).toEqual(round1StandingsBefore);
+    // Carol herself doesn't appear in round 1's standings at all — she wasn't really part of it.
+    expect(round1LeaderboardAfter.json().standings.some((s: { playerId: number }) => s.playerId === carol.id)).toBe(false);
 
     // Player history only reflects published rounds — publish round 2 so
     // both of Carol's rounds show up: round 1 as a bye with real points,
