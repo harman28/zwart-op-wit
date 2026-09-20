@@ -415,19 +415,29 @@ export async function getLiveLeaderboard(seasonId: number, afterRound?: number) 
  * playerGameHistory — every entry is rebased under the season's final values,
  * not frozen as it looked the round it happened). Public, no-auth — same
  * visibility as the leaderboard itself.
+ *
+ * Pass `afterRound` to rebase the history under standings as they stood
+ * right after that published round, instead of the season's current state —
+ * mirrors getLiveLeaderboard's `afterRound`, so a player opened from an
+ * as-of-round leaderboard view sees a history consistent with it (later
+ * rounds are excluded from the replay entirely, not just hidden).
  */
-export async function getPlayerHistory(seasonId: number, playerId: number) {
+export async function getPlayerHistory(seasonId: number, playerId: number, afterRound?: number) {
   const season = await getSeasonWithEnrollments(seasonId);
   const playerById = new Map(season.enrollments.map((e) => [e.playerId, e.player]));
   const player = playerById.get(playerId);
   if (!player) throw new HttpError(404, `Player ${playerId} is not enrolled in season ${seasonId}`);
 
   const roundsForReplay = await getPublishedRoundsForReplay(season);
+  if (afterRound != null && !roundsForReplay.some((r) => r.number === afterRound)) {
+    throw new HttpError(404, `Round ${afterRound} has no published standings in this season`);
+  }
+  const roundsUpToCutoff = afterRound != null ? roundsForReplay.filter((r) => r.number <= afterRound) : roundsForReplay;
   const history = playerGameHistory(
     {
       topValue: season.topValue,
       baselines: mapEnrollmentsToBaselines(season.enrollments),
-      rounds: roundsForReplay.map(mapRoundToEngine),
+      rounds: roundsUpToCutoff.map(mapRoundToEngine),
     },
     playerId,
   );

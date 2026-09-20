@@ -44,6 +44,7 @@ export default function PlayerHistoryModal({
   seasonId,
   playerId,
   standing,
+  afterRound,
   onClose,
 }: {
   seasonId: number;
@@ -54,17 +55,23 @@ export default function PlayerHistoryModal({
    * round-by-round breakdown. Omit if unavailable; the modal still works,
    * just without that summary. */
   standing?: Standing;
+  /** Rebase the history under standings as they stood right after this
+   * published round, instead of the season's current state — matches
+   * whatever round the leaderboard this modal was opened from is showing.
+   * Omit (or leave undefined) to show the full season to date. */
+  afterRound?: number;
   onClose: () => void;
 }) {
   const [history, setHistory] = useState<PlayerHistory | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    setHistory(null);
     seasonsApi
-      .getPlayerHistory(seasonId, playerId)
+      .getPlayerHistory(seasonId, playerId, afterRound)
       .then(setHistory)
       .catch((err: unknown) => setError(errorMessage(err)));
-  }, [seasonId, playerId]);
+  }, [seasonId, playerId, afterRound]);
 
   const title = history ? history.name : 'Player history';
 
