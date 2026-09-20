@@ -14,8 +14,9 @@ export function getLeaderboard(id: number, afterRound?: number) {
 export function getPublicRounds(id: number) {
   return api.get<Round[]>(`/seasons/${id}/rounds`);
 }
-export function getPlayerHistory(seasonId: number, playerId: number) {
-  return api.get<PlayerHistory>(`/seasons/${seasonId}/players/${playerId}/history`);
+export function getPlayerHistory(seasonId: number, playerId: number, afterRound?: number) {
+  const query = afterRound != null ? `?afterRound=${afterRound}` : '';
+  return api.get<PlayerHistory>(`/seasons/${seasonId}/players/${playerId}/history${query}`);
 }
 
 export function getCurrentSeason() {

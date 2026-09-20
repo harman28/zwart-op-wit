@@ -110,6 +110,7 @@ export default function LeaderboardPage() {
           seasonId={season.id}
           playerId={selectedPlayerId}
           standing={leaderboard?.standings.find((s) => s.playerId === selectedPlayerId)}
+          afterRound={asOfRound === CURRENT ? undefined : Number(asOfRound)}
           onClose={() => setSelectedPlayerId(null)}
         />
       )}

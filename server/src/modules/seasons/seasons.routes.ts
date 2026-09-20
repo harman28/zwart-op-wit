@@ -67,7 +67,8 @@ export async function seasonsRoutes(app: FastifyInstance): Promise<void> {
   app.get('/api/seasons/:id/rounds', async (request) => getPublicRounds(idParams.parse(request.params).id));
   app.get('/api/seasons/:id/players/:playerId/history', async (request) => {
     const params = playerIdParams.parse(request.params);
-    return getPlayerHistory(params.id, params.playerId);
+    const query = leaderboardQuery.parse(request.query);
+    return getPlayerHistory(params.id, params.playerId, query.afterRound);
   });
 
   // Admin
