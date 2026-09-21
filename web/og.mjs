@@ -15,15 +15,12 @@ const fontBold = fs.readFileSync(path.join(__dirname, 'assets/fonts/Roboto-Bold.
 
 const WIDTH = 1200;
 const HEIGHT = 630;
-// Two columns of 7 — comfortably covers every round this club has actually
-// run (9-14 games); the "+N more" line is a rare safety net, not the normal
-// case. Deliberately conservative beyond that: satori/flexbox will silently
-// squash (not wrap or scroll) any child that doesn't fit a fixed-height
-// container, so this has to cover the worst case (MAX_ROWS rows across both
-// columns + the "+N more" line + a bye line), not just the typical one.
-// Verified by eye at that worst case; if the frame's paddings/font sizes
-// change, recheck it.
-const MAX_ROWS = 14;
+// Deliberately conservative — satori/flexbox will silently squash (not wrap
+// or scroll) any child that doesn't fit a fixed-height container, so this
+// has to comfortably cover the worst case (MAX_ROWS rows + the "+N more"
+// line + a bye line), not just the typical one. Verified by eye at that
+// worst case; if the frame's paddings/font sizes change, recheck it.
+const MAX_ROWS = 5;
 
 // Same palette as web/src/styles/tokens.css's dark theme (:root) — the
 // image is generated server-side with no access to the visitor's own
@@ -61,27 +58,6 @@ function formatDate(iso) {
   return new Date(iso).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-// Truncated manually (not via CSS text-overflow) so it always keeps the
-// start of the name and cuts the end — with the White column right-aligned,
-// satori's own ellipsis handling truncates from an unpredictable point
-// instead. Real names are all well under this in practice; this only
-// matters for the pathological case (nobody in this club has an 18+
-// character name today, but nothing stops one from joining).
-function truncateName(name) {
-  return name.length > 18 ? `${name.slice(0, 17)}…` : name;
-}
-
-// nowrap + overflow:hidden as a fallback only — truncateName above is what's
-// meant to keep a row single-line; this just clips cleanly if that's ever
-// wrong, same reasoning as the frame's own overflow:hidden.
-const NAME_STYLE = {
-  display: 'flex',
-  flex: 1,
-  color: COLORS.text,
-  whiteSpace: 'nowrap',
-  overflow: 'hidden',
-};
-
 function pairingRow(entry) {
   return el(
     'div',
@@ -90,51 +66,35 @@ function pairingRow(entry) {
       flexShrink: 0,
       width: '100%',
       alignItems: 'center',
-      padding: '5px 0',
+      padding: '6px 0',
       borderBottom: `1px solid ${COLORS.border}`,
-      fontSize: 22,
+      fontSize: 24,
       lineHeight: 1.3,
     },
     [
-      el('div', { ...NAME_STYLE, justifyContent: 'flex-end', textAlign: 'right' }, [
-        truncateName(entry.whitePlayer?.name ?? '—'),
+      el('div', { display: 'flex', flex: 1, justifyContent: 'flex-end', color: COLORS.text, textAlign: 'right' }, [
+        entry.whitePlayer?.name ?? '—',
       ]),
       el(
         'div',
         {
           display: 'flex',
-          flexShrink: 0,
-          width: 60,
+          width: 70,
           justifyContent: 'center',
           color: COLORS.muted,
-          fontSize: 16,
+          fontSize: 18,
           lineHeight: 1.3,
         },
         [resultLabel(entry.result)],
       ),
-      el('div', NAME_STYLE, [truncateName(entry.blackPlayer?.name ?? '—')]),
+      el('div', { display: 'flex', flex: 1, color: COLORS.text }, [entry.blackPlayer?.name ?? '—']),
     ],
   );
 }
 
-/** Splits pairing rows left-then-right (first half in column 1, rest in
- * column 2) rather than interleaving — reads the same way a printed pairing
- * sheet split into two columns would. */
-function twoColumnGrid(rows) {
-  const mid = Math.ceil(rows.length / 2);
-  return el('div', { display: 'flex', flexDirection: 'row', flexShrink: 0, width: '100%' }, [
-    el('div', { display: 'flex', flexDirection: 'column', flex: 1 }, rows.slice(0, mid)),
-    el('div', { display: 'flex', flexDirection: 'column', flex: 1, marginLeft: 40 }, rows.slice(mid)),
-  ]);
-}
-
 /** The shared frame every OG image uses — a title/subtitle block, optional
- * body content, and the club wordmark pinned to the bottom. `titleSize`
- * defaults to a large brand treatment (the title IS the content on the
- * brand-only fallback); round images pass a much smaller one — the round
- * number is the least useful thing on that image, the pairings are why
- * someone opens it, so the title shouldn't out-rank them. */
-function frame({ eyebrow, title, titleSize = 68, subtitle, body }) {
+ * body content, and the club wordmark pinned to the bottom. */
+function frame({ eyebrow, title, subtitle, body }) {
   return el(
     'div',
     {
@@ -167,35 +127,20 @@ function frame({ eyebrow, title, titleSize = 68, subtitle, body }) {
       ),
       el(
         'div',
-        {
-          display: 'flex',
-          flexShrink: 0,
-          fontSize: titleSize,
-          lineHeight: 1.25,
-          fontWeight: 700,
-          color: COLORS.accent,
-          marginTop: titleSize > 40 ? 20 : 12,
-        },
+        { display: 'flex', flexShrink: 0, fontSize: 68, lineHeight: 1.3, fontWeight: 700, color: COLORS.accent, marginTop: 20 },
         [title],
       ),
       ...(subtitle
         ? [
             el(
               'div',
-              {
-                display: 'flex',
-                flexShrink: 0,
-                fontSize: titleSize > 40 ? 24 : 20,
-                lineHeight: 1.3,
-                color: COLORS.muted,
-                marginTop: titleSize > 40 ? 14 : 6,
-              },
+              { display: 'flex', flexShrink: 0, fontSize: 24, lineHeight: 1.3, color: COLORS.muted, marginTop: 14 },
               [subtitle],
             ),
           ]
         : []),
       ...(body
-        ? [el('div', { display: 'flex', flexShrink: 0, flexDirection: 'column', width: '100%', marginTop: 22 }, body)]
+        ? [el('div', { display: 'flex', flexShrink: 0, flexDirection: 'column', width: '100%', marginTop: 20 }, body)]
         : [
             // Only the brand-only fallback (no pairings) gets this — a round
             // image is already dense enough that the eyebrow above is
@@ -230,11 +175,9 @@ export function renderBrandImage({ title = 'Zwart op Wit', subtitle } = {}) {
 }
 
 /** `round` is a Round from GET /api/seasons/:id/rounds (see web/src/api/types.ts) —
- * only its GAME entries are shown, in two columns (the pairings are the
- * point of this image, so they get almost the whole frame). Byes get one
- * small summary line instead of a row each, and anything past MAX_ROWS
- * (rare — see its comment) collapses into a "+N more" line so a big round
- * never overflows the fixed-height image. */
+ * only its GAME entries are shown; byes get one small summary line instead of
+ * a row each, and anything past MAX_ROWS collapses into a "+N more" line so a
+ * big round never overflows the fixed-height image. */
 export function renderRoundImage(round, seasonName) {
   const games = round.entries.filter((e) => e.kind === 'GAME').sort((a, b) => (a.tableNumber ?? 0) - (b.tableNumber ?? 0));
   const byes = round.entries.filter((e) => e.kind === 'PAIRING_BYE' || e.kind === 'EXTERNAL_BYE');
@@ -243,7 +186,7 @@ export function renderRoundImage(round, seasonName) {
   const overflow = games.length - shown.length;
 
   const body = [
-    twoColumnGrid(shown.map(pairingRow)),
+    ...shown.map(pairingRow),
     ...(overflow > 0
       ? [
           el(
@@ -267,7 +210,6 @@ export function renderRoundImage(round, seasonName) {
   return toPng(
     frame({
       title: `Round ${round.number}`,
-      titleSize: 40,
       subtitle: [seasonName, formatDate(round.date)].filter(Boolean).join(' · '),
       body,
     }),
