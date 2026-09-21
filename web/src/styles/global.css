@@ -514,6 +514,14 @@ table.board td.winpct-cell .lb-card-tiny-bar {
   background: var(--card);
   margin-bottom: 10px;
   overflow: hidden;
+  /* Matches table.pairings' own 560px cap (plus .round-body's 16px side
+     padding, plus a little slack for admin mode's extra "remove matchup"
+     column) — without this the card still stretched to .app's full width
+     even once the table inside it stopped doing so, leaving the same dead
+     space just moved from inside the table to beside it. No margin:auto —
+     left-anchored so it lines up with the masthead/nav above, which are
+     flush-left too, not centered. */
+  max-width: 620px;
 }
 /* Once open, let the autocomplete dropdown (swap/assign/external-add) escape
    the card's bounds instead of being clipped — hidden is only needed to keep
@@ -699,13 +707,11 @@ table.board td.winpct-cell .lb-card-tiny-bar {
 table.pairings {
   width: 100%;
   /* The real fix for the "canyon" in the middle: this table was stretching
-     to the full card width (often 800px+ on desktop) to show content that's
-     never more than a couple of short names and a result — capping it is
-     what actually removes the dead space, not shuffling which column
-     absorbs it. Left-aligned (not centered) so it reads as one block with
-     the round's header line above it, rather than floating disconnected in
-     the middle of the card. Mobile's own width:100% inside a much narrower
-     viewport is never affected by this cap. */
+     to the full card width to show content that's never more than a couple
+     of short names and a result — capping it is what actually removes the
+     dead space, not shuffling which column absorbs it. .round below caps
+     the card itself to match, so this and that stay in sync. Mobile's own
+     width:100% inside a much narrower viewport is never affected by this. */
   max-width: 560px;
   margin: 4px 0 0;
   border-collapse: collapse;
@@ -735,8 +741,8 @@ table.pairings td {
    even though its own cell is text-align:center. Fixed proportions keep
    Result centered between the two name columns regardless of name length.
    Result itself only needs to fit 4-5 characters ("½–½", "0-1R"), not the
-   20% it had before — now that the table above is capped/centered rather
-   than stretched, these percentages apply to a ~560px table instead of an
+   20% it had before — now that the table above is capped instead of
+   stretched, these percentages apply to a ~560px table instead of an
    800px+ one, which is most of what was actually causing the empty gap. */
 table.pairings th:nth-child(2),
 table.pairings td:nth-child(2) {
@@ -753,10 +759,6 @@ table.pairings td:nth-child(4) {
      this in admin view, where a trailing "remove matchup" column pushes
      Black off of last-child. */
   text-align: right;
-}
-table.pairings td:nth-child(2),
-table.pairings td:nth-child(4) {
-  font-weight: 600;
 }
 .result-pill {
   font-family: var(--font-mono);
