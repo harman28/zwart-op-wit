@@ -105,6 +105,11 @@ function pairingRow(entry: EntryWithPlayers): SatoriNode {
       lineHeight: 1.3,
     },
     [
+      el(
+        'div',
+        { display: 'flex', flexShrink: 0, width: 30, color: COLORS.muted, fontSize: 16, lineHeight: 1.3 },
+        [String(entry.tableNumber ?? '')],
+      ),
       el('div', { ...NAME_STYLE, justifyContent: 'flex-end', textAlign: 'right' }, [
         truncateName(entry.whitePlayer?.name ?? '—'),
       ]),
