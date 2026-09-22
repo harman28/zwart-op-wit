@@ -7,6 +7,7 @@ import type { PairingCandidate, PastPairing } from '../../engine/types.js';
 import { HttpError } from '../../lib/errors.js';
 import { mapEnrollmentsToBaselines, mapRoundToEngine } from '../../lib/mappers.js';
 import { enrollNewOrReturningPlayer } from '../seasons/seasons.service.js';
+import { regenerateShareImageIfPublished } from './shareImage.js';
 
 type RoundWithEntries = Round & { entries: RoundEntry[] };
 
@@ -183,7 +184,9 @@ export async function getRoundAdmin(id: number) {
 }
 
 export async function updateRound(id: number, data: { number?: number; date?: Date }) {
-  return prisma.round.update({ where: { id }, data });
+  const round = await prisma.round.update({ where: { id }, data });
+  await regenerateShareImageIfPublished(id); // date shows in the image's subtitle
+  return round;
 }
 
 export interface UpdateEntryInput {
@@ -205,7 +208,9 @@ export interface UpdateEntryInput {
  * actual mechanism behind "no hard-blocking sequencing".
  */
 export async function updateEntry(id: number, data: UpdateEntryInput) {
-  return prisma.roundEntry.update({ where: { id }, data });
+  const entry = await prisma.roundEntry.update({ where: { id }, data });
+  await regenerateShareImageIfPublished(entry.roundId);
+  return entry;
 }
 
 export async function addEntry(
@@ -221,7 +226,9 @@ export async function addEntry(
     tableNumber?: number;
   },
 ) {
-  return prisma.roundEntry.create({ data: { roundId, ...data } });
+  const entry = await prisma.roundEntry.create({ data: { roundId, ...data } });
+  await regenerateShareImageIfPublished(roundId);
+  return entry;
 }
 
 export interface MatchupParticipantInput {
@@ -274,7 +281,7 @@ export async function addMatchup(roundId: number, participantA: MatchupParticipa
 
   const { colors, nextTable } = await computeColorsAndNextTable(roundId, round.seasonId, playerAId, playerBId);
 
-  return prisma.roundEntry.create({
+  const entry = await prisma.roundEntry.create({
     data: {
       roundId,
       kind: 'GAME',
@@ -283,6 +290,8 @@ export async function addMatchup(roundId: number, participantA: MatchupParticipa
       tableNumber: nextTable,
     },
   });
+  await regenerateShareImageIfPublished(roundId);
+  return entry;
 }
 
 export interface AssignOpponentInput {
@@ -311,7 +320,7 @@ export async function assignOpponent(pairingByeEntryId: number, input: AssignOpp
 
   const { colors, nextTable } = await computeColorsAndNextTable(entry.roundId, round.seasonId, entry.soloPlayerId, opponentId);
 
-  return prisma.roundEntry.update({
+  const updated = await prisma.roundEntry.update({
     where: { id: pairingByeEntryId },
     data: {
       kind: 'GAME',
@@ -321,10 +330,13 @@ export async function assignOpponent(pairingByeEntryId: number, input: AssignOpp
       tableNumber: nextTable,
     },
   });
+  await regenerateShareImageIfPublished(entry.roundId);
+  return updated;
 }
 
 export async function deleteEntry(id: number) {
-  await prisma.roundEntry.delete({ where: { id } });
+  const entry = await prisma.roundEntry.delete({ where: { id } });
+  await regenerateShareImageIfPublished(entry.roundId);
 }
 
 /** Bulk renumber/cascade: the "override the first table, rest follow" stepper behavior. */
@@ -336,12 +348,16 @@ export async function renumberTables(roundId: number, startAt: number) {
   await prisma.$transaction(
     games.map((g, idx) => prisma.roundEntry.update({ where: { id: g.id }, data: { tableNumber: startAt + idx } })),
   );
-  return prisma.roundEntry.findMany({ where: { roundId, kind: 'GAME' }, orderBy: { tableNumber: 'asc' } });
+  const result = await prisma.roundEntry.findMany({ where: { roundId, kind: 'GAME' }, orderBy: { tableNumber: 'asc' } });
+  await regenerateShareImageIfPublished(roundId);
+  return result;
 }
 
 /** Idempotent — only ever controls public visibility, nothing else. */
 export async function publishRound(id: number) {
-  return prisma.round.update({ where: { id }, data: { isPublished: true } });
+  const round = await prisma.round.update({ where: { id }, data: { isPublished: true } });
+  await regenerateShareImageIfPublished(id);
+  return round;
 }
 
 export async function deleteRound(id: number) {

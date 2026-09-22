@@ -14,10 +14,12 @@ import {
   updateEntry,
   updateRound,
 } from './rounds.service.js';
+import { getShareImagePng } from './shareImage.js';
 
 const seasonIdParams = z.object({ id: z.coerce.number().int() });
 const roundIdParams = z.object({ id: z.coerce.number().int() });
 const entryIdParams = z.object({ id: z.coerce.number().int(), entryId: z.coerce.number().int() });
+const seasonRoundNumberParams = z.object({ id: z.coerce.number().int(), number: z.coerce.number().int() });
 
 const membershipTypeSchema = z.enum(['FULL', 'INTERNAL_ONLY', 'GUEST']);
 const gameResultSchema = z.enum(['WHITE_WIN', 'BLACK_WIN', 'DRAW', 'WHITE_WIN_FORFEIT', 'BLACK_WIN_FORFEIT']);
@@ -90,6 +92,15 @@ const assignOpponentBody = z.object({
 });
 
 export async function roundsRoutes(app: FastifyInstance): Promise<void> {
+  // Public — same no-auth visibility as the round itself (GET /api/seasons/:id/rounds).
+  app.get('/api/seasons/:id/rounds/:number/share-image.png', async (request, reply) => {
+    const params = seasonRoundNumberParams.parse(request.params);
+    const png = await getShareImagePng(params.id, params.number);
+    reply.header('Content-Type', 'image/png');
+    reply.header('Cache-Control', 'public, max-age=300');
+    return reply.send(png);
+  });
+
   app.post('/api/admin/seasons/:id/rounds', { preHandler: requireAdmin }, async (request, reply) => {
     const params = seasonIdParams.parse(request.params);
     const body = createRoundBody.parse(request.body);

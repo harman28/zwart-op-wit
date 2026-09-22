@@ -170,6 +170,17 @@ export default function RoundsPage() {
     await refreshRounds();
   }
 
+  /** Colors are normally computed automatically (assignColors, off each
+   * player's current color balance) whenever a matchup is created — never an
+   * admin choice at that point. That's right for regular pairings, but wrong
+   * whenever two players privately agree to sit down as White/Black
+   * themselves (self-arranged games, a bye recipient's opponent, etc.) — the
+   * admin needs to be able to just flip it to match what actually happened. */
+  async function handleSwapColors(round: Round, entry: RoundEntry) {
+    await roundsApi.updateEntry(round.id, entry.id, { whitePlayerId: entry.blackPlayerId, blackPlayerId: entry.whitePlayerId });
+    await refreshRounds();
+  }
+
   function closeAssignOpponent() {
     setAssigningByeId(null);
     setShowAddUnregistered(false);
@@ -330,7 +341,7 @@ export default function RoundsPage() {
                       <th>White</th>
                       <th style={{ textAlign: 'center' }}>Result</th>
                       <th>Black</th>
-                      {adminMode && <th style={{ width: 24 }} />}
+                      {adminMode && <th style={{ width: 48 }} />}
                     </tr>
                   </thead>
                   <tbody>
@@ -381,7 +392,15 @@ export default function RoundsPage() {
                           )}
                         </td>
                         {adminMode && (
-                          <td>
+                          <td className="row-actions">
+                            <button
+                              className="external-remove"
+                              onClick={() => handleSwapColors(round, g)}
+                              aria-label="Swap colors"
+                              title="Swap colors"
+                            >
+                              ⇄
+                            </button>
                             <button
                               className="external-remove"
                               onClick={() => handleDeleteMatchup(round, g)}

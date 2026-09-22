@@ -5,6 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <title>Zwart op Wit — Internal Competition</title>
+    <!--
+      Static defaults for every route. A shared round permalink
+      (/round/:number) gets these swapped for round-specific values —
+      including og:image pointing at that round's pre-rendered share image
+      — server-side in server.mjs, before this file is served; see
+      renderIndexHtml there. This is a plain client-rendered SPA (no SSR),
+      so link-preview crawlers (which don't run JS) only ever see whatever
+      HTML this file resolves to for the request path they fetched.
+    -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Zwart op Wit" />
+    <meta property="og:title" content="Zwart op Wit — Internal Competition" />
+    <meta property="og:description" content="Internal chess competition site — leaderboard, rounds, and pairings." />
+    <meta property="og:image" content="__OG_IMAGE__" />
+    <meta property="og:url" content="__OG_URL__" />
+    <meta name="twitter:card" content="summary_large_image" />
     <script>
       // Only counts real visits to the production site — staging and
       // production build from the same index.html, so an unconditional
