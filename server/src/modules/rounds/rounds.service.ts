@@ -208,6 +208,17 @@ export interface UpdateEntryInput {
  * actual mechanism behind "no hard-blocking sequencing".
  */
 export async function updateEntry(id: number, data: UpdateEntryInput) {
+  const existing = await prisma.roundEntry.findUnique({ where: { id } });
+  if (!existing) throw new HttpError(404, `Entry ${id} not found`);
+  const resultingKind = data.kind ?? existing.kind;
+  if (resultingKind !== 'REGULAR_BYE') {
+    const resultingPlayerIds = [
+      data.whitePlayerId !== undefined ? data.whitePlayerId : existing.whitePlayerId,
+      data.blackPlayerId !== undefined ? data.blackPlayerId : existing.blackPlayerId,
+      data.soloPlayerId !== undefined ? data.soloPlayerId : existing.soloPlayerId,
+    ].filter((pid): pid is number => pid != null);
+    await assertNoConflictingEntry(existing.roundId, resultingPlayerIds, id);
+  }
   const entry = await prisma.roundEntry.update({ where: { id }, data });
   if (entry.kind === 'GAME') {
     const playerIds = [entry.whitePlayerId, entry.blackPlayerId].filter((pid): pid is number => pid != null);
@@ -230,6 +241,12 @@ export async function addEntry(
     tableNumber?: number;
   },
 ) {
+  if (data.kind !== 'REGULAR_BYE') {
+    const playerIds = [data.whitePlayerId, data.blackPlayerId, data.soloPlayerId].filter(
+      (id): id is number => id != null,
+    );
+    await assertNoConflictingEntry(roundId, playerIds);
+  }
   if (data.kind === 'GAME') {
     const playerIds = [data.whitePlayerId, data.blackPlayerId].filter((id): id is number => id != null);
     await removeStaleRegularByes(roundId, playerIds);
@@ -276,6 +293,34 @@ async function removeStaleRegularByes(roundId: number, playerIds: number[]): Pro
   });
 }
 
+/**
+ * Unlike a stale REGULAR_BYE, a player already holding a *real* entry
+ * (GAME/PAIRING_BYE/EXTERNAL_BYE) in a round and then getting a second one
+ * there is always an admin mistake — there's no automatically-correct
+ * resolution the way there is for a leftover bye, so this rejects it
+ * outright rather than silently creating a second table for the same
+ * player. `excludeEntryId` lets updateEntry check against every *other*
+ * entry when it's the one being edited (e.g. swapping a different player
+ * into it) — otherwise an entry would always conflict with itself.
+ */
+async function assertNoConflictingEntry(roundId: number, playerIds: number[], excludeEntryId?: number): Promise<void> {
+  if (playerIds.length === 0) return;
+  const conflict = await prisma.roundEntry.findFirst({
+    where: {
+      roundId,
+      kind: { not: 'REGULAR_BYE' },
+      ...(excludeEntryId != null ? { id: { not: excludeEntryId } } : {}),
+      OR: [{ whitePlayerId: { in: playerIds } }, { blackPlayerId: { in: playerIds } }, { soloPlayerId: { in: playerIds } }],
+    },
+  });
+  if (!conflict) return;
+  const conflictingPlayerId = [conflict.whitePlayerId, conflict.blackPlayerId, conflict.soloPlayerId].find(
+    (pid): pid is number => pid != null && playerIds.includes(pid),
+  )!;
+  const player = await prisma.player.findUnique({ where: { id: conflictingPlayerId } });
+  throw new HttpError(409, `${player?.name ?? `Player ${conflictingPlayerId}`} already has an entry in this round`);
+}
+
 /** Shared by addMatchup and assignOpponent: who plays which color is never an
  * admin choice (computed via assignColors, same as pairing generation), and a
  * newly-created table always gets the next free number in the round. */
@@ -308,6 +353,7 @@ export async function addMatchup(roundId: number, participantA: MatchupParticipa
 
   const { colors, nextTable } = await computeColorsAndNextTable(roundId, round.seasonId, playerAId, playerBId);
 
+  await assertNoConflictingEntry(roundId, [playerAId, playerBId]);
   await removeStaleRegularByes(roundId, [playerAId, playerBId]);
   const entry = await prisma.roundEntry.create({
     data: {
@@ -348,6 +394,7 @@ export async function assignOpponent(pairingByeEntryId: number, input: AssignOpp
 
   const { colors, nextTable } = await computeColorsAndNextTable(entry.roundId, round.seasonId, entry.soloPlayerId, opponentId);
 
+  await assertNoConflictingEntry(entry.roundId, [entry.soloPlayerId, opponentId], pairingByeEntryId);
   await removeStaleRegularByes(entry.roundId, [entry.soloPlayerId, opponentId]);
   const updated = await prisma.roundEntry.update({
     where: { id: pairingByeEntryId },
