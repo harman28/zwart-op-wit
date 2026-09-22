@@ -209,6 +209,10 @@ export interface UpdateEntryInput {
  */
 export async function updateEntry(id: number, data: UpdateEntryInput) {
   const entry = await prisma.roundEntry.update({ where: { id }, data });
+  if (entry.kind === 'GAME') {
+    const playerIds = [entry.whitePlayerId, entry.blackPlayerId].filter((pid): pid is number => pid != null);
+    await removeStaleRegularByes(entry.roundId, playerIds);
+  }
   await regenerateShareImageIfPublished(entry.roundId);
   return entry;
 }
@@ -226,6 +230,10 @@ export async function addEntry(
     tableNumber?: number;
   },
 ) {
+  if (data.kind === 'GAME') {
+    const playerIds = [data.whitePlayerId, data.blackPlayerId].filter((id): id is number => id != null);
+    await removeStaleRegularByes(roundId, playerIds);
+  }
   const entry = await prisma.roundEntry.create({ data: { roundId, ...data } });
   await regenerateShareImageIfPublished(roundId);
   return entry;
@@ -247,6 +255,25 @@ async function resolveParticipant(seasonId: number, input: MatchupParticipantInp
   if (!input.newPlayer) throw new HttpError(400, 'Either playerId or newPlayer is required');
   const { playerId } = await enrollNewOrReturningPlayer(seasonId, input.newPlayer, roundId);
   return playerId;
+}
+
+/**
+ * A REGULAR_BYE means "absent this round" — a player can never legitimately
+ * hold one for a round they also have a GAME in. But one can end up sitting
+ * there anyway: enrolling a player (Players tab, or an existing player
+ * picked from the list here) backfills a REGULAR_BYE for every already-
+ * existing round they have no entry in yet (see backfillMissedRounds), and
+ * if an admin *later* gives that player a real matchup in one of those
+ * rounds, nothing before this removed the now-stale bye — it just sat there
+ * silently double-counting them (a real game's result *and* a bye's ~2/3
+ * value, both scored). Called right before a GAME entry is created for a
+ * player in addMatchup/assignOpponent/addEntry — the one moment this
+ * conflict can actually arise.
+ */
+async function removeStaleRegularByes(roundId: number, playerIds: number[]): Promise<void> {
+  await prisma.roundEntry.deleteMany({
+    where: { roundId, kind: 'REGULAR_BYE', soloPlayerId: { in: playerIds } },
+  });
 }
 
 /** Shared by addMatchup and assignOpponent: who plays which color is never an
@@ -281,6 +308,7 @@ export async function addMatchup(roundId: number, participantA: MatchupParticipa
 
   const { colors, nextTable } = await computeColorsAndNextTable(roundId, round.seasonId, playerAId, playerBId);
 
+  await removeStaleRegularByes(roundId, [playerAId, playerBId]);
   const entry = await prisma.roundEntry.create({
     data: {
       roundId,
@@ -320,6 +348,7 @@ export async function assignOpponent(pairingByeEntryId: number, input: AssignOpp
 
   const { colors, nextTable } = await computeColorsAndNextTable(entry.roundId, round.seasonId, entry.soloPlayerId, opponentId);
 
+  await removeStaleRegularByes(entry.roundId, [entry.soloPlayerId, opponentId]);
   const updated = await prisma.roundEntry.update({
     where: { id: pairingByeEntryId },
     data: {
