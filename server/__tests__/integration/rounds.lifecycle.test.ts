@@ -180,12 +180,24 @@ describe('round lifecycle (real Postgres): create -> edit -> publish -> re-edit 
     expect(originalWinnerAfterCorrection.losses).toBe(1);
 
     // 12. The odd-one-out can be turned into a real game ("assign opponent") via the
-    // same generic entry editor — no dedicated endpoint needed.
+    // same generic entry editor — no dedicated endpoint needed. The opponent must be
+    // someone not already playing this round (carol/alice/bob/dave all have a game
+    // already from step 3) — a brand-new player, same as a real admin adding one.
+    const frankRes = await app.inject({
+      method: 'POST',
+      url: `/api/admin/seasons/${seasonId}/players`,
+      headers: { cookie },
+      payload: { name: 'LifecycleFrank', startingValue: 100 },
+    });
+    expect(frankRes.statusCode).toBe(201);
+    const frank = frankRes.json().playerId;
+    createdPlayerIds.push(frank);
+
     const assignOpponent = await app.inject({
       method: 'PATCH',
       url: `/api/admin/rounds/${roundId}/entries/${pairingBye.id}`,
       headers: { cookie },
-      payload: { kind: 'GAME', soloPlayerId: null, whitePlayerId: eve, blackPlayerId: carol, tableNumber: 11 },
+      payload: { kind: 'GAME', soloPlayerId: null, whitePlayerId: eve, blackPlayerId: frank, tableNumber: 11 },
     });
     expect(assignOpponent.statusCode).toBe(200);
     expect(assignOpponent.json().kind).toBe('GAME');
