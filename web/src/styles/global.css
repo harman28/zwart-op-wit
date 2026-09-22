@@ -907,6 +907,12 @@ table.pairings td:nth-child(4) {
 .external-remove:hover {
   opacity: 1;
 }
+/* table.pairings' admin-only actions column (swap colors / remove matchup) — two
+   icon buttons side by side rather than stacked, so the row stays one line tall. */
+.row-actions {
+  display: flex;
+  gap: 4px;
+}
 .external-tag,
 .external-tag-btn {
   font-size: 12px;
