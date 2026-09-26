@@ -28,6 +28,9 @@
   --win: #7c9a6b;
   --loss: #b0524a;
   --draw: #a89566;
+  /* Secondary membership (full member of another club, still KNSB-registered
+     here) — needs its own hue distinct from the other three membership pills. */
+  --secondary: #9b86c9;
 
   /* Result colors read as "which piece color won" (white/black), never as
      good/bad — black winning isn't a loss, it's just black's turn to win.
@@ -66,6 +69,7 @@
   --win: #4c7a3d;
   --loss: #a1443c;
   --draw: #8a723f;
+  --secondary: #6a5296;
 }
 
 /* cache-bust marker 2026-07-24 */

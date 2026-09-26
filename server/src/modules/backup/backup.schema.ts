@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const membershipTypeSchema = z.enum(['FULL', 'INTERNAL_ONLY', 'GUEST']);
+const membershipTypeSchema = z.enum(['FULL', 'INTERNAL_ONLY', 'GUEST', 'SECONDARY']);
 const genderSchema = z.enum(['M', 'V', 'X']);
 const gameResultSchema = z.enum(['WHITE_WIN', 'BLACK_WIN', 'DRAW', 'WHITE_WIN_FORFEIT', 'BLACK_WIN_FORFEIT']);
 const externalOutcomeSchema = z.enum(['WIN', 'DRAW', 'LOSS']);

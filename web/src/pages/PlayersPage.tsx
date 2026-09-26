@@ -20,11 +20,13 @@ const MEMBERSHIP_BADGE_CLASS: Record<MembershipType, string> = {
   FULL: 'pill full',
   INTERNAL_ONLY: 'pill internal',
   GUEST: 'pill guest',
+  SECONDARY: 'pill secondary',
 };
 const MEMBERSHIP_SHORT: Record<MembershipType, string> = {
   FULL: 'Full',
   INTERNAL_ONLY: 'Internal',
   GUEST: 'Guest',
+  SECONDARY: 'Secondary',
 };
 
 // Jim's own dues-tracking flag — display only here, no effect anywhere else on the site.
@@ -217,7 +219,7 @@ export default function PlayersPage() {
       .map((line) => {
         const [name, membership, federation, knsbId, gender] = line.split(',').map((s) => s.trim());
         const membershipType: MembershipType =
-          membership === 'INTERNAL_ONLY' || membership === 'GUEST' ? membership : 'FULL';
+          membership === 'INTERNAL_ONLY' || membership === 'GUEST' || membership === 'SECONDARY' ? membership : 'FULL';
         return {
           name: name!,
           membershipType,

@@ -11,7 +11,7 @@ import {
   updatePlayer,
 } from './players.service.js';
 
-const membershipTypeSchema = z.enum(['FULL', 'INTERNAL_ONLY', 'GUEST']);
+const membershipTypeSchema = z.enum(['FULL', 'INTERNAL_ONLY', 'GUEST', 'SECONDARY']);
 const genderSchema = z.enum(['M', 'V', 'X']);
 const createBody = z.object({ name: z.string().min(1), membershipType: membershipTypeSchema.default('FULL') });
 const importBody = z.object({

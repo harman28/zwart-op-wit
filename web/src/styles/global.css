@@ -1621,6 +1621,9 @@ table.roster tr:last-child td {
 .player-card.guest {
   border-left-color: var(--draw);
 }
+.player-card.secondary {
+  border-left-color: var(--secondary);
+}
 .player-card-top {
   display: flex;
   align-items: center;
@@ -1660,6 +1663,10 @@ table.roster tr:last-child td {
 .pill.guest {
   background: color-mix(in srgb, var(--draw) 18%, transparent);
   color: var(--draw);
+}
+.pill.secondary {
+  background: color-mix(in srgb, var(--secondary) 18%, transparent);
+  color: var(--secondary);
 }
 .pill.paid {
   background: color-mix(in srgb, var(--win) 16%, transparent);
@@ -1717,6 +1724,9 @@ table.roster tr:last-child td {
 }
 .roster-select-guest {
   color: var(--draw);
+}
+.roster-select-secondary {
+  color: var(--secondary);
 }
 
 .note-cell {

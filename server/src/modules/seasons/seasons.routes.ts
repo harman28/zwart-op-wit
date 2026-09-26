@@ -24,7 +24,7 @@ const leaderboardQuery = z.object({ afterRound: z.coerce.number().int().optional
 const rosterEntrySchema = z.object({
   playerId: z.number().int().optional(),
   newPlayerName: z.string().min(1).optional(),
-  membershipType: z.enum(['FULL', 'INTERNAL_ONLY', 'GUEST']).optional(),
+  membershipType: z.enum(['FULL', 'INTERNAL_ONLY', 'GUEST', 'SECONDARY']).optional(),
   knsbId: z.string().min(1).optional(),
   gender: z.enum(['M', 'V', 'X']).optional(),
   federation: z.string().min(1).optional(),
@@ -42,7 +42,7 @@ const createSeasonBody = z.object({
 });
 const enrollPlayerBody = z.object({
   name: z.string().min(1),
-  membershipType: z.enum(['FULL', 'INTERNAL_ONLY', 'GUEST']).optional(),
+  membershipType: z.enum(['FULL', 'INTERNAL_ONLY', 'GUEST', 'SECONDARY']).optional(),
   // Omit to default to the median of the season's current standings — see
   // defaultStartingValue in seasons.service.ts.
   startingValue: z.number().int().optional(),

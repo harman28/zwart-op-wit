@@ -10,6 +10,9 @@ enum MembershipType {
   FULL
   INTERNAL_ONLY
   GUEST
+  // Full member of a *different* club, still KNSB-registered (has their own
+  // knsbId) — plays here as a second-club member, not this club's own.
+  SECONDARY
 }
 
 enum EntryKind {

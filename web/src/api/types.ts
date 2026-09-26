@@ -1,4 +1,4 @@
-export type MembershipType = 'FULL' | 'INTERNAL_ONLY' | 'GUEST';
+export type MembershipType = 'FULL' | 'INTERNAL_ONLY' | 'GUEST' | 'SECONDARY';
 export type EntryKind = 'GAME' | 'PAIRING_BYE' | 'REGULAR_BYE' | 'EXTERNAL_BYE';
 export type GameResult = 'WHITE_WIN' | 'BLACK_WIN' | 'DRAW' | 'WHITE_WIN_FORFEIT' | 'BLACK_WIN_FORFEIT';
 export type ExternalOutcome = 'WIN' | 'DRAW' | 'LOSS';
