@@ -12,6 +12,7 @@ export interface Player {
   gender: Gender | null;
   knsbId: string | null;
   federation: string | null;
+  duesPaid: boolean;
   createdAt: string;
   archivedAt: string | null;
   roundsThisSeason?: number;
@@ -131,4 +132,5 @@ export interface ClubSettings {
   defaultRegularByeCap: number;
   defaultKnsbArbiterName: string | null;
   defaultKnsbArbiterEmail: string | null;
+  defaultKnsbExportFilename: string;
 }

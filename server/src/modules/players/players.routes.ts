@@ -32,6 +32,7 @@ const updateBody = z.object({
   gender: genderSchema.nullable().optional(),
   knsbId: z.string().nullable().optional(),
   federation: z.string().min(1).optional(),
+  duesPaid: z.boolean().optional(),
 });
 const idParams = z.object({ id: z.coerce.number().int() });
 

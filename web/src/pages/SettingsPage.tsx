@@ -37,6 +37,7 @@ export default function SettingsPage() {
   const [knsbRounds, setKnsbRounds] = useState<Round[]>([]);
   const [knsbFromRound, setKnsbFromRound] = useState('');
   const [knsbThroughRound, setKnsbThroughRound] = useState('');
+  const [knsbFilenameDraft, setKnsbFilenameDraft] = useState('');
   const [knsbBusy, setKnsbBusy] = useState(false);
 
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -70,6 +71,7 @@ export default function SettingsPage() {
       setClubSettings(cs);
       setArbiterNameDraft(cs.defaultKnsbArbiterName ?? '');
       setArbiterEmailDraft(cs.defaultKnsbArbiterEmail ?? '');
+      setKnsbFilenameDraft(cs.defaultKnsbExportFilename);
       setTopValueDraft(String(cs.defaultTopValue));
     });
     playersApi
@@ -166,7 +168,8 @@ export default function SettingsPage() {
     setError(null);
     setKnsbBusy(true);
     try {
-      const { content, filename } = await settingsApi.getKnsbExport(season.id, from, through);
+      const chosenFilename = knsbFilenameDraft.trim() || clubSettings?.defaultKnsbExportFilename;
+      const { content, filename } = await settingsApi.getKnsbExport(season.id, from, through, chosenFilename);
       const blob = new Blob([content], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -174,6 +177,12 @@ export default function SettingsPage() {
       a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
+      // Remember whatever filename was actually used — the next export
+      // starts from this one instead of the original default.
+      if (chosenFilename && chosenFilename !== clubSettings?.defaultKnsbExportFilename) {
+        const updated = await settingsApi.updateClubSettings({ defaultKnsbExportFilename: chosenFilename });
+        setClubSettings(updated);
+      }
       setShowKnsbModal(false);
     } catch (err) {
       setError(errorMessage(err));
@@ -572,6 +581,15 @@ export default function SettingsPage() {
 
       {showKnsbModal && season && (
         <Modal title="KNSB rating export" onClose={() => setShowKnsbModal(false)}>
+          <div className="field">
+            <label htmlFor="knsb-filename">Filename</label>
+            <input
+              id="knsb-filename"
+              value={knsbFilenameDraft}
+              onChange={(e) => setKnsbFilenameDraft(e.target.value)}
+              placeholder={clubSettings ? clubSettings.defaultKnsbExportFilename : 'Loading…'}
+            />
+          </div>
           <div className="field">
             <label htmlFor="knsb-arbiter-name">Arbiter name</label>
             <input

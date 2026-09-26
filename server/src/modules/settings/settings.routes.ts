@@ -10,6 +10,7 @@ const updateBody = z.object({
   defaultRegularByeCap: z.number().int().optional(),
   defaultKnsbArbiterName: z.string().min(1).optional(),
   defaultKnsbArbiterEmail: z.string().min(1).optional(),
+  defaultKnsbExportFilename: z.string().min(1).optional(),
 });
 
 export async function settingsRoutes(app: FastifyInstance): Promise<void> {

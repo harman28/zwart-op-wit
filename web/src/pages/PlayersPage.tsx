@@ -27,6 +27,12 @@ const MEMBERSHIP_SHORT: Record<MembershipType, string> = {
   GUEST: 'Guest',
 };
 
+// Jim's own dues-tracking flag — display only here, no effect anywhere else on the site.
+const DUES_OPTIONS = [
+  { value: 'paid', label: 'Paid' },
+  { value: 'unpaid', label: 'Unpaid' },
+];
+
 function PlayerListTable({ list, onSelect }: { list: Player[]; onSelect: (p: Player) => void }) {
   return (
     <>
@@ -36,6 +42,7 @@ function PlayerListTable({ list, onSelect }: { list: Player[]; onSelect: (p: Pla
             <tr>
               <th>Name</th>
               <th>Membership</th>
+              <th>Paid/Unpaid</th>
               <th>Notes</th>
               <th>Federation</th>
               <th>KNSB ID</th>
@@ -48,6 +55,9 @@ function PlayerListTable({ list, onSelect }: { list: Player[]; onSelect: (p: Pla
                 <td>{p.name}</td>
                 <td>
                   <span className={MEMBERSHIP_BADGE_CLASS[p.membershipType]}>{MEMBERSHIP_SHORT[p.membershipType]}</span>
+                </td>
+                <td>
+                  <span className={p.duesPaid ? 'pill paid' : 'pill unpaid'}>{p.duesPaid ? 'Paid' : 'Unpaid'}</span>
                 </td>
                 <td className="note-cell">
                   {p.notes || <span style={{ color: 'var(--muted)' }}>—</span>}
@@ -78,6 +88,7 @@ function PlayerListTable({ list, onSelect }: { list: Player[]; onSelect: (p: Pla
             <div className="player-card-top">
               <span className="player-card-name">{p.name}</span>
               <span className={MEMBERSHIP_BADGE_CLASS[p.membershipType]}>{MEMBERSHIP_SHORT[p.membershipType]}</span>
+              <span className={p.duesPaid ? 'pill paid' : 'pill unpaid'}>{p.duesPaid ? 'Paid' : 'Unpaid'}</span>
             </div>
             {p.notes && <div className="player-card-notes">{p.notes}</div>}
             <div className="player-card-meta">
@@ -104,6 +115,7 @@ function PlayerListTable({ list, onSelect }: { list: Player[]; onSelect: (p: Pla
 interface EditDraft {
   name: string;
   membershipType: MembershipType;
+  duesPaid: boolean;
   notes: string;
   federation: string;
   knsbId: string;
@@ -114,6 +126,7 @@ function draftFor(p: Player): EditDraft {
   return {
     name: p.name,
     membershipType: p.membershipType,
+    duesPaid: p.duesPaid,
     notes: p.notes ?? '',
     federation: p.federation ?? '',
     knsbId: p.knsbId ?? '',
@@ -284,6 +297,7 @@ export default function PlayersPage() {
       const updated = await playersApi.updatePlayer(editingPlayer.id, {
         name: draft.name.trim() || editingPlayer.name,
         membershipType: draft.membershipType,
+        duesPaid: draft.duesPaid,
         notes: draft.notes.trim() || null,
         federation: draft.federation.trim() ? draft.federation.trim().toUpperCase() : undefined,
         knsbId: draft.knsbId.trim() || null,
@@ -445,6 +459,15 @@ export default function PlayersPage() {
               value={draft.membershipType}
               options={MEMBERSHIP_OPTIONS}
               onChange={(v) => setDraft({ ...draft, membershipType: v as MembershipType })}
+              triggerClassName="roster-select"
+            />
+          </div>
+          <div className="field">
+            <label>Paid/Unpaid</label>
+            <CustomSelect
+              value={draft.duesPaid ? 'paid' : 'unpaid'}
+              options={DUES_OPTIONS}
+              onChange={(v) => setDraft({ ...draft, duesPaid: v === 'paid' })}
               triggerClassName="roster-select"
             />
           </div>

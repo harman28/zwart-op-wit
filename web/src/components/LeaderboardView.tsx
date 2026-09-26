@@ -15,10 +15,13 @@ function rankClass(rank: number): string {
 export default function LeaderboardView({
   standings,
   onSelectPlayer,
+  isAdmin,
 }: {
   standings: Standing[];
   /** Omit to fall back to plain (non-clickable) names. */
   onSelectPlayer?: (playerId: number) => void;
+  /** Guest is an admin-only distinction — a public visitor shouldn't see it. */
+  isAdmin?: boolean;
 }) {
   return (
     <>
@@ -51,7 +54,7 @@ export default function LeaderboardView({
                   ) : (
                     s.name
                   )}
-                  {s.membershipType === 'GUEST' && <span className="badge">Guest</span>}
+                  {isAdmin && s.membershipType === 'GUEST' && <span className="badge">Guest</span>}
                 </td>
                 <td className="num score-cell">{formatNumber(s.score)}</td>
                 <td className="num value-cell">{s.value}</td>

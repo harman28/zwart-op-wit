@@ -1661,6 +1661,14 @@ table.roster tr:last-child td {
   background: color-mix(in srgb, var(--draw) 18%, transparent);
   color: var(--draw);
 }
+.pill.paid {
+  background: color-mix(in srgb, var(--win) 16%, transparent);
+  color: var(--win);
+}
+.pill.unpaid {
+  background: color-mix(in srgb, var(--loss) 16%, transparent);
+  color: var(--loss);
+}
 
 .roster-select {
   font-family: var(--font-ui);

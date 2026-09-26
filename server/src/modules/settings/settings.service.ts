@@ -10,6 +10,7 @@ export async function getClubSettings() {
     defaultRegularByeCap: settings.defaultRegularByeCap,
     defaultKnsbArbiterName: settings.defaultKnsbArbiterName,
     defaultKnsbArbiterEmail: settings.defaultKnsbArbiterEmail,
+    defaultKnsbExportFilename: settings.defaultKnsbExportFilename,
   };
 }
 
@@ -20,6 +21,7 @@ export async function updateClubSettings(data: {
   defaultRegularByeCap?: number;
   defaultKnsbArbiterName?: string;
   defaultKnsbArbiterEmail?: string;
+  defaultKnsbExportFilename?: string;
 }) {
   const updated = await prisma.clubSettings.update({ where: { id: 1 }, data });
   return {
@@ -29,5 +31,6 @@ export async function updateClubSettings(data: {
     defaultRegularByeCap: updated.defaultRegularByeCap,
     defaultKnsbArbiterName: updated.defaultKnsbArbiterName,
     defaultKnsbArbiterEmail: updated.defaultKnsbArbiterEmail,
+    defaultKnsbExportFilename: updated.defaultKnsbExportFilename,
   };
 }

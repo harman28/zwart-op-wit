@@ -40,6 +40,7 @@ const backupPlayerSchema = z.object({
   gender: genderSchema.nullable().optional(),
   knsbId: z.string().nullable().optional(),
   federation: z.string().nullable().optional(),
+  duesPaid: z.boolean().optional(),
 });
 
 const backupSeasonSchema = z.object({
@@ -68,6 +69,7 @@ const backupClubSettingsSchema = z.object({
   defaultRegularByeCap: z.number().int(),
   defaultKnsbArbiterName: z.string().nullable().optional(),
   defaultKnsbArbiterEmail: z.string().nullable().optional(),
+  defaultKnsbExportFilename: z.string().optional(),
 });
 
 export const backupFileSchema = z.object({

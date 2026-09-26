@@ -85,6 +85,7 @@ export async function updatePlayer(
     gender?: Gender | null;
     knsbId?: string | null;
     federation?: string;
+    duesPaid?: boolean;
   },
 ) {
   if (data.name) await assertNameAvailable(data.name, id);
