@@ -4,7 +4,11 @@ import { requireAdmin } from '../../lib/requireAdmin.js';
 import { generateSeasonKnsbExport } from './knsb.service.js';
 
 const idParams = z.object({ id: z.coerce.number().int() });
-const exportQuery = z.object({ fromRound: z.coerce.number().int(), throughRound: z.coerce.number().int() });
+const exportQuery = z.object({
+  fromRound: z.coerce.number().int(),
+  throughRound: z.coerce.number().int(),
+  filename: z.string().min(1).optional(),
+});
 
 export async function knsbRoutes(app: FastifyInstance): Promise<void> {
   // Same {content, filename} shape the backup export uses — the frontend
@@ -13,6 +17,8 @@ export async function knsbRoutes(app: FastifyInstance): Promise<void> {
     const params = idParams.parse(request.params);
     const query = exportQuery.parse(request.query);
     const content = await generateSeasonKnsbExport(params.id, query.fromRound, query.throughRound);
-    return { content, filename: `knsb-rapid-r${query.fromRound}-r${query.throughRound}.txt` };
+    const base = query.filename ?? `knsb-rapid-r${query.fromRound}-r${query.throughRound}`;
+    const filename = base.endsWith('.txt') ? base : `${base}.txt`;
+    return { content, filename };
   });
 }

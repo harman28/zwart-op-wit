@@ -4,4 +4,5 @@ export const MEMBERSHIP_OPTIONS: { value: MembershipType; label: string; colorCl
   { value: 'FULL', label: 'Full member', colorClassName: 'roster-select-full' },
   { value: 'INTERNAL_ONLY', label: 'Internal only', colorClassName: 'roster-select-internal_only' },
   { value: 'GUEST', label: 'Guest', colorClassName: 'roster-select-guest' },
+  { value: 'SECONDARY', label: 'Secondary', colorClassName: 'roster-select-secondary' },
 ];

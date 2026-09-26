@@ -21,7 +21,7 @@ const roundIdParams = z.object({ id: z.coerce.number().int() });
 const entryIdParams = z.object({ id: z.coerce.number().int(), entryId: z.coerce.number().int() });
 const seasonRoundNumberParams = z.object({ id: z.coerce.number().int(), number: z.coerce.number().int() });
 
-const membershipTypeSchema = z.enum(['FULL', 'INTERNAL_ONLY', 'GUEST']);
+const membershipTypeSchema = z.enum(['FULL', 'INTERNAL_ONLY', 'GUEST', 'SECONDARY']);
 const gameResultSchema = z.enum(['WHITE_WIN', 'BLACK_WIN', 'DRAW', 'WHITE_WIN_FORFEIT', 'BLACK_WIN_FORFEIT']);
 const externalOutcomeSchema = z.enum(['WIN', 'DRAW', 'LOSS']);
 const entryKindSchema = z.enum(['GAME', 'PAIRING_BYE', 'REGULAR_BYE', 'EXTERNAL_BYE']);

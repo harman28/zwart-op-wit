@@ -104,7 +104,9 @@ export default function LeaderboardPage() {
         </div>
       </div>
       {error && <div className="error-banner">{error}</div>}
-      {leaderboard && <LeaderboardView standings={leaderboard.standings} onSelectPlayer={setSelectedPlayerId} />}
+      {leaderboard && (
+        <LeaderboardView standings={leaderboard.standings} onSelectPlayer={setSelectedPlayerId} isAdmin={isAdmin} />
+      )}
       {selectedPlayerId != null && (
         <PlayerHistoryModal
           seasonId={season.id}

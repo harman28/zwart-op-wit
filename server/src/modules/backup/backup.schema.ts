@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const membershipTypeSchema = z.enum(['FULL', 'INTERNAL_ONLY', 'GUEST']);
+const membershipTypeSchema = z.enum(['FULL', 'INTERNAL_ONLY', 'GUEST', 'SECONDARY']);
 const genderSchema = z.enum(['M', 'V', 'X']);
 const gameResultSchema = z.enum(['WHITE_WIN', 'BLACK_WIN', 'DRAW', 'WHITE_WIN_FORFEIT', 'BLACK_WIN_FORFEIT']);
 const externalOutcomeSchema = z.enum(['WIN', 'DRAW', 'LOSS']);
@@ -40,6 +40,7 @@ const backupPlayerSchema = z.object({
   gender: genderSchema.nullable().optional(),
   knsbId: z.string().nullable().optional(),
   federation: z.string().nullable().optional(),
+  duesPaid: z.boolean().optional(),
 });
 
 const backupSeasonSchema = z.object({
@@ -68,6 +69,7 @@ const backupClubSettingsSchema = z.object({
   defaultRegularByeCap: z.number().int(),
   defaultKnsbArbiterName: z.string().nullable().optional(),
   defaultKnsbArbiterEmail: z.string().nullable().optional(),
+  defaultKnsbExportFilename: z.string().optional(),
 });
 
 export const backupFileSchema = z.object({

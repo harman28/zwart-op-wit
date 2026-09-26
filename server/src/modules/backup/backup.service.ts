@@ -39,6 +39,7 @@ export async function exportFullBackup(): Promise<BackupFile> {
       defaultRegularByeCap: clubSettings.defaultRegularByeCap,
       defaultKnsbArbiterName: clubSettings.defaultKnsbArbiterName,
       defaultKnsbArbiterEmail: clubSettings.defaultKnsbArbiterEmail,
+      defaultKnsbExportFilename: clubSettings.defaultKnsbExportFilename,
     },
     players: players.map((p) => ({
       name: p.name,
@@ -48,6 +49,7 @@ export async function exportFullBackup(): Promise<BackupFile> {
       gender: p.gender,
       knsbId: p.knsbId,
       federation: p.federation,
+      duesPaid: p.duesPaid,
     })),
     seasons: seasons.map((season) => ({
       name: season.name,
@@ -130,6 +132,9 @@ export async function importFullBackup(data: BackupFile) {
           defaultRegularByeCap: data.clubSettings.defaultRegularByeCap,
           defaultKnsbArbiterName: data.clubSettings.defaultKnsbArbiterName ?? null,
           defaultKnsbArbiterEmail: data.clubSettings.defaultKnsbArbiterEmail ?? null,
+          ...(data.clubSettings.defaultKnsbExportFilename != null
+            ? { defaultKnsbExportFilename: data.clubSettings.defaultKnsbExportFilename }
+            : {}),
         },
       });
 
@@ -143,6 +148,7 @@ export async function importFullBackup(data: BackupFile) {
             gender: p.gender ?? null,
             knsbId: p.knsbId ?? null,
             federation: p.federation ?? null,
+            duesPaid: p.duesPaid ?? false,
           })),
         });
       }

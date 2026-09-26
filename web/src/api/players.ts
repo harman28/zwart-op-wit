@@ -21,6 +21,7 @@ export function updatePlayer(
     gender?: Gender | null;
     knsbId?: string | null;
     federation?: string;
+    duesPaid?: boolean;
   },
 ) {
   return api.patch<Player>(`/admin/players/${id}`, data);

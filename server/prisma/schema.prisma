@@ -10,6 +10,9 @@ enum MembershipType {
   FULL
   INTERNAL_ONLY
   GUEST
+  // Full member of a *different* club, still KNSB-registered (has their own
+  // knsbId) — plays here as a second-club member, not this club's own.
+  SECONDARY
 }
 
 enum EntryKind {
@@ -47,6 +50,9 @@ model Player {
   membershipType MembershipType @default(FULL)
   notes          String?
   createdAt      DateTime       @default(now())
+  // Jim's own dues-tracking flag — purely his bookkeeping, no effect on
+  // scoring, eligibility, or anything else on the site.
+  duesPaid       Boolean        @default(false)
   // Set when an admin archives someone who hasn't shown up in a long time —
   // purely a display/list-declutter flag, never touches enrollments or
   // historical RoundEntry rows. Null means active.
@@ -200,6 +206,10 @@ model ClubSettings {
   // into every new season's KNSB metadata rather than retyped each time.
   defaultKnsbArbiterName  String?
   defaultKnsbArbiterEmail String?
+  // Prefilled into the export modal, then overwritten with whatever was
+  // actually typed after each successful export — Jim reuses the same base
+  // name every batch, so this saves retyping it each time.
+  defaultKnsbExportFilename String @default("knsb-rapid-export")
 }
 
 model AdminSession {

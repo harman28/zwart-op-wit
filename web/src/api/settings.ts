@@ -7,8 +7,9 @@ export function getClubSettings() {
 export function updateClubSettings(data: Partial<ClubSettings>) {
   return api.patch<ClubSettings>('/admin/settings', data);
 }
-export function getKnsbExport(seasonId: number, fromRound: number, throughRound: number) {
+export function getKnsbExport(seasonId: number, fromRound: number, throughRound: number, filename?: string) {
+  const filenameParam = filename ? `&filename=${encodeURIComponent(filename)}` : '';
   return api.get<{ content: string; filename: string }>(
-    `/admin/seasons/${seasonId}/knsb-export?fromRound=${fromRound}&throughRound=${throughRound}`,
+    `/admin/seasons/${seasonId}/knsb-export?fromRound=${fromRound}&throughRound=${throughRound}${filenameParam}`,
   );
 }
