@@ -37,28 +37,37 @@ export async function externalTeamsRoutes(app: FastifyInstance): Promise<void> {
   // netstand.nl (this sandbox can't reach it to test directly). Remove once
   // the live behavior is confirmed working correctly. Never writes anything.
   app.get('/api/admin/external-teams/debug-fetch', { preHandler: requireAdmin }, async (request) => {
-    const query = debugQuery.parse(request.query);
-    const teamRes = await fetch(query.netstandUrl, { signal: AbortSignal.timeout(8000) });
-    const teamHtml = await teamRes.text();
-    const pairingUrl = findPairingUrlInTeamPageHtml(teamHtml, query.date);
-    let pairingStatus: number | null = null;
-    let pairingHtmlLength: number | null = null;
-    let boards: Record<string, number> = {};
-    if (pairingUrl) {
-      const pairingRes = await fetch(pairingUrl, { signal: AbortSignal.timeout(8000) });
-      pairingStatus = pairingRes.status;
-      const pairingHtml = await pairingRes.text();
-      pairingHtmlLength = pairingHtml.length;
-      boards = Object.fromEntries(parseBoardNumbersFromPairingHtml(pairingHtml, query.netstandUrl));
+    try {
+      const query = debugQuery.parse(request.query);
+      const teamRes = await fetch(query.netstandUrl, { signal: AbortSignal.timeout(8000) });
+      const teamHtml = await teamRes.text();
+      const pairingUrl = findPairingUrlInTeamPageHtml(teamHtml, query.date);
+      let pairingStatus: number | null = null;
+      let pairingHtmlLength: number | null = null;
+      let boards: Record<string, number> = {};
+      if (pairingUrl) {
+        const pairingRes = await fetch(pairingUrl, { signal: AbortSignal.timeout(8000) });
+        pairingStatus = pairingRes.status;
+        const pairingHtml = await pairingRes.text();
+        pairingHtmlLength = pairingHtml.length;
+        boards = Object.fromEntries(parseBoardNumbersFromPairingHtml(pairingHtml, query.netstandUrl));
+      }
+      return {
+        teamFetchStatus: teamRes.status,
+        teamHtmlLength: teamHtml.length,
+        teamHtmlSnippet: teamHtml.slice(0, 300),
+        pairingUrl,
+        pairingStatus,
+        pairingHtmlLength,
+        boards,
+      };
+    } catch (err) {
+      return {
+        caught: true,
+        message: err instanceof Error ? err.message : String(err),
+        name: err instanceof Error ? err.name : null,
+        stack: err instanceof Error ? err.stack : null,
+      };
     }
-    return {
-      teamFetchStatus: teamRes.status,
-      teamHtmlLength: teamHtml.length,
-      teamHtmlSnippet: teamHtml.slice(0, 300),
-      pairingUrl,
-      pairingStatus,
-      pairingHtmlLength,
-      boards,
-    };
   });
 }
