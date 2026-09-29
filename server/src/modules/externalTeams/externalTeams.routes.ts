@@ -2,10 +2,12 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requireAdmin } from '../../lib/requireAdmin.js';
 import { createExternalTeam, deleteExternalTeam, listExternalTeams, updateExternalTeam } from './externalTeams.service.js';
+import { findPairingUrlInTeamPageHtml, parseBoardNumbersFromPairingHtml } from './netstandScrape.js';
 
 const idParams = z.object({ id: z.coerce.number().int() });
 const createBody = z.object({ name: z.string().min(1), netstandUrl: z.string().min(1) });
 const updateBody = z.object({ name: z.string().min(1).optional(), netstandUrl: z.string().min(1).optional() });
+const debugQuery = z.object({ netstandUrl: z.string().min(1), date: z.coerce.date() });
 
 // Admin-only, no dedicated settings-page UI yet — small, rarely-changed list
 // (a club has at most a couple of external league teams), managed directly
@@ -29,5 +31,34 @@ export async function externalTeamsRoutes(app: FastifyInstance): Promise<void> {
   app.delete('/api/admin/external-teams/:id', { preHandler: requireAdmin }, async (request, reply) => {
     await deleteExternalTeam(idParams.parse(request.params).id);
     reply.code(204);
+  });
+
+  // TEMPORARY — diagnosing the live board-number auto-fill against the real
+  // netstand.nl (this sandbox can't reach it to test directly). Remove once
+  // the live behavior is confirmed working correctly. Never writes anything.
+  app.get('/api/admin/external-teams/debug-fetch', { preHandler: requireAdmin }, async (request) => {
+    const query = debugQuery.parse(request.query);
+    const teamRes = await fetch(query.netstandUrl, { signal: AbortSignal.timeout(8000) });
+    const teamHtml = await teamRes.text();
+    const pairingUrl = findPairingUrlInTeamPageHtml(teamHtml, query.date);
+    let pairingStatus: number | null = null;
+    let pairingHtmlLength: number | null = null;
+    let boards: Record<string, number> = {};
+    if (pairingUrl) {
+      const pairingRes = await fetch(pairingUrl, { signal: AbortSignal.timeout(8000) });
+      pairingStatus = pairingRes.status;
+      const pairingHtml = await pairingRes.text();
+      pairingHtmlLength = pairingHtml.length;
+      boards = Object.fromEntries(parseBoardNumbersFromPairingHtml(pairingHtml, query.netstandUrl));
+    }
+    return {
+      teamFetchStatus: teamRes.status,
+      teamHtmlLength: teamHtml.length,
+      teamHtmlSnippet: teamHtml.slice(0, 300),
+      pairingUrl,
+      pairingStatus,
+      pairingHtmlLength,
+      boards,
+    };
   });
 }
