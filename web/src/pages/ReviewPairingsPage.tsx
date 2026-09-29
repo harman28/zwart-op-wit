@@ -86,6 +86,11 @@ export default function ReviewPairingsPage() {
     load();
   }
 
+  async function handleSetExternalBoard(entry: RoundEntry, boardNumber: number | null) {
+    await roundsApi.updateEntry(roundId, entry.id, { tableNumber: boardNumber });
+    load();
+  }
+
   async function handleRemoveExternal(entry: RoundEntry) {
     await roundsApi.deleteEntry(roundId, entry.id);
     load();
@@ -121,7 +126,9 @@ export default function ReviewPairingsPage() {
     .filter((e) => e.kind === 'GAME')
     .sort((a, b) => (a.tableNumber ?? 0) - (b.tableNumber ?? 0));
   const pairingBye = round.entries.find((e) => e.kind === 'PAIRING_BYE');
-  const externalEntries = round.entries.filter((e) => e.kind === 'EXTERNAL_BYE').sort((a, b) => a.id - b.id);
+  const externalEntries = round.entries
+    .filter((e) => e.kind === 'EXTERNAL_BYE')
+    .sort((a, b) => (a.tableNumber ?? Infinity) - (b.tableNumber ?? Infinity) || a.id - b.id);
   const pairedIds = new Set(games.flatMap((g) => [g.whitePlayerId, g.blackPlayerId]).filter((v): v is number => v != null));
   const externalIds = new Set(externalEntries.map((e) => e.soloPlayerId));
   const externalCandidates = allPlayers.filter((p) => !pairedIds.has(p.id) && !externalIds.has(p.id));
@@ -214,6 +221,7 @@ export default function ReviewPairingsPage() {
             adminMode
             onAdd={handleAddExternal}
             onSetOutcome={handleSetExternalOutcome}
+            onSetBoard={handleSetExternalBoard}
             onRemove={handleRemoveExternal}
           />
         )}

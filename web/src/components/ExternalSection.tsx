@@ -21,6 +21,7 @@ export default function ExternalSection({
   adminMode,
   onAdd,
   onSetOutcome,
+  onSetBoard,
   onRemove,
 }: {
   externalEntries: RoundEntry[];
@@ -28,6 +29,9 @@ export default function ExternalSection({
   adminMode: boolean;
   onAdd: (player: Player) => void;
   onSetOutcome: (entry: RoundEntry, outcome: ExternalOutcome) => void;
+  /** Optional board number, purely for sort order — never shown to visitors,
+   * just what the 2-column grid reads top-to-bottom/left-to-right by. */
+  onSetBoard: (entry: RoundEntry, boardNumber: number | null) => void;
   onRemove: (entry: RoundEntry) => void;
 }) {
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -79,6 +83,21 @@ export default function ExternalSection({
       <div className={adminMode ? undefined : 'external-grid'}>
         {externalEntries.map((entry) => (
           <div className="external-row" key={entry.id}>
+            {adminMode && (
+              <input
+                key={`board-${entry.id}-${entry.tableNumber ?? ''}`}
+                type="number"
+                className="external-board-input"
+                defaultValue={entry.tableNumber ?? ''}
+                placeholder="#"
+                aria-label={`Board number for ${entry.soloPlayer?.name ?? 'this player'}`}
+                onBlur={(e) => {
+                  const raw = e.target.value.trim();
+                  const parsed = raw ? Number(raw) : null;
+                  if (parsed !== entry.tableNumber) onSetBoard(entry, parsed);
+                }}
+              />
+            )}
             <span className="txt">{entry.soloPlayer?.name}</span>
             {outcomeIndicator(entry)}
             {adminMode && editingId !== entry.id && (
