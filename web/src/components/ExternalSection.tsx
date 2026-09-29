@@ -3,7 +3,10 @@ import type { ExternalOutcome, Player, RoundEntry } from '../api/types.js';
 import ExternalOutcomeToggle from './ExternalOutcomeToggle.js';
 import PlayerAutocomplete from './PlayerAutocomplete.js';
 
-const OUTCOME_LABEL: Record<ExternalOutcome, string> = { WIN: 'Won', DRAW: 'Drew', LOSS: 'Lost' };
+// Same W/D/L convention as PlayerHistoryModal's own outcome-pill — one glance,
+// no "Played external" boilerplate repeated on every row.
+const OUTCOME_LETTER: Record<ExternalOutcome, string> = { WIN: 'W', DRAW: 'D', LOSS: 'L' };
+const OUTCOME_CLASS: Record<ExternalOutcome, string> = { WIN: 'win', DRAW: 'draw', LOSS: 'loss' };
 
 /**
  * Players who played an external (rated) match instead of an internal pairing
@@ -18,6 +21,7 @@ export default function ExternalSection({
   adminMode,
   onAdd,
   onSetOutcome,
+  onSetBoard,
   onRemove,
 }: {
   externalEntries: RoundEntry[];
@@ -25,6 +29,9 @@ export default function ExternalSection({
   adminMode: boolean;
   onAdd: (player: Player) => void;
   onSetOutcome: (entry: RoundEntry, outcome: ExternalOutcome) => void;
+  /** Optional board number, purely for sort order — never shown to visitors,
+   * just what the 2-column grid reads top-to-bottom/left-to-right by. */
+  onSetBoard: (entry: RoundEntry, boardNumber: number | null) => void;
   onRemove: (entry: RoundEntry) => void;
 }) {
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -32,52 +39,75 @@ export default function ExternalSection({
 
   if (!adminMode && externalEntries.length === 0) return null;
 
+  // Read view: a compact W/D/L pill, same convention PlayerHistoryModal
+  // already uses — no per-row "Played external" sentence repeated 7 times.
+  // Admin view keeps the full toggle/edit affordance instead of the pill.
+  function outcomeIndicator(entry: RoundEntry) {
+    if (adminMode && editingId === entry.id) {
+      return (
+        <>
+          <ExternalOutcomeToggle
+            value={entry.externalOutcome}
+            onChange={(outcome) => {
+              onSetOutcome(entry, outcome);
+              setEditingId(null);
+            }}
+          />
+          <button className="link-add" onClick={() => setEditingId(null)}>
+            Cancel
+          </button>
+        </>
+      );
+    }
+    if (entry.externalOutcome) {
+      return adminMode ? (
+        <button className={`outcome-pill-btn ${OUTCOME_CLASS[entry.externalOutcome]}`} onClick={() => setEditingId(entry.id)}>
+          {OUTCOME_LETTER[entry.externalOutcome]}
+        </button>
+      ) : (
+        <span className={`outcome-pill ${OUTCOME_CLASS[entry.externalOutcome]}`}>{OUTCOME_LETTER[entry.externalOutcome]}</span>
+      );
+    }
+    return adminMode ? (
+      <button className="outcome-pill-btn pending" onClick={() => setEditingId(entry.id)}>
+        …
+      </button>
+    ) : (
+      <span className="outcome-pill pending">…</span>
+    );
+  }
+
   return (
     <div className="external-section">
-      <div className="not-playing-label">External</div>
-      {externalEntries.map((entry) => (
-        <div className="external-row" key={entry.id}>
-          <span className="txt">{entry.soloPlayer?.name}</span>
-          {adminMode && editingId === entry.id ? (
-            <>
-              <ExternalOutcomeToggle
-                value={entry.externalOutcome}
-                onChange={(outcome) => {
-                  onSetOutcome(entry, outcome);
-                  setEditingId(null);
+      <div className="external-results-label">External Results</div>
+      <div className={adminMode ? undefined : 'external-grid'}>
+        {externalEntries.map((entry) => (
+          <div className="external-row" key={entry.id}>
+            {adminMode && (
+              <input
+                key={`board-${entry.id}-${entry.tableNumber ?? ''}`}
+                type="number"
+                className="external-board-input"
+                defaultValue={entry.tableNumber ?? ''}
+                placeholder="#"
+                aria-label={`Board number for ${entry.soloPlayer?.name ?? 'this player'}`}
+                onBlur={(e) => {
+                  const raw = e.target.value.trim();
+                  const parsed = raw ? Number(raw) : null;
+                  if (parsed !== entry.tableNumber) onSetBoard(entry, parsed);
                 }}
               />
-              <button className="link-add" onClick={() => setEditingId(null)}>
-                Cancel
+            )}
+            <span className="txt">{entry.soloPlayer?.name}</span>
+            {outcomeIndicator(entry)}
+            {adminMode && editingId !== entry.id && (
+              <button className="x external-remove" onClick={() => onRemove(entry)} aria-label="Remove">
+                ✕
               </button>
-            </>
-          ) : entry.externalOutcome ? (
-            adminMode ? (
-              <button
-                className={`external-tag-btn ${entry.externalOutcome.toLowerCase()}`}
-                onClick={() => setEditingId(entry.id)}
-              >
-                Played external — {OUTCOME_LABEL[entry.externalOutcome]}
-              </button>
-            ) : (
-              <span className={`external-tag ${entry.externalOutcome.toLowerCase()}`}>
-                Played external — {OUTCOME_LABEL[entry.externalOutcome]}
-              </span>
-            )
-          ) : adminMode ? (
-            <button className="external-tag-btn pending" onClick={() => setEditingId(entry.id)}>
-              Result pending…
-            </button>
-          ) : (
-            <span className="external-tag pending">Playing external — result pending</span>
-          )}
-          {adminMode && editingId !== entry.id && (
-            <button className="x external-remove" onClick={() => onRemove(entry)} aria-label="Remove">
-              ✕
-            </button>
-          )}
-        </div>
-      ))}
+            )}
+          </div>
+        ))}
+      </div>
       {adminMode &&
         (adding ? (
           <div style={{ marginTop: externalEntries.length ? 10 : 0 }}>

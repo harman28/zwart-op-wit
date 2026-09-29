@@ -141,6 +141,11 @@ export default function RoundsPage() {
     await refreshRounds();
   }
 
+  async function handleSetExternalBoard(round: Round, entry: RoundEntry, boardNumber: number | null) {
+    await roundsApi.updateEntry(round.id, entry.id, { tableNumber: boardNumber });
+    await refreshRounds();
+  }
+
   async function handleRemoveExternal(round: Round, entry: RoundEntry) {
     await roundsApi.deleteEntry(round.id, entry.id);
     await refreshRounds();
@@ -316,7 +321,11 @@ export default function RoundsPage() {
           .filter((e) => e.kind === 'GAME')
           .sort((a, b) => (a.tableNumber ?? 0) - (b.tableNumber ?? 0));
         const pairingBye = round.entries.find((e) => e.kind === 'PAIRING_BYE');
-        const externalEntries = round.entries.filter((e) => e.kind === 'EXTERNAL_BYE').sort((a, b) => a.id - b.id);
+        // Board number is optional — anyone without one sorts after everyone who has
+        // one, in whatever order they were originally entered (stable id tiebreak).
+        const externalEntries = round.entries
+          .filter((e) => e.kind === 'EXTERNAL_BYE')
+          .sort((a, b) => (a.tableNumber ?? Infinity) - (b.tableNumber ?? Infinity) || a.id - b.id);
         const pairedIds = new Set(games.flatMap((g) => [g.whitePlayerId, g.blackPlayerId]).filter((id): id is number => id != null));
         const externalIds = new Set(externalEntries.map((e) => e.soloPlayerId));
         const externalCandidates = allPlayers.filter((p) => !pairedIds.has(p.id) && !externalIds.has(p.id));
@@ -524,6 +533,7 @@ export default function RoundsPage() {
                     adminMode={adminMode}
                     onAdd={(player) => handleAddExternal(round, player)}
                     onSetOutcome={(entry, outcome) => handleSetExternalOutcome(round, entry, outcome)}
+                    onSetBoard={(entry, boardNumber) => handleSetExternalBoard(round, entry, boardNumber)}
                     onRemove={(entry) => handleRemoveExternal(round, entry)}
                   />
                 )}
