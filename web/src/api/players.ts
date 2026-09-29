@@ -22,6 +22,7 @@ export function updatePlayer(
     knsbId?: string | null;
     federation?: string;
     duesPaid?: boolean;
+    externalTeamId?: number | null;
   },
 ) {
   return api.patch<Player>(`/admin/players/${id}`, data);

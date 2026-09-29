@@ -10,6 +10,7 @@ import { describeAction } from './modules/actionlog/describeAction.js';
 import { resolveLogContext, resolveNewPlayerNames, type LogContext } from './modules/actionlog/resolveLogContext.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { backupRoutes } from './modules/backup/backup.routes.js';
+import { externalTeamsRoutes } from './modules/externalTeams/externalTeams.routes.js';
 import { knsbRoutes } from './modules/knsb/knsb.routes.js';
 import { playersRoutes } from './modules/players/players.routes.js';
 import { roundsRoutes } from './modules/rounds/rounds.routes.js';
@@ -106,6 +107,7 @@ export function buildApp() {
   app.register(settingsRoutes);
   app.register(knsbRoutes);
   app.register(actionLogRoutes);
+  app.register(externalTeamsRoutes);
 
   return app;
 }
