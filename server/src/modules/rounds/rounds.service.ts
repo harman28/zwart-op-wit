@@ -6,7 +6,7 @@ import { replaySeason } from '../../engine/standings.js';
 import type { PairingCandidate, PastPairing } from '../../engine/types.js';
 import { HttpError } from '../../lib/errors.js';
 import { mapEnrollmentsToBaselines, mapRoundToEngine } from '../../lib/mappers.js';
-import { enrollNewOrReturningPlayer } from '../seasons/seasons.service.js';
+import { backfillMissedRounds, enrollNewOrReturningPlayer } from '../seasons/seasons.service.js';
 import { regenerateShareImageIfPublished } from './shareImage.js';
 
 type RoundWithEntries = Round & { entries: RoundEntry[] };
@@ -223,6 +223,8 @@ export async function updateEntry(id: number, data: UpdateEntryInput) {
   if (entry.kind === 'GAME') {
     const playerIds = [entry.whitePlayerId, entry.blackPlayerId].filter((pid): pid is number => pid != null);
     await removeStaleRegularByes(entry.roundId, playerIds);
+    const round = await prisma.round.findUniqueOrThrow({ where: { id: entry.roundId } });
+    await reclaimByeCapacity(round.seasonId, playerIds);
   }
   await regenerateShareImageIfPublished(entry.roundId);
   return entry;
@@ -239,6 +241,12 @@ export async function addEntry(
     externalOutcome?: ExternalOutcome;
     isSelfArranged?: boolean;
     tableNumber?: number;
+    /** REGULAR_BYE only — backdating a bye an admin is manually correcting
+     * in after the fact (e.g. a missed backfill) needs this, same as
+     * backfillMissedRounds sets it: the engine (standings.ts) uses it to
+     * credit the bye without treating this as the player's ranked debut, so
+     * it can never shift anyone else's round rank/value retroactively. */
+    isRetroactive?: boolean;
   },
 ) {
   if (data.kind !== 'REGULAR_BYE') {
@@ -252,6 +260,11 @@ export async function addEntry(
     await removeStaleRegularByes(roundId, playerIds);
   }
   const entry = await prisma.roundEntry.create({ data: { roundId, ...data } });
+  if (data.kind === 'GAME') {
+    const playerIds = [data.whitePlayerId, data.blackPlayerId].filter((id): id is number => id != null);
+    const round = await prisma.round.findUniqueOrThrow({ where: { id: roundId } });
+    await reclaimByeCapacity(round.seasonId, playerIds);
+  }
   await regenerateShareImageIfPublished(roundId);
   return entry;
 }
@@ -291,6 +304,21 @@ async function removeStaleRegularByes(roundId: number, playerIds: number[]): Pro
   await prisma.roundEntry.deleteMany({
     where: { roundId, kind: 'REGULAR_BYE', soloPlayerId: { in: playerIds } },
   });
+}
+
+/**
+ * Removing a stale REGULAR_BYE (above) frees up a slot against the player's
+ * regularByeCap — without this, that freed slot is simply lost rather than
+ * going toward whatever *other* round is still genuinely missing for them.
+ * Must run only after the real entry replacing the stale bye actually
+ * exists, so this round itself is correctly excluded from "still missing".
+ * A no-op whenever there's nothing left to backfill or the cap is still
+ * fully spent on rounds that remain genuinely missing.
+ */
+async function reclaimByeCapacity(seasonId: number, playerIds: number[]): Promise<void> {
+  for (const playerId of playerIds) {
+    await backfillMissedRounds(seasonId, playerId);
+  }
 }
 
 /**
@@ -364,6 +392,7 @@ export async function addMatchup(roundId: number, participantA: MatchupParticipa
       tableNumber: nextTable,
     },
   });
+  await reclaimByeCapacity(round.seasonId, [playerAId, playerBId]);
   await regenerateShareImageIfPublished(roundId);
   return entry;
 }
@@ -406,6 +435,7 @@ export async function assignOpponent(pairingByeEntryId: number, input: AssignOpp
       tableNumber: nextTable,
     },
   });
+  await reclaimByeCapacity(round.seasonId, [entry.soloPlayerId, opponentId]);
   await regenerateShareImageIfPublished(entry.roundId);
   return updated;
 }

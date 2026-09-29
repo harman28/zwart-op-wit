@@ -252,8 +252,17 @@ async function defaultStartingValue(seasonId: number): Promise<number> {
  * the bye to this player's score without treating it as their ranked debut,
  * so it can never shift anyone else's rank/value at a round this player
  * wasn't really part of.
+ *
+ * Also re-invoked (exported for this) whenever a stale REGULAR_BYE gets
+ * removed because a real entry replaced it (see removeStaleRegularByes in
+ * rounds.service.ts) — that frees up a slot against the cap, and without
+ * re-running this, that freed slot is just lost rather than going toward
+ * another still-missing round (the actual Wessel/round-4 bug: enrolled with
+ * 4 rounds already existing and a cap of 3, backfill spent its budget on
+ * rounds 1-3, then round 2's bye got reclaimed by a real game minutes later
+ * — with nothing to notice the cap now had room for round 4 after all).
  */
-async function backfillMissedRounds(seasonId: number, playerId: number, excludeRoundId?: number) {
+export async function backfillMissedRounds(seasonId: number, playerId: number, excludeRoundId?: number) {
   const season = await prisma.season.findUniqueOrThrow({ where: { id: seasonId } });
   const rounds = await prisma.round.findMany({
     where: { seasonId, ...(excludeRoundId != null ? { id: { not: excludeRoundId } } : {}) },
