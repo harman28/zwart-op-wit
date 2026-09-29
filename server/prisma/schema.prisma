@@ -70,6 +70,13 @@ model Player {
   // Admin fills it in once a player is upgraded to Full and actually reported.
   federation String?
 
+  // The external (KNSB team-competition) team this player usually plays
+  // for — not enforced, since a player can sub in for a different team
+  // occasionally. Only used to group/link the round page's External
+  // Results section, never anything score-affecting.
+  externalTeamId Int?
+  externalTeam   ExternalTeam? @relation(fields: [externalTeamId], references: [id])
+
   enrollments  SeasonEnrollment[]
   signups      RoundSignup[]
   whiteEntries RoundEntry[]       @relation("WhitePlayer")
@@ -77,6 +84,16 @@ model Player {
   soloEntries  RoundEntry[]       @relation("SoloPlayer")
 
   @@index([name])
+}
+
+// An external league team (e.g. a KNSB team competition roster) some of the
+// club's players are on. Small, manually-curated list — never more than a
+// couple of rows in practice, so no delete-cascade concerns worth modeling.
+model ExternalTeam {
+  id          Int      @id @default(autoincrement())
+  name        String
+  netstandUrl String
+  players     Player[]
 }
 
 model Season {

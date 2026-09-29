@@ -13,6 +13,7 @@ export interface Player {
   knsbId: string | null;
   federation: string | null;
   duesPaid: boolean;
+  externalTeamId: number | null;
   createdAt: string;
   archivedAt: string | null;
   roundsThisSeason?: number;
@@ -57,9 +58,18 @@ export interface Leaderboard {
   availableRounds: number[];
 }
 
+export interface ExternalTeam {
+  id: number;
+  name: string;
+  netstandUrl: string;
+}
+
 export interface PlayerRef {
   id: number;
   name: string;
+  /** Only ever populated on RoundEntry.soloPlayer — groups/links the round
+   * page's External Results section, see ExternalSection.tsx. */
+  externalTeam?: ExternalTeam | null;
 }
 
 export interface PlayerHistoryEntry {

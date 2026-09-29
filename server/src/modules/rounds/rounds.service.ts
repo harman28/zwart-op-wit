@@ -175,7 +175,7 @@ export async function getRoundAdmin(id: number) {
   const round = await prisma.round.findUnique({
     where: { id },
     include: {
-      entries: { include: { whitePlayer: true, blackPlayer: true, soloPlayer: true } },
+      entries: { include: { whitePlayer: true, blackPlayer: true, soloPlayer: { include: { externalTeam: true } } } },
       signups: { include: { player: true } },
     },
   });

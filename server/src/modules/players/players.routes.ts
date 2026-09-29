@@ -33,6 +33,7 @@ const updateBody = z.object({
   knsbId: z.string().nullable().optional(),
   federation: z.string().min(1).optional(),
   duesPaid: z.boolean().optional(),
+  externalTeamId: z.number().int().nullable().optional(),
 });
 const idParams = z.object({ id: z.coerce.number().int() });
 

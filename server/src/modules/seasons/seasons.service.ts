@@ -477,7 +477,7 @@ export async function getPublicRounds(seasonId: number) {
     include: {
       entries: {
         where: { kind: { in: kinds as ('GAME' | 'PAIRING_BYE' | 'EXTERNAL_BYE')[] } },
-        include: { whitePlayer: true, blackPlayer: true, soloPlayer: true },
+        include: { whitePlayer: true, blackPlayer: true, soloPlayer: { include: { externalTeam: true } } },
       },
     },
     orderBy: { number: 'desc' },
@@ -499,7 +499,7 @@ export async function getAdminRounds(seasonId: number) {
     include: {
       entries: {
         where: { kind: { in: kinds as ('GAME' | 'PAIRING_BYE' | 'REGULAR_BYE' | 'EXTERNAL_BYE')[] } },
-        include: { whitePlayer: true, blackPlayer: true, soloPlayer: true },
+        include: { whitePlayer: true, blackPlayer: true, soloPlayer: { include: { externalTeam: true } } },
       },
     },
     orderBy: { number: 'desc' },
