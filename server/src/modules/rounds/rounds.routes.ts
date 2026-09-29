@@ -63,6 +63,7 @@ const addEntryBody = z.object({
   externalOutcome: externalOutcomeSchema.optional(),
   isSelfArranged: z.boolean().optional(),
   tableNumber: z.number().int().optional(),
+  isRetroactive: z.boolean().optional(),
 });
 
 const tableNumbersBody = z.object({ startAt: z.number().int() });

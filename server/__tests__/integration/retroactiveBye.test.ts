@@ -262,4 +262,124 @@ describe('retroactive byes (real Postgres): a player enrolled mid-season is back
 
     await prisma.season.delete({ where: { id: capSeasonId } }).catch(() => {});
   });
+
+  /**
+   * The actual Wessel/Maurice production bug: enroll a player with no round
+   * in mind (Players tab) into a season where MORE rounds already exist than
+   * the bye cap allows, then — separately, moments later — add their real
+   * matchup into one of the rounds that happened to get backfilled. Deleting
+   * that round's now-stale bye (removeStaleRegularByes) frees up a slot
+   * against the cap; without reclaimByeCapacity picking that slot back up,
+   * it's just lost, silently starving whichever round the cap-limited
+   * backfill never reached in the first place (here: round 4).
+   */
+  it('reclaims a freed bye-cap slot for another still-missing round when a stale bye is superseded by a real matchup', async () => {
+    // Dave is enrolled but never signed up for rounds 1-4 — he sits every
+    // one out (his own auto REGULAR_BYE each time), so he's free later as
+    // Carol's round-2 opponent without already holding a real entry there,
+    // unlike Alice/Bob who play each other every round.
+    const names = ['ReclaimAlice', 'ReclaimBob', 'ReclaimDave'];
+    const playerIds: number[] = [];
+    for (const name of names) {
+      const res = await app.inject({ method: 'POST', url: '/api/admin/players', headers: { cookie }, payload: { name } });
+      playerIds.push(res.json().id);
+    }
+    createdPlayerIds.push(...playerIds);
+    const [alice, bob, dave] = playerIds as [number, number, number];
+
+    const seasonRes = await app.inject({
+      method: 'POST',
+      url: '/api/admin/seasons',
+      headers: { cookie },
+      payload: {
+        name: 'Reclaim Bye Cap Test Season',
+        topValue: 105,
+        regularByeCap: 3,
+        roster: [
+          { playerId: alice, startingValue: 105 },
+          { playerId: bob, startingValue: 104 },
+          { playerId: dave, startingValue: 103 },
+        ],
+      },
+    });
+    const reclaimSeasonId = seasonRes.json().id;
+
+    // Four rounds already exist and are published — Alice/Bob play each one
+    // — before the debutant (Carol) ever shows up, same as Wessel joining
+    // well after Round 4 already existed.
+    const roundIds: number[] = [];
+    for (const [number, date] of [
+      [1, '2026-05-01'],
+      [2, '2026-05-08'],
+      [3, '2026-05-15'],
+      [4, '2026-05-22'],
+    ] as [number, string][]) {
+      const round = await app.inject({
+        method: 'POST',
+        url: `/api/admin/seasons/${reclaimSeasonId}/rounds`,
+        headers: { cookie },
+        payload: { number, date, signedUpPlayerIds: [alice, bob] },
+      });
+      roundIds.push(round.json().id);
+      const game = round.json().entries.find((e: { kind: string }) => e.kind === 'GAME');
+      await app.inject({
+        method: 'PATCH',
+        url: `/api/admin/rounds/${round.json().id}/entries/${game.id}`,
+        headers: { cookie },
+        payload: { result: 'WHITE_WIN' },
+      });
+      await app.inject({ method: 'POST', url: `/api/admin/rounds/${round.json().id}/publish`, headers: { cookie } });
+    }
+    const [round1Id, round2Id, round3Id, round4Id] = roundIds as [number, number, number, number];
+
+    // Enroll Carol with no round in mind — exactly the Players-tab path.
+    // Cap is 3, 4 rounds are missing: rounds 1-3 get backfilled, round 4
+    // does not (same as the cap-respecting test above).
+    const enrollRes = await app.inject({
+      method: 'POST',
+      url: `/api/admin/seasons/${reclaimSeasonId}/players`,
+      headers: { cookie },
+      payload: { name: 'ReclaimCarol', startingValue: 100 },
+    });
+    const carolId = enrollRes.json().playerId as number;
+    createdPlayerIds.push(carolId);
+
+    const round4Before = await app.inject({ method: 'GET', url: `/api/admin/rounds/${round4Id}`, headers: { cookie } });
+    const carolInRound4Before = round4Before.json().entries.filter((e: { soloPlayerId: number | null }) => e.soloPlayerId === carolId);
+    expect(carolInRound4Before).toHaveLength(0);
+
+    // Now, separately: Carol actually played round 2 against Dave. Adding
+    // that real matchup deletes round 2's now-stale bye — freeing up a slot
+    // that should go to round 4, the round still genuinely missing.
+    const matchupRes = await app.inject({
+      method: 'POST',
+      url: `/api/admin/rounds/${round2Id}/matchups`,
+      headers: { cookie },
+      payload: { playerA: { playerId: carolId }, playerB: { playerId: dave } },
+    });
+    expect(matchupRes.statusCode).toBe(201);
+
+    const round4After = await app.inject({ method: 'GET', url: `/api/admin/rounds/${round4Id}`, headers: { cookie } });
+    const carolInRound4After = round4After.json().entries.filter((e: { soloPlayerId: number | null }) => e.soloPlayerId === carolId);
+    expect(carolInRound4After).toHaveLength(1);
+    expect(carolInRound4After[0].kind).toBe('REGULAR_BYE');
+
+    // Round 1 and round 3's original backfilled byes are untouched.
+    for (const roundId of [round1Id, round3Id]) {
+      const roundAdmin = await app.inject({ method: 'GET', url: `/api/admin/rounds/${roundId}`, headers: { cookie } });
+      const carolEntries = roundAdmin.json().entries.filter((e: { soloPlayerId: number | null }) => e.soloPlayerId === carolId);
+      expect(carolEntries).toHaveLength(1);
+      expect(carolEntries[0].kind).toBe('REGULAR_BYE');
+    }
+
+    // Round 2 itself: a real game, not a bye.
+    const round2Admin = await app.inject({ method: 'GET', url: `/api/admin/rounds/${round2Id}`, headers: { cookie } });
+    const carolInRound2 = round2Admin.json().entries.filter(
+      (e: { whitePlayerId: number | null; blackPlayerId: number | null }) => e.whitePlayerId === carolId || e.blackPlayerId === carolId,
+    );
+    expect(carolInRound2).toHaveLength(1);
+    expect(carolInRound2[0].kind).toBe('GAME');
+
+    await prisma.season.delete({ where: { id: reclaimSeasonId } }).catch(() => {});
+  });
 });
