@@ -37,11 +37,12 @@ export async function externalTeamsRoutes(app: FastifyInstance): Promise<void> {
   // netstand.nl (this sandbox can't reach it to test directly). Remove once
   // the live behavior is confirmed working correctly. Never writes anything.
   app.get('/api/admin/external-teams/debug-fetch', { preHandler: requireAdmin }, async (request) => {
+    let pairingUrl: string | null = null;
     try {
       const query = debugQuery.parse(request.query);
       const teamRes = await fetch(query.netstandUrl, { signal: AbortSignal.timeout(8000) });
       const teamHtml = await teamRes.text();
-      const pairingUrl = findPairingUrlInTeamPageHtml(teamHtml, query.date, query.netstandUrl);
+      pairingUrl = findPairingUrlInTeamPageHtml(teamHtml, query.date, query.netstandUrl);
       let pairingStatus: number | null = null;
       let pairingHtmlLength: number | null = null;
       let boards: Record<string, number> = {};
@@ -64,6 +65,7 @@ export async function externalTeamsRoutes(app: FastifyInstance): Promise<void> {
     } catch (err) {
       return {
         caught: true,
+        pairingUrlAtFailure: pairingUrl,
         message: err instanceof Error ? err.message : String(err),
         name: err instanceof Error ? err.name : null,
         stack: err instanceof Error ? err.stack : null,
