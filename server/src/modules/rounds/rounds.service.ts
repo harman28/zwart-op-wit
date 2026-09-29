@@ -6,6 +6,7 @@ import { replaySeason } from '../../engine/standings.js';
 import type { PairingCandidate, PastPairing } from '../../engine/types.js';
 import { HttpError } from '../../lib/errors.js';
 import { mapEnrollmentsToBaselines, mapRoundToEngine } from '../../lib/mappers.js';
+import { fetchBoardNumber } from '../externalTeams/netstandScrape.js';
 import { backfillMissedRounds, enrollNewOrReturningPlayer } from '../seasons/seasons.service.js';
 import { regenerateShareImageIfPublished } from './shareImage.js';
 
@@ -219,15 +220,40 @@ export async function updateEntry(id: number, data: UpdateEntryInput) {
     ].filter((pid): pid is number => pid != null);
     await assertNoConflictingEntry(existing.roundId, resultingPlayerIds, id);
   }
-  const entry = await prisma.roundEntry.update({ where: { id }, data });
+  let entry = await prisma.roundEntry.update({ where: { id }, data });
   if (entry.kind === 'GAME') {
     const playerIds = [entry.whitePlayerId, entry.blackPlayerId].filter((pid): pid is number => pid != null);
     await removeStaleRegularByes(entry.roundId, playerIds);
     const round = await prisma.round.findUniqueOrThrow({ where: { id: entry.roundId } });
     await reclaimByeCapacity(round.seasonId, playerIds);
   }
+  if (entry.kind === 'EXTERNAL_BYE' && data.externalOutcome != null && entry.tableNumber == null) {
+    entry = await tryAutoFillBoardNumber(entry);
+  }
   await regenerateShareImageIfPublished(entry.roundId);
   return entry;
+}
+
+/**
+ * Best-effort: an admin just confirmed an external result actually happened
+ * (set its outcome), so the match should now be on netstand — try once to
+ * read the real board number off it, so External Results sorts correctly
+ * without the admin ever typing a number in by hand. Never overwrites a
+ * board number that's already set (manually or from a prior successful
+ * fetch), and any failure (no netstand page yet, network hiccup, page
+ * layout we don't recognize) just leaves tableNumber unset, same as today —
+ * this must never be the reason setting a result fails.
+ */
+async function tryAutoFillBoardNumber(entry: RoundEntry): Promise<RoundEntry> {
+  if (entry.soloPlayerId == null) return entry;
+  const [player, round] = await Promise.all([
+    prisma.player.findUnique({ where: { id: entry.soloPlayerId }, include: { externalTeam: true } }),
+    prisma.round.findUniqueOrThrow({ where: { id: entry.roundId } }),
+  ]);
+  if (!player?.externalTeam) return entry;
+  const boardNumber = await fetchBoardNumber(player.externalTeam.netstandUrl, round.date, player.name);
+  if (boardNumber == null) return entry;
+  return prisma.roundEntry.update({ where: { id: entry.id }, data: { tableNumber: boardNumber } });
 }
 
 export async function addEntry(
