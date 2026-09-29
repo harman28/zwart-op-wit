@@ -883,6 +883,17 @@ table.pairings td:nth-child(4) {
   color: var(--muted);
   margin-bottom: 8px;
 }
+/* Matches table.pairings th, not .not-playing-label — an external result
+   counts toward standings same as a game does, so it shouldn't read with
+   the same muted weight as a plain absence label. */
+.external-results-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
 .external-row {
   display: flex;
   align-items: center;
@@ -892,6 +903,18 @@ table.pairings td:nth-child(4) {
 }
 .external-row .txt {
   min-width: 90px;
+}
+/* Two columns in the read-only view — with a handful of external results
+   each taking a full row, this was as tall as the whole pairings table
+   above it. Admin mode skips this wrapper entirely (edit controls need the
+   full row width), so it only ever applies to the plain W/D/L view. */
+.external-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 20px;
+}
+.external-grid .external-row {
+  padding: 4px 0;
 }
 .external-remove {
   background: none;
@@ -913,40 +936,39 @@ table.pairings td:nth-child(4) {
   display: flex;
   gap: 4px;
 }
-.external-tag,
-.external-tag-btn {
+/* Admin's clickable equivalent of .outcome-pill (see PlayerHistoryModal) —
+   same W/D/L pill look, just a <button> that opens the outcome toggle. */
+.outcome-pill-btn {
+  font-family: var(--font-mono);
   font-size: 12px;
-  font-weight: 600;
-  color: var(--muted);
-}
-.external-tag-btn {
-  background: none;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 5px;
+  white-space: nowrap;
+  display: inline-block;
   border: none;
-  border-bottom: 1px dotted var(--accent-dim);
   cursor: pointer;
-  padding: 4px 2px;
-  font-family: var(--font-ui);
-  transition: color 0.15s ease, border-color 0.15s ease;
+  transition: opacity 0.15s ease;
 }
-.external-tag-btn:hover {
-  border-color: var(--accent);
+.outcome-pill-btn:hover {
+  opacity: 0.8;
 }
-.external-tag.win,
-.external-tag-btn.win {
+.outcome-pill-btn.win {
+  background: color-mix(in srgb, var(--win) 18%, transparent);
   color: var(--win);
 }
-.external-tag.loss,
-.external-tag-btn.loss {
-  color: var(--loss);
-}
-.external-tag.draw,
-.external-tag-btn.draw {
+.outcome-pill-btn.draw {
+  background: color-mix(in srgb, var(--draw) 18%, transparent);
   color: var(--draw);
 }
-.external-tag.pending,
-.external-tag-btn.pending {
+.outcome-pill-btn.loss {
+  background: color-mix(in srgb, var(--loss) 18%, transparent);
+  color: var(--loss);
+}
+.outcome-pill.pending,
+.outcome-pill-btn.pending {
+  background: color-mix(in srgb, var(--muted) 14%, transparent);
   color: var(--muted);
-  font-style: italic;
 }
 
 .editable-name {
@@ -1800,6 +1822,9 @@ footer.note {
   table.pairings th {
     padding: 6px 4px;
     font-size: 12.5px;
+  }
+  .external-grid {
+    grid-template-columns: 1fr;
   }
   table.board {
     display: none;
