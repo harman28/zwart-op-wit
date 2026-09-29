@@ -41,7 +41,7 @@ export async function externalTeamsRoutes(app: FastifyInstance): Promise<void> {
       const query = debugQuery.parse(request.query);
       const teamRes = await fetch(query.netstandUrl, { signal: AbortSignal.timeout(8000) });
       const teamHtml = await teamRes.text();
-      const pairingUrl = findPairingUrlInTeamPageHtml(teamHtml, query.date);
+      const pairingUrl = findPairingUrlInTeamPageHtml(teamHtml, query.date, query.netstandUrl);
       let pairingStatus: number | null = null;
       let pairingHtmlLength: number | null = null;
       let boards: Record<string, number> = {};

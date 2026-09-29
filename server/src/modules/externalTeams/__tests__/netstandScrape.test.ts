@@ -7,21 +7,23 @@ import { findPairingUrlInTeamPageHtml, parseBoardNumbersFromPairingHtml } from '
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const fixture = (name: string) => readFileSync(path.join(__dirname, 'fixtures', name), 'utf-8');
 
+const TEAM_752_URL = 'https://sga.netstand.nl/teams/view/752';
+
 describe('findPairingUrlInTeamPageHtml (real Zwart op Wit 1 team page)', () => {
   const teamHtml = fixture('team-752.html');
 
   it('finds the pairing URL for a round played on the matching date', () => {
-    const url = findPairingUrlInTeamPageHtml(teamHtml, new Date('2026-09-28T00:00:00Z'));
+    const url = findPairingUrlInTeamPageHtml(teamHtml, new Date('2026-09-28T00:00:00Z'), TEAM_752_URL);
     expect(url).toBe('https://sga.netstand.nl/pairings/view/2557');
   });
 
   it('finds a different round by its own date', () => {
-    const url = findPairingUrlInTeamPageHtml(teamHtml, new Date('2026-10-26T00:00:00Z'));
+    const url = findPairingUrlInTeamPageHtml(teamHtml, new Date('2026-10-26T00:00:00Z'), TEAM_752_URL);
     expect(url).toBe('https://sga.netstand.nl/pairings/view/2564');
   });
 
   it('returns null for a date with no scheduled match', () => {
-    const url = findPairingUrlInTeamPageHtml(teamHtml, new Date('2026-01-01T00:00:00Z'));
+    const url = findPairingUrlInTeamPageHtml(teamHtml, new Date('2026-01-01T00:00:00Z'), TEAM_752_URL);
     expect(url).toBeNull();
   });
 
@@ -29,8 +31,35 @@ describe('findPairingUrlInTeamPageHtml (real Zwart op Wit 1 team page)', () => {
     // Regression check for the selector itself — if it started matching the
     // wrong table, cell[1]/cell[4] would be nonsense and every lookup above
     // would silently return null instead of a real URL.
-    const url = findPairingUrlInTeamPageHtml(teamHtml, new Date('2026-09-28T00:00:00Z'));
+    const url = findPairingUrlInTeamPageHtml(teamHtml, new Date('2026-09-28T00:00:00Z'), TEAM_752_URL);
     expect(url).not.toBeNull();
+  });
+});
+
+describe('findPairingUrlInTeamPageHtml (relative hrefs — the real live site, not a browser-saved copy)', () => {
+  // The saved fixture above has hrefs already rewritten to absolute by
+  // Chrome's "Save As" — it can never catch this. The real server serves
+  // relative hrefs ("/pairings/view/2557"), confirmed by fetching it live:
+  // fetch() rejects a relative URL outright with no base to resolve
+  // against, which is exactly what broke the very first live attempt at
+  // this feature.
+  const html = `
+    <table class="table table-striped table-bordered">
+      <tbody>
+        <tr>
+          <td><a href="/rounds/view/565">Ronde 1</a></td>
+          <td>28-09-2026</td>
+          <td><a href="/teams/view/752">Zwart op Wit 1</a></td>
+          <td><a href="/teams/view/759">De Volewijckers 2</a></td>
+          <td><a href="/pairings/view/2557"><b>3½</b> - 4½</a></td>
+        </tr>
+      </tbody>
+    </table>
+  `;
+
+  it('resolves a relative href against the team page URL passed in', () => {
+    const url = findPairingUrlInTeamPageHtml(html, new Date('2026-09-28T00:00:00Z'), TEAM_752_URL);
+    expect(url).toBe('https://sga.netstand.nl/pairings/view/2557');
   });
 });
 

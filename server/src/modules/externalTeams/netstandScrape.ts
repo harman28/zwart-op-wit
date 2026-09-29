@@ -27,8 +27,14 @@ function extractFirstName(linkText: string): string | null {
  * schedule table on their team page — the same table the season/round-info
  * comment on ExternalTeam describes. Exported/pure w.r.t. parsing so it's
  * testable against a saved HTML fixture; only the outer fetch is live.
+ *
+ * `pageUrl` (the team page's own URL) is required to resolve the schedule's
+ * hrefs — the live site serves them relative ("/pairings/view/2557"), only a
+ * browser-saved copy (like this module's own test fixtures) has already
+ * rewritten them to absolute URLs. `fetch()` needs an absolute URL, so this
+ * always resolves against it rather than trusting whatever the markup gives.
  */
-export function findPairingUrlInTeamPageHtml(html: string, date: Date): string | null {
+export function findPairingUrlInTeamPageHtml(html: string, date: Date, pageUrl: string): string | null {
   const $ = cheerio.load(html);
   const targetDate = toDutchDate(date);
   let pairingUrl: string | null = null;
@@ -40,7 +46,7 @@ export function findPairingUrlInTeamPageHtml(html: string, date: Date): string |
     const rowDate = $(cells.get(1)).text().trim();
     if (rowDate === targetDate) {
       const href = $(cells.get(4)).find('a').attr('href');
-      if (href) pairingUrl = href;
+      if (href) pairingUrl = new URL(href, pageUrl).href;
     }
   });
   return pairingUrl;
@@ -84,7 +90,7 @@ export function parseBoardNumbersFromPairingHtml(html: string, teamNetstandUrl: 
 export async function fetchBoardNumber(teamNetstandUrl: string, roundDate: Date, playerFirstName: string): Promise<number | null> {
   try {
     const teamHtml = await fetchHtml(teamNetstandUrl);
-    const pairingUrl = findPairingUrlInTeamPageHtml(teamHtml, roundDate);
+    const pairingUrl = findPairingUrlInTeamPageHtml(teamHtml, roundDate, teamNetstandUrl);
     if (!pairingUrl) return null;
     const pairingHtml = await fetchHtml(pairingUrl);
     const boards = parseBoardNumbersFromPairingHtml(pairingHtml, teamNetstandUrl);
