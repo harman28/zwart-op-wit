@@ -19,6 +19,7 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
+  const [search, setSearch] = useState('');
   const [allSeasons, setAllSeasons] = useState<Season[]>([]);
   // null = follow the latest season, same as a visitor sees. Only admins can set this.
   const [selectedSeasonId, setSelectedSeasonId] = useState<number | null>(null);
@@ -46,6 +47,7 @@ export default function LeaderboardPage() {
   // view whenever the season itself changes (not on every leaderboard refetch).
   useEffect(() => {
     setAsOfRound(CURRENT);
+    setSearch('');
   }, [season?.id]);
 
   if (seasonLoading || (loading && !leaderboard)) {
@@ -70,6 +72,11 @@ export default function LeaderboardPage() {
       .reverse()
       .map((n) => ({ value: String(n), label: `After round ${n}` })),
   ];
+
+  const query = search.trim().toLowerCase();
+  // Keeps each player's original rank — this is for finding someone quickly,
+  // not for re-ranking a subset.
+  const visibleStandings = query ? (leaderboard?.standings ?? []).filter((s) => s.name.toLowerCase().includes(query)) : leaderboard?.standings;
 
   return (
     <div className="app">
@@ -105,7 +112,21 @@ export default function LeaderboardPage() {
       </div>
       {error && <div className="error-banner">{error}</div>}
       {leaderboard && (
-        <LeaderboardView standings={leaderboard.standings} onSelectPlayer={setSelectedPlayerId} isAdmin={isAdmin} />
+        <>
+          <input
+            className="leaderboard-search"
+            type="text"
+            placeholder="Search players…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search players"
+          />
+          {visibleStandings && visibleStandings.length === 0 ? (
+            <p style={{ color: 'var(--muted)' }}>No players match "{search.trim()}".</p>
+          ) : (
+            <LeaderboardView standings={visibleStandings ?? []} onSelectPlayer={setSelectedPlayerId} isAdmin={isAdmin} />
+          )}
+        </>
       )}
       {selectedPlayerId != null && (
         <PlayerHistoryModal

@@ -1638,6 +1638,27 @@ table.pairings td:nth-child(4) {
     justify-content: flex-end;
   }
 }
+.leaderboard-search {
+  display: block;
+  width: 100%;
+  max-width: 260px;
+  margin-bottom: 14px;
+  padding: 8px 12px;
+  font-size: 13.5px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+}
+.leaderboard-search:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+@media (max-width: 640px) {
+  .leaderboard-search {
+    max-width: none;
+  }
+}
 table.roster {
   width: 100%;
   border-collapse: collapse;
