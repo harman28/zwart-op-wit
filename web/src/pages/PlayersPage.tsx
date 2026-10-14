@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import * as playersApi from '../api/players.js';
 import * as seasonsApi from '../api/seasons.js';
-import type { Gender, MembershipType, Player } from '../api/types.js';
+import type { DuesStatus, Gender, MembershipType, Player } from '../api/types.js';
 import CustomSelect from '../components/CustomSelect.js';
 import Modal from '../components/Modal.js';
 import { errorMessage } from '../lib/format.js';
@@ -31,9 +31,20 @@ const MEMBERSHIP_SHORT: Record<MembershipType, string> = {
 
 // Jim's own dues-tracking flag — display only here, no effect anywhere else on the site.
 const DUES_OPTIONS = [
-  { value: 'paid', label: 'Paid' },
-  { value: 'unpaid', label: 'Unpaid' },
+  { value: 'UNPAID', label: 'Unpaid' },
+  { value: 'REQUEST_SENT', label: 'Request sent' },
+  { value: 'PAID', label: 'Paid' },
 ];
+const DUES_BADGE_CLASS: Record<DuesStatus, string> = {
+  UNPAID: 'pill unpaid',
+  REQUEST_SENT: 'pill request-sent',
+  PAID: 'pill paid',
+};
+const DUES_LABEL: Record<DuesStatus, string> = {
+  UNPAID: 'Unpaid',
+  REQUEST_SENT: 'Request sent',
+  PAID: 'Paid',
+};
 
 function PlayerListTable({ list, onSelect }: { list: Player[]; onSelect: (p: Player) => void }) {
   return (
@@ -44,7 +55,8 @@ function PlayerListTable({ list, onSelect }: { list: Player[]; onSelect: (p: Pla
             <tr>
               <th>Name</th>
               <th>Membership</th>
-              <th>Paid/Unpaid</th>
+              <th>Dues</th>
+              <th style={{ textAlign: 'right' }}>Rounds</th>
               <th>Notes</th>
               <th>Federation</th>
               <th>KNSB ID</th>
@@ -59,8 +71,9 @@ function PlayerListTable({ list, onSelect }: { list: Player[]; onSelect: (p: Pla
                   <span className={MEMBERSHIP_BADGE_CLASS[p.membershipType]}>{MEMBERSHIP_SHORT[p.membershipType]}</span>
                 </td>
                 <td>
-                  <span className={p.duesPaid ? 'pill paid' : 'pill unpaid'}>{p.duesPaid ? 'Paid' : 'Unpaid'}</span>
+                  <span className={DUES_BADGE_CLASS[p.duesStatus]}>{DUES_LABEL[p.duesStatus]}</span>
                 </td>
+                <td className="num value-cell">{p.roundsThisSeason ?? 0}</td>
                 <td className="note-cell">
                   {p.notes || <span style={{ color: 'var(--muted)' }}>—</span>}
                   {p.membershipType === 'GUEST' &&
@@ -90,11 +103,11 @@ function PlayerListTable({ list, onSelect }: { list: Player[]; onSelect: (p: Pla
             <div className="player-card-top">
               <span className="player-card-name">{p.name}</span>
               <span className={MEMBERSHIP_BADGE_CLASS[p.membershipType]}>{MEMBERSHIP_SHORT[p.membershipType]}</span>
-              <span className={p.duesPaid ? 'pill paid' : 'pill unpaid'}>{p.duesPaid ? 'Paid' : 'Unpaid'}</span>
+              <span className={DUES_BADGE_CLASS[p.duesStatus]}>{DUES_LABEL[p.duesStatus]}</span>
             </div>
             {p.notes && <div className="player-card-notes">{p.notes}</div>}
             <div className="player-card-meta">
-              Fed {p.federation ?? '—'} · KNSB {p.knsbId ?? '—'} · Gender {p.gender ?? '—'}
+              Fed {p.federation ?? '—'} · KNSB {p.knsbId ?? '—'} · Gender {p.gender ?? '—'} · Rounds {p.roundsThisSeason ?? 0}
             </div>
             {p.membershipType === 'GUEST' &&
               (() => {
@@ -117,7 +130,7 @@ function PlayerListTable({ list, onSelect }: { list: Player[]; onSelect: (p: Pla
 interface EditDraft {
   name: string;
   membershipType: MembershipType;
-  duesPaid: boolean;
+  duesStatus: DuesStatus;
   notes: string;
   federation: string;
   knsbId: string;
@@ -128,7 +141,7 @@ function draftFor(p: Player): EditDraft {
   return {
     name: p.name,
     membershipType: p.membershipType,
-    duesPaid: p.duesPaid,
+    duesStatus: p.duesStatus,
     notes: p.notes ?? '',
     federation: p.federation ?? '',
     knsbId: p.knsbId ?? '',
@@ -299,7 +312,7 @@ export default function PlayersPage() {
       const updated = await playersApi.updatePlayer(editingPlayer.id, {
         name: draft.name.trim() || editingPlayer.name,
         membershipType: draft.membershipType,
-        duesPaid: draft.duesPaid,
+        duesStatus: draft.duesStatus,
         notes: draft.notes.trim() || null,
         federation: draft.federation.trim() ? draft.federation.trim().toUpperCase() : undefined,
         knsbId: draft.knsbId.trim() || null,
@@ -465,11 +478,11 @@ export default function PlayersPage() {
             />
           </div>
           <div className="field">
-            <label>Paid/Unpaid</label>
+            <label>Dues</label>
             <CustomSelect
-              value={draft.duesPaid ? 'paid' : 'unpaid'}
+              value={draft.duesStatus}
               options={DUES_OPTIONS}
-              onChange={(v) => setDraft({ ...draft, duesPaid: v === 'paid' })}
+              onChange={(v) => setDraft({ ...draft, duesStatus: v as DuesStatus })}
               triggerClassName="roster-select"
             />
           </div>

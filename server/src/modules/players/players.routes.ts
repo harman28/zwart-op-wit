@@ -13,6 +13,7 @@ import {
 
 const membershipTypeSchema = z.enum(['FULL', 'INTERNAL_ONLY', 'GUEST', 'SECONDARY']);
 const genderSchema = z.enum(['M', 'V', 'X']);
+const duesStatusSchema = z.enum(['UNPAID', 'REQUEST_SENT', 'PAID']);
 const createBody = z.object({ name: z.string().min(1), membershipType: membershipTypeSchema.default('FULL') });
 const importBody = z.object({
   players: z.array(
@@ -32,7 +33,7 @@ const updateBody = z.object({
   gender: genderSchema.nullable().optional(),
   knsbId: z.string().nullable().optional(),
   federation: z.string().min(1).optional(),
-  duesPaid: z.boolean().optional(),
+  duesStatus: duesStatusSchema.optional(),
   externalTeamId: z.number().int().nullable().optional(),
 });
 const idParams = z.object({ id: z.coerce.number().int() });

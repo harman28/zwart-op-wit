@@ -49,7 +49,7 @@ export async function exportFullBackup(): Promise<BackupFile> {
       gender: p.gender,
       knsbId: p.knsbId,
       federation: p.federation,
-      duesPaid: p.duesPaid,
+      duesStatus: p.duesStatus,
     })),
     seasons: seasons.map((season) => ({
       name: season.name,
@@ -148,7 +148,9 @@ export async function importFullBackup(data: BackupFile) {
             gender: p.gender ?? null,
             knsbId: p.knsbId ?? null,
             federation: p.federation ?? null,
-            duesPaid: p.duesPaid ?? false,
+            // New files carry duesStatus directly; an older file only has
+            // duesPaid (or neither, for a file predating both).
+            duesStatus: p.duesStatus ?? (p.duesPaid ? 'PAID' : 'UNPAID'),
           })),
         });
       }

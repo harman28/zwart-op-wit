@@ -3,6 +3,7 @@ export type EntryKind = 'GAME' | 'PAIRING_BYE' | 'REGULAR_BYE' | 'EXTERNAL_BYE';
 export type GameResult = 'WHITE_WIN' | 'BLACK_WIN' | 'DRAW' | 'WHITE_WIN_FORFEIT' | 'BLACK_WIN_FORFEIT';
 export type ExternalOutcome = 'WIN' | 'DRAW' | 'LOSS';
 export type Gender = 'M' | 'V' | 'X';
+export type DuesStatus = 'UNPAID' | 'REQUEST_SENT' | 'PAID';
 
 export interface Player {
   id: number;
@@ -12,7 +13,7 @@ export interface Player {
   gender: Gender | null;
   knsbId: string | null;
   federation: string | null;
-  duesPaid: boolean;
+  duesStatus: DuesStatus;
   externalTeamId: number | null;
   createdAt: string;
   archivedAt: string | null;
