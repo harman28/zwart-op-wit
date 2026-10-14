@@ -1,7 +1,7 @@
 import type { DuesStatus, Gender, MembershipType } from '@prisma/client';
 import { prisma } from '../../db/client.js';
 import { HttpError } from '../../lib/errors.js';
-import { enrollExistingPlayer } from '../seasons/seasons.service.js';
+import { enrollExistingPlayer, getLiveLeaderboard } from '../seasons/seasons.service.js';
 
 /**
  * Case-insensitive, since the roster-reuse logic elsewhere (matching an
@@ -17,9 +17,15 @@ export async function assertNameAvailable(name: string, excludePlayerId?: number
 }
 
 /**
- * "Games this season" for a guest is counted as rounds signed up for in the
- * current (active, not-yet-ended) season — purely informational, never
- * auto-enforced; admins decide manually whether to ask a guest to register.
+ * "Rounds played this season" — reuses getLiveLeaderboard's own `played`
+ * count (GAME entries with a result, EXTERNAL_BYE entries with an outcome)
+ * rather than counting RoundSignup rows. Signups only cover a round's
+ * original "who's in" list — a bye backfilled retroactively, a late
+ * addition, or anyone swapped in as an opponent never gets a signup row,
+ * which undercounted real participation here while the Leaderboard's own
+ * Played column (driven by the same standings replay) was correct all
+ * along. Reusing it keeps the two permanently in agreement instead of
+ * reimplementing the definition a second time.
  */
 export async function listPlayersWithGuestCounts() {
   const currentSeason = await prisma.season.findFirst({
@@ -32,14 +38,10 @@ export async function listPlayersWithGuestCounts() {
     return players.map((p) => ({ ...p, roundsThisSeason: 0 }));
   }
 
-  const signupCounts = await prisma.roundSignup.groupBy({
-    by: ['playerId'],
-    where: { round: { seasonId: currentSeason.id } },
-    _count: { playerId: true },
-  });
-  const countByPlayer = new Map(signupCounts.map((c) => [c.playerId, c._count.playerId]));
+  const leaderboard = await getLiveLeaderboard(currentSeason.id);
+  const playedByPlayer = new Map(leaderboard.standings.map((s) => [s.playerId, s.played]));
 
-  return players.map((p) => ({ ...p, roundsThisSeason: countByPlayer.get(p.id) ?? 0 }));
+  return players.map((p) => ({ ...p, roundsThisSeason: playedByPlayer.get(p.id) ?? 0 }));
 }
 
 export async function createPlayer(name: string, membershipType: MembershipType) {
