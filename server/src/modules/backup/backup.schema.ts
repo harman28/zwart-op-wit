@@ -4,6 +4,7 @@ const membershipTypeSchema = z.enum(['FULL', 'INTERNAL_ONLY', 'GUEST', 'SECONDAR
 const genderSchema = z.enum(['M', 'V', 'X']);
 const gameResultSchema = z.enum(['WHITE_WIN', 'BLACK_WIN', 'DRAW', 'WHITE_WIN_FORFEIT', 'BLACK_WIN_FORFEIT']);
 const externalOutcomeSchema = z.enum(['WIN', 'DRAW', 'LOSS']);
+const duesStatusSchema = z.enum(['UNPAID', 'REQUEST_SENT', 'PAID']);
 
 // Players are referenced by name, not opaque IDs — the file is human-readable
 // and portable to a completely fresh database.
@@ -40,7 +41,10 @@ const backupPlayerSchema = z.object({
   gender: genderSchema.nullable().optional(),
   knsbId: z.string().nullable().optional(),
   federation: z.string().nullable().optional(),
+  // duesPaid is the pre-tri-state field — still accepted (optional) so a
+  // backup file exported before duesStatus existed still restores cleanly.
   duesPaid: z.boolean().optional(),
+  duesStatus: duesStatusSchema.optional(),
 });
 
 const backupSeasonSchema = z.object({

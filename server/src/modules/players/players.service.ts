@@ -1,4 +1,4 @@
-import type { Gender, MembershipType } from '@prisma/client';
+import type { DuesStatus, Gender, MembershipType } from '@prisma/client';
 import { prisma } from '../../db/client.js';
 import { HttpError } from '../../lib/errors.js';
 import { enrollExistingPlayer } from '../seasons/seasons.service.js';
@@ -85,7 +85,7 @@ export async function updatePlayer(
     gender?: Gender | null;
     knsbId?: string | null;
     federation?: string;
-    duesPaid?: boolean;
+    duesStatus?: DuesStatus;
     externalTeamId?: number | null;
   },
 ) {

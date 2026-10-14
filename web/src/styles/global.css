@@ -318,20 +318,6 @@ table.board tbody tr:nth-child(even) {
 .value-cell.loss-count {
   color: var(--loss);
 }
-.badge {
-  display: inline-block;
-  font-size: 10.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 2px 7px;
-  border-radius: 5px;
-  margin-left: 8px;
-  vertical-align: middle;
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-  color: var(--accent);
-}
-
 .lb-cards {
   display: none;
   flex-direction: column;
@@ -1765,6 +1751,10 @@ table.roster tr:last-child td {
 .pill.unpaid {
   background: color-mix(in srgb, var(--loss) 16%, transparent);
   color: var(--loss);
+}
+.pill.request-sent {
+  background: color-mix(in srgb, var(--draw) 18%, transparent);
+  color: var(--draw);
 }
 
 .roster-select {

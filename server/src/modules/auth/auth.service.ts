@@ -14,6 +14,21 @@ export async function ensureClubSettings(): Promise<void> {
   });
 }
 
+/**
+ * One-time carry-over for players already marked duesPaid=true from before
+ * duesStatus existed. Safe to call every startup: the WHERE clause also
+ * flips duesPaid back to false as part of the same update, so once a row
+ * has been migrated it can never match again — no separate "has this run"
+ * marker needed, and an admin later setting someone back to UNPAID won't
+ * get silently reverted to PAID by a later restart.
+ */
+export async function migrateDuesStatus(): Promise<void> {
+  await prisma.player.updateMany({
+    where: { duesPaid: true, duesStatus: 'UNPAID' },
+    data: { duesStatus: 'PAID', duesPaid: false },
+  });
+}
+
 export async function login(
   password: string,
   actorName: string,

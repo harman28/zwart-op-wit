@@ -42,6 +42,12 @@ enum Gender {
   X
 }
 
+enum DuesStatus {
+  UNPAID
+  REQUEST_SENT
+  PAID
+}
+
 // Club-wide identity. Never deleted — referenced by historical RoundEntry
 // rows across seasons forever. Fix typos with an update, not a delete+recreate.
 model Player {
@@ -51,8 +57,12 @@ model Player {
   notes          String?
   createdAt      DateTime       @default(now())
   // Jim's own dues-tracking flag — purely his bookkeeping, no effect on
-  // scoring, eligibility, or anything else on the site.
+  // scoring, eligibility, or anything else on the site. Superseded by
+  // duesStatus below; kept only so migrateDuesStatus() (auth.service.ts) has
+  // something to read on an existing database's first boot after this
+  // field was added — remove it once that's confirmed to have run.
   duesPaid       Boolean        @default(false)
+  duesStatus     DuesStatus     @default(UNPAID)
   // Set when an admin archives someone who hasn't shown up in a long time —
   // purely a display/list-declutter flag, never touches enrollments or
   // historical RoundEntry rows. Null means active.

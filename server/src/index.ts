@@ -1,10 +1,11 @@
 import { buildApp } from './app.js';
-import { ensureClubSettings } from './modules/auth/auth.service.js';
+import { ensureClubSettings, migrateDuesStatus } from './modules/auth/auth.service.js';
 import { env } from './env.js';
 
 const app = buildApp();
 
 await ensureClubSettings();
+await migrateDuesStatus();
 
 app
   .listen({ port: env.PORT, host: '0.0.0.0' })

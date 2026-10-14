@@ -1,5 +1,5 @@
 import { api } from './client.js';
-import type { Gender, MembershipType, Player } from './types.js';
+import type { DuesStatus, Gender, MembershipType, Player } from './types.js';
 
 export function listPlayers() {
   return api.get<Player[]>('/admin/players');
@@ -21,7 +21,7 @@ export function updatePlayer(
     gender?: Gender | null;
     knsbId?: string | null;
     federation?: string;
-    duesPaid?: boolean;
+    duesStatus?: DuesStatus;
     externalTeamId?: number | null;
   },
 ) {
