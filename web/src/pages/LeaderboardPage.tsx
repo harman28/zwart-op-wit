@@ -124,7 +124,7 @@ export default function LeaderboardPage() {
           {visibleStandings && visibleStandings.length === 0 ? (
             <p style={{ color: 'var(--muted)' }}>No players match "{search.trim()}".</p>
           ) : (
-            <LeaderboardView standings={visibleStandings ?? []} onSelectPlayer={setSelectedPlayerId} isAdmin={isAdmin} />
+            <LeaderboardView standings={visibleStandings ?? []} onSelectPlayer={setSelectedPlayerId} />
           )}
         </>
       )}
