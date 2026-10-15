@@ -1752,6 +1752,7 @@ table.roster tr:last-child td {
   font-weight: 700;
   padding: 3px 9px;
   border-radius: 999px;
+  white-space: nowrap;
 }
 .pill.full {
   background: color-mix(in srgb, var(--win) 16%, transparent);
