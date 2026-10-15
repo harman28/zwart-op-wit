@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { createPortal } from 'react-dom';
 
 interface Props<T extends { id: number; name: string }> {
   /** The eligible pool to search — caller filters out anyone who shouldn't be selectable.
@@ -44,11 +45,23 @@ export default function PlayerAutocomplete<T extends { id: number; name: string 
   // silently carries over onto an unrelated suggestion at the same index.
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
   const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // The dropdown is portaled to <body> and positioned in fixed coordinates
+  // computed from the input's own rect — an ordinary absolutely-positioned
+  // dropdown gets clipped by any ancestor with overflow (e.g. a scrolling
+  // modal panel), portaling is what lets it escape that.
+  const [menuRect, setMenuRect] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  function updateMenuRect() {
+    const rect = wrapRef.current?.getBoundingClientRect();
+    if (rect) setMenuRect({ top: rect.bottom + 6, left: rect.left, width: rect.width });
+  }
 
   function handleFocus() {
     clearTimeout(blurTimeoutRef.current);
     setFocused(true);
+    updateMenuRect();
   }
   function handleBlur() {
     // Delayed so a click on a dropdown item (which blurs the input first) still registers —
@@ -86,6 +99,20 @@ export default function PlayerAutocomplete<T extends { id: number; name: string 
     requestAnimationFrame(() => inputRef.current?.focus());
   }
 
+  const open = focused && suggestions.length > 0;
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    updateMenuRect();
+    window.addEventListener('scroll', updateMenuRect, true);
+    window.addEventListener('resize', updateMenuRect);
+    return () => {
+      window.removeEventListener('scroll', updateMenuRect, true);
+      window.removeEventListener('resize', updateMenuRect);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'ArrowDown') {
       if (suggestions.length === 0) return;
@@ -116,7 +143,7 @@ export default function PlayerAutocomplete<T extends { id: number; name: string 
 
   return (
     <div>
-      <div className="name-input-wrap">
+      <div className="name-input-wrap" ref={wrapRef}>
         <input
           ref={inputRef}
           className={inputClassName}
@@ -131,20 +158,26 @@ export default function PlayerAutocomplete<T extends { id: number; name: string 
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
         />
-        {focused && suggestions.length > 0 && (
-          <div className="autocomplete">
-            {suggestions.map((p, i) => (
-              <div
-                key={p.id}
-                className={i === highlightedIndex ? 'active' : undefined}
-                onMouseDown={() => select(p)}
-                onMouseEnter={() => setHighlightedIndex(i)}
-              >
-                {p.name}
-              </div>
-            ))}
-          </div>
-        )}
+        {open &&
+          menuRect &&
+          createPortal(
+            <div
+              className="autocomplete autocomplete-portal"
+              style={{ position: 'fixed', top: menuRect.top, left: menuRect.left, width: menuRect.width }}
+            >
+              {suggestions.map((p, i) => (
+                <div
+                  key={p.id}
+                  className={i === highlightedIndex ? 'active' : undefined}
+                  onMouseDown={() => select(p)}
+                  onMouseEnter={() => setHighlightedIndex(i)}
+                >
+                  {p.name}
+                </div>
+              ))}
+            </div>,
+            document.body,
+          )}
       </div>
       {showFrequentBubbles && frequent.length > 0 && (
         <div className="frequent-bubbles">

@@ -1496,6 +1496,13 @@ table.pairings td:nth-child(4) {
   z-index: 10;
   animation: round-body-in 0.12s ease;
 }
+/* Portaled to <body> (see PlayerAutocomplete) so it isn't clipped by a
+   scrolling ancestor like .modal-panel — position/top/left/width come from
+   inline styles computed off the input's own rect; this only needs to clear
+   .modal-backdrop's stacking context. */
+.autocomplete-portal {
+  z-index: 200;
+}
 .autocomplete div {
   padding: 9px 14px;
   font-size: 13.5px;
