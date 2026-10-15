@@ -5,6 +5,8 @@ import type { DuesStatus, Gender, MembershipType, Player } from '../api/types.js
 import CustomSelect from '../components/CustomSelect.js';
 import Modal from '../components/Modal.js';
 import PlayerHistoryPanel from '../components/PlayerHistoryPanel.js';
+import PlayerValueChart from '../components/PlayerValueChart.js';
+import { usePlayerHistory } from '../hooks/usePlayerHistory.js';
 import { errorMessage } from '../lib/format.js';
 import { MEMBERSHIP_OPTIONS } from '../lib/membership.js';
 
@@ -164,7 +166,14 @@ export default function PlayersPage() {
   const [importText, setImportText] = useState('');
 
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
-  const [editTab, setEditTab] = useState<'edit' | 'results'>('edit');
+  const [editTab, setEditTab] = useState<'edit' | 'results' | 'graph'>('edit');
+  // Fetched unconditionally (editingPlayer is null until a row is clicked, so
+  // this no-ops until then) rather than only while the Results/Graph tab is
+  // active — switching between those two tabs must not re-fetch.
+  const { history: editingPlayerHistory, error: editingPlayerHistoryError } = usePlayerHistory(
+    currentSeasonId,
+    editingPlayer?.id ?? null,
+  );
   const [draft, setDraft] = useState<EditDraft | null>(null);
   const [saving, setSaving] = useState(false);
   const [archiving, setArchiving] = useState(false);
@@ -476,6 +485,9 @@ export default function PlayersPage() {
             >
               Results
             </button>
+            <button className={editTab === 'graph' ? 'modal-tab current' : 'modal-tab'} onClick={() => setEditTab('graph')}>
+              Graph
+            </button>
           </div>
 
           {editTab === 'edit' ? (
@@ -551,10 +563,16 @@ export default function PlayersPage() {
                 </button>
               </div>
             </>
-          ) : currentSeasonId != null ? (
-            <PlayerHistoryPanel seasonId={currentSeasonId} playerId={editingPlayer.id} />
-          ) : (
+          ) : currentSeasonId == null ? (
             <p style={{ color: 'var(--muted)' }}>No active season.</p>
+          ) : editingPlayerHistoryError ? (
+            <div className="error-banner">{editingPlayerHistoryError}</div>
+          ) : !editingPlayerHistory ? (
+            <p style={{ color: 'var(--muted)' }}>Loading…</p>
+          ) : editTab === 'results' ? (
+            <PlayerHistoryPanel history={editingPlayerHistory} />
+          ) : (
+            <PlayerValueChart history={editingPlayerHistory} />
           )}
         </Modal>
       )}

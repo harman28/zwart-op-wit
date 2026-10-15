@@ -1,5 +1,11 @@
 import type { GameResult } from '../api/types.js';
 
+/** Drops a trailing .00/.50 → whole numbers print plain, halves/quarters (from
+ * draws, byes, rebasing) keep exactly the precision they need and no more. */
+export function formatNumber(n: number): string {
+  return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, '');
+}
+
 export function resultLabel(result: GameResult): string {
   switch (result) {
     case 'WHITE_WIN':

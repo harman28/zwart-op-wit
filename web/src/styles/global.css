@@ -677,6 +677,28 @@ table.board td.winpct-cell .lb-card-tiny-bar {
   color: var(--text);
   border-bottom-color: var(--accent);
 }
+.chart-axis-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  fill: var(--muted);
+}
+.chart-end-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  fill: var(--accent);
+}
+.chart-tooltip-value {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  fill: var(--accent);
+}
+.chart-tooltip-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  fill: var(--muted);
+}
 .modal-body {
   padding: 20px;
   display: flex;

@@ -1,9 +1,6 @@
 import type { Standing } from '../api/types.js';
+import { formatNumber } from '../lib/format.js';
 import { ColorSwatch, RecordLine, SecondaryStatsLine } from './StandingStats.js';
-
-function formatNumber(n: number): string {
-  return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, '');
-}
 
 function rankClass(rank: number): string {
   if (rank === 1) return 'rank-num rank-1';
