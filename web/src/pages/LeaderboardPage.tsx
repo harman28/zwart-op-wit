@@ -132,7 +132,6 @@ export default function LeaderboardPage() {
         <PlayerHistoryModal
           seasonId={season.id}
           playerId={selectedPlayerId}
-          standing={leaderboard?.standings.find((s) => s.playerId === selectedPlayerId)}
           afterRound={asOfRound === CURRENT ? undefined : Number(asOfRound)}
           onClose={() => setSelectedPlayerId(null)}
         />

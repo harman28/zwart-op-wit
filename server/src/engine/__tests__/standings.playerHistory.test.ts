@@ -52,6 +52,12 @@ describe('playerGameHistory — same worked example as the golden-master standin
 
   it('a player with no rounds played yet gets an empty history and their raw baseline as startingValue', () => {
     const history = playerGameHistory({ ...workedExampleInput, rounds: [] }, JOPPE);
-    expect(history).toEqual({ startingValue: 90, entries: [] });
+    expect(history.startingValue).toBe(90);
+    expect(history.entries).toEqual([]);
+  });
+
+  it("includes the player's own standing row from the same replay — the record/summary shown above the round-by-round table", () => {
+    const history = playerGameHistory(workedExampleInput, JOPPE);
+    expect(history.standing).toEqual(result.current.standings.find((s) => s.playerId === JOPPE));
   });
 });

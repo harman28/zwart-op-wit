@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import * as seasonsApi from '../api/seasons.js';
-import type { GameResult, PlayerHistory, PlayerHistoryEntry, Standing } from '../api/types.js';
+import type { GameResult, PlayerHistory, PlayerHistoryEntry } from '../api/types.js';
 import { errorMessage } from '../lib/format.js';
 import { RecordLine, SecondaryStatsLine } from './StandingStats.js';
 
@@ -40,25 +40,23 @@ function describeEntry(entry: PlayerHistoryEntry): string {
 const OUTCOME_CLASS: Record<'W' | 'D' | 'L', string> = { W: 'win', D: 'draw', L: 'loss' };
 
 /**
- * One player's round-by-round results for a season — the Leaderboard's
- * "click a name" view, factored out of PlayerHistoryModal so the Players
- * admin page can embed the same thing as a tab instead of duplicating it.
+ * One player's round-by-round results for a season, plus the same
+ * record/Played/Win/Color/Odd summary the Leaderboard shows — the single
+ * "click a name, see their results" view used everywhere a name is
+ * clickable (Leaderboard, Rounds, Players admin), so it looks and behaves
+ * identically no matter which page it was opened from. The summary always
+ * comes from this same fetch (PlayerHistory.standing) rather than being
+ * passed in by the caller, so there's no way for one caller to show it and
+ * another to forget to.
  */
 export default function PlayerHistoryPanel({
   seasonId,
   playerId,
-  standing,
   afterRound,
   onNameLoaded,
 }: {
   seasonId: number;
   playerId: number;
-  /** The player's current-season standing, if the caller already has it
-   * (e.g. from the leaderboard it was opened from) — shows the same
-   * record/Played/Win/Color/Odd summary as the leaderboard card, above the
-   * round-by-round breakdown. Omit if unavailable; the panel still works,
-   * just without that summary. */
-  standing?: Standing;
   /** Rebase the history under standings as they stood right after this
    * published round, instead of the season's current state — matches
    * whatever round the leaderboard this panel was opened from is showing.
@@ -89,16 +87,14 @@ export default function PlayerHistoryPanel({
 
   return (
     <>
-      {standing && (
-        <div className="modal-player-summary">
-          <RecordLine standing={standing} />
-          <SecondaryStatsLine standing={standing} />
-        </div>
-      )}
       {error && <div className="error-banner">{error}</div>}
       {!history && !error && <p style={{ color: 'var(--muted)' }}>Loading…</p>}
       {history && (
         <>
+          <div className="modal-player-summary">
+            <RecordLine standing={history.standing} />
+            <SecondaryStatsLine standing={history.standing} />
+          </div>
           {history.entries.length === 0 ? (
             <p style={{ color: 'var(--muted)' }}>No published rounds played yet this season.</p>
           ) : (

@@ -459,6 +459,11 @@ export async function getPlayerHistory(seasonId: number, playerId: number, after
       ...e,
       opponentName: e.opponentId != null ? (playerById.get(e.opponentId)?.name ?? `#${e.opponentId}`) : null,
     })),
+    // Shaped exactly like a Leaderboard standings row (name/membershipType
+    // included) so the frontend can render the same record/summary line
+    // from this one response, wherever a player's history is opened from —
+    // no separate leaderboard fetch needed just to get it.
+    standing: { ...history.standing, name: player.name, membershipType: player.membershipType },
   };
 }
 
