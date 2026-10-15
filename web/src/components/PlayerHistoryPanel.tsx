@@ -1,38 +1,7 @@
-import type { GameResult, PlayerHistory, PlayerHistoryEntry } from '../api/types.js';
+import type { PlayerHistory } from '../api/types.js';
 import { formatNumber } from '../lib/format.js';
-import { valueSeries } from '../lib/playerHistory.js';
+import { describeEntry, OUTCOME_CLASS, outcomeFor, valueSeries } from '../lib/playerHistory.js';
 import { RecordLine, SecondaryStatsLine } from './StandingStats.js';
-
-/** Win/draw/loss from this player's own side of the board — the shared
- * white/black-perspective resultLabel in lib/format.ts isn't what you want
- * when you're looking at one player's personal history. */
-function outcomeFor(entry: PlayerHistoryEntry): 'W' | 'D' | 'L' | null {
-  if (entry.kind === 'GAME' && entry.result) {
-    if (entry.result === 'DRAW') return 'D';
-    const whiteWon: GameResult[] = ['WHITE_WIN', 'WHITE_WIN_FORFEIT'];
-    const playerWon = whiteWon.includes(entry.result) === (entry.color === 'WHITE');
-    return playerWon ? 'W' : 'L';
-  }
-  if (entry.kind === 'EXTERNAL_BYE' && entry.externalOutcome) {
-    return entry.externalOutcome === 'WIN' ? 'W' : entry.externalOutcome === 'LOSS' ? 'L' : 'D';
-  }
-  return null;
-}
-
-function describeEntry(entry: PlayerHistoryEntry): string {
-  switch (entry.kind) {
-    case 'GAME':
-      return entry.opponentName ? `vs ${entry.opponentName}` : 'vs —';
-    case 'PAIRING_BYE':
-      return 'Pairing bye';
-    case 'REGULAR_BYE':
-      return 'Regular bye (absent)';
-    case 'EXTERNAL_BYE':
-      return 'External result';
-  }
-}
-
-const OUTCOME_CLASS: Record<'W' | 'D' | 'L', string> = { W: 'win', D: 'draw', L: 'loss' };
 
 /**
  * One player's round-by-round results for a season, plus the same

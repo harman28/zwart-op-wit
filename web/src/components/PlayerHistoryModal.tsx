@@ -22,7 +22,7 @@ export default function PlayerHistoryModal({
   const [tab, setTab] = useState<'results' | 'graph'>('results');
 
   return (
-    <Modal title={history?.name ?? 'Player history'} onClose={onClose}>
+    <Modal title={history?.name ?? 'Player history'} onClose={onClose} wide={tab === 'graph'}>
       <div className="modal-tabs">
         <button className={tab === 'results' ? 'modal-tab current' : 'modal-tab'} onClick={() => setTab('results')}>
           Results

@@ -622,6 +622,9 @@ table.board td.winpct-cell .lb-card-tiny-bar {
   overflow-y: auto;
   animation: modal-panel-in 0.18s ease;
 }
+.modal-panel-wide {
+  max-width: 680px;
+}
 .modal-header {
   display: flex;
   align-items: center;
@@ -688,16 +691,49 @@ table.board td.winpct-cell .lb-card-tiny-bar {
   font-weight: 700;
   fill: var(--accent);
 }
-.chart-tooltip-value {
-  font-family: var(--font-mono);
+.chart-tooltip {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  background: var(--card-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 11px;
+  min-width: 108px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+}
+.chart-tooltip-round {
+  font-family: var(--font-ui);
   font-size: 11px;
   font-weight: 700;
-  fill: var(--accent);
+  color: var(--text);
+  white-space: nowrap;
 }
-.chart-tooltip-label {
+.chart-tooltip-opponent {
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 1px;
+  white-space: nowrap;
+}
+.chart-tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 6px;
+}
+.chart-tooltip-delta {
   font-family: var(--font-mono);
-  font-size: 9px;
-  fill: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.chart-tooltip-value {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-top: 4px;
 }
 .modal-body {
   padding: 20px;

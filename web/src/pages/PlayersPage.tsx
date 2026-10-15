@@ -474,7 +474,7 @@ export default function PlayersPage() {
       )}
 
       {editingPlayer && draft && (
-        <Modal title={editingPlayer.name} onClose={closeEdit}>
+        <Modal title={editingPlayer.name} onClose={closeEdit} wide={editTab === 'graph'}>
           <div className="modal-tabs">
             <button className={editTab === 'edit' ? 'modal-tab current' : 'modal-tab'} onClick={() => setEditTab('edit')}>
               Edit
