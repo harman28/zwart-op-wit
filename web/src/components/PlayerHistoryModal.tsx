@@ -34,7 +34,11 @@ export default function PlayerHistoryModal({
       {error && <div className="error-banner">{error}</div>}
       {!history && !error && <p style={{ color: 'var(--muted)' }}>Loading…</p>}
       {history &&
-        (tab === 'results' ? <PlayerHistoryPanel history={history} /> : <PlayerValueChart history={history} />)}
+        (tab === 'results' ? (
+          <PlayerHistoryPanel history={history} />
+        ) : (
+          <PlayerValueChart history={history} seasonId={seasonId} afterRound={afterRound} />
+        ))}
     </Modal>
   );
 }

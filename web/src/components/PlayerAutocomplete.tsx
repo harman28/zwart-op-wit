@@ -1,10 +1,11 @@
 import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import type { Player } from '../api/types.js';
 
-interface Props {
-  /** The eligible pool to search — caller filters out anyone who shouldn't be selectable. */
-  players: Player[];
-  onSelect: (player: Player) => void;
+interface Props<T extends { id: number; name: string }> {
+  /** The eligible pool to search — caller filters out anyone who shouldn't be selectable.
+   * Only id/name are read here; callers needing more (membershipType, etc.) pass full
+   * Player objects and get the same object back from onSelect. */
+  players: T[];
+  onSelect: (player: T) => void;
   /** Fires when the input loses focus without a selection having been made —
    * e.g. clicking away to back out of an in-place edit. Never fires after a
    * real select() (the post-select refocus reclaims focus first). */
@@ -26,7 +27,7 @@ interface Props {
  * selects an unambiguous match, and focus returns to the input after a pick
  * so a whole roster can be typed in one unbroken flow.
  */
-export default function PlayerAutocomplete({
+export default function PlayerAutocomplete<T extends { id: number; name: string }>({
   players,
   onSelect,
   onCancel,
@@ -35,7 +36,7 @@ export default function PlayerAutocomplete({
   frequentLimit = 8,
   autoFocus,
   inputClassName = 'name-input',
-}: Props) {
+}: Props<T>) {
   const [query, setQuery] = useState('');
   const [focused, setFocused] = useState(false);
   // -1 = nothing highlighted (typing hasn't been followed by an arrow key
@@ -77,7 +78,7 @@ export default function PlayerAutocomplete({
     [players, frequentLimit],
   );
 
-  function select(player: Player) {
+  function select(player: T) {
     onSelect(player);
     setQuery('');
     setHighlightedIndex(-1);

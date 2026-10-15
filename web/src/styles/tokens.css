@@ -32,6 +32,17 @@
      here) — needs its own hue distinct from the other three membership pills. */
   --secondary: #9b86c9;
 
+  /* Value-graph comparison series (2nd/3rd player added alongside the
+   * primary, which keeps --accent) — blue/aqua from the dataviz skill's
+   * validated reference palette, picked and run through its validator
+   * specifically against --accent (already this app's line-1 color): both
+   * pairs clear every all-pairs CVD/contrast check together in this mode.
+   * Capped at two: a 4th hue can't clear the same floors against this trio
+   * in either mode (see the skill's palette.md), so a 3rd addition folds
+   * into "and N more" in the legend instead of a new color. */
+  --chart-series-2: #3987e5;
+  --chart-series-3: #199e70;
+
   /* Result colors read as "which piece color won" (white/black), never as
      good/bad — black winning isn't a loss, it's just black's turn to win.
      Deliberately constant across themes: they represent actual chess piece
@@ -70,6 +81,9 @@
   --loss: #a1443c;
   --draw: #8a723f;
   --secondary: #6a5296;
+
+  --chart-series-2: #2a78d6;
+  --chart-series-3: #1baf7a;
 }
 
 /* cache-bust marker 2026-07-24 */

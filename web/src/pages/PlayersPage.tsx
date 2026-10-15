@@ -572,7 +572,7 @@ export default function PlayersPage() {
           ) : editTab === 'results' ? (
             <PlayerHistoryPanel history={editingPlayerHistory} />
           ) : (
-            <PlayerValueChart history={editingPlayerHistory} />
+            <PlayerValueChart history={editingPlayerHistory} seasonId={currentSeasonId} />
           )}
         </Modal>
       )}
