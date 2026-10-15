@@ -149,8 +149,23 @@ export default function PlayerValueChart({
           aria-label={`Value by round this season for ${series.map((s) => s.name).join(', ')}`}
           tabIndex={0}
           style={{ width: '100%', height: 'auto', aspectRatio: `${WIDTH} / ${HEIGHT}`, display: 'block', outline: 'none' }}
-          onPointerMove={(e) => setActiveRound(nearestRound(e.clientX, e.currentTarget))}
-          onPointerLeave={() => setActiveRound(null)}
+          onPointerMove={(e) => {
+            // Live-follow on genuine mouse hover only — a touch tap rarely
+            // fires pointermove at all (no finger movement), so it's handled
+            // separately below, as a pin rather than a hover.
+            if (e.pointerType === 'mouse') setActiveRound(nearestRound(e.clientX, e.currentTarget));
+          }}
+          onPointerDown={(e) => {
+            if (e.pointerType !== 'mouse') setActiveRound(nearestRound(e.clientX, e.currentTarget));
+          }}
+          onPointerLeave={(e) => {
+            // Touch always "leaves" the instant the finger lifts — clearing
+            // here would hide the tooltip right after the tap that opened
+            // it. Only a real mouse leaving the chart should dismiss it;
+            // a tap stays pinned until another point is tapped or the
+            // chart loses focus (onBlur, below).
+            if (e.pointerType === 'mouse') setActiveRound(null);
+          }}
           onFocus={() => setActiveRound((prev) => prev ?? allRounds[allRounds.length - 1]!)}
           onBlur={() => setActiveRound(null)}
           onKeyDown={(e) => {
