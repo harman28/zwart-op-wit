@@ -7,6 +7,7 @@ import ActivityLogPage from './pages/ActivityLogPage.js';
 import LeaderboardPage from './pages/LeaderboardPage.js';
 import LoginPage from './pages/LoginPage.js';
 import NewRoundPage from './pages/NewRoundPage.js';
+import PlayerProfilePage from './pages/PlayerProfilePage.js';
 import PlayersPage from './pages/PlayersPage.js';
 import ReviewPairingsPage from './pages/ReviewPairingsPage.js';
 import RoundsPage from './pages/RoundsPage.js';
@@ -27,6 +28,7 @@ function AppRoutes() {
         <Route path="/" element={<RoundsPage />} />
         <Route path="/round/:number" element={<RoundsPage />} />
         <Route path="/leaderboard" element={<LeaderboardPage />} />
+        <Route path="/players/:id" element={<PlayerProfilePage />} />
         <Route path="/admin/login" element={<LoginPage />} />
         <Route
           path="/admin/new-round"

@@ -11,7 +11,7 @@ export default function Modal({
   children,
   wide,
 }: {
-  title: string;
+  title: ReactNode;
   onClose: () => void;
   children: ReactNode;
   /** The default 460px panel is a cramped fit for a chart with a readable
