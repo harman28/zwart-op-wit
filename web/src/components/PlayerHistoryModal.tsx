@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router';
 import { usePlayerHistory } from '../hooks/usePlayerHistory.js';
 import Modal from './Modal.js';
 import PlayerHistoryPanel from './PlayerHistoryPanel.js';
@@ -22,7 +23,19 @@ export default function PlayerHistoryModal({
   const [tab, setTab] = useState<'results' | 'graph'>('results');
 
   return (
-    <Modal title={history?.name ?? 'Player history'} onClose={onClose} wide={tab === 'graph'}>
+    <Modal
+      title={
+        history ? (
+          <Link to={`/players/${playerId}`} className="modal-title-link">
+            {history.name}
+          </Link>
+        ) : (
+          'Player history'
+        )
+      }
+      onClose={onClose}
+      wide={tab === 'graph'}
+    >
       <div className="modal-tabs">
         <button className={tab === 'results' ? 'modal-tab current' : 'modal-tab'} onClick={() => setTab('results')}>
           Results

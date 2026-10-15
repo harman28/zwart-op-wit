@@ -640,6 +640,25 @@ table.board td.winpct-cell .lb-card-tiny-bar {
   font-weight: 700;
   color: var(--text);
 }
+.modal-title-link {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px dotted var(--muted);
+}
+.modal-title-link:hover {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.profile-name {
+  font-size: 26px;
+  margin: 18px 0 0;
+}
+.profile-meta {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
 .modal-close {
   background: transparent;
   border: none;
@@ -2029,20 +2048,24 @@ footer.note {
   .lb-cards {
     display: flex;
   }
-  /* PlayerHistoryModal reuses table.board for its own (unrelated) table and
-     has no card-based mobile fallback like the leaderboard does — without
-     this override, the rule above silently blanks its entire contents on
-     any narrow viewport. */
-  .modal-body table.board {
+  /* PlayerHistoryModal and the player profile page both reuse table.board
+     for their own (unrelated) table and have no card-based mobile fallback
+     like the leaderboard does — without this override, the rule above
+     silently blanks their entire contents on any narrow viewport. */
+  .modal-body table.board,
+  .profile-body table.board {
     display: table;
   }
   /* table.board's normal 12px/10px cell padding is sized for the full-width
-     desktop leaderboard — inside the cramped modal it pushed the 5-column
-     round-by-round table wider than the screen, leaving the last column
-     (Running total) scrolled out of view by default. Tighter padding and
-     type gets all 5 columns to fit without needing that scroll at all. */
+     desktop leaderboard — inside the cramped modal (or the profile page at
+     phone width) it pushed the 5-column round-by-round table wider than the
+     screen, leaving the last column (Running total) scrolled out of view by
+     default. Tighter padding and type gets all 5 columns to fit without
+     needing that scroll at all. */
   .modal-body table.board td,
-  .modal-body table.board th {
+  .modal-body table.board th,
+  .profile-body table.board td,
+  .profile-body table.board th {
     padding: 6px 3px;
     font-size: 12.5px;
   }
