@@ -1,4 +1,4 @@
-import type { Gender, MembershipType, Player, Season, SeasonEnrollment } from '@prisma/client';
+import type { ExternalTeam, Gender, MembershipType, Player, Season, SeasonEnrollment } from '@prisma/client';
 import { prisma } from '../../db/client.js';
 import { playerGameHistory, replaySeason } from '../../engine/standings.js';
 import { HttpError } from '../../lib/errors.js';
@@ -152,7 +152,9 @@ export async function updateSeasonSettings(
   return prisma.season.update({ where: { id }, data });
 }
 
-type SeasonWithEnrollments = Season & { enrollments: (SeasonEnrollment & { player: Player })[] };
+type SeasonWithEnrollments = Season & {
+  enrollments: (SeasonEnrollment & { player: Player & { externalTeam: ExternalTeam | null } })[];
+};
 
 /**
  * Shared by getLiveLeaderboard and getPlayerHistory: this season's published
@@ -196,7 +198,7 @@ function roundIsFullyEntered(round: {
 async function getSeasonWithEnrollments(seasonId: number): Promise<SeasonWithEnrollments> {
   const season = await prisma.season.findUnique({
     where: { id: seasonId },
-    include: { enrollments: { include: { player: true } } },
+    include: { enrollments: { include: { player: { include: { externalTeam: true } } } } },
   });
   if (!season) throw new HttpError(404, `Season ${seasonId} not found`);
   return season;
@@ -464,6 +466,13 @@ export async function getPlayerHistory(seasonId: number, playerId: number, after
     // from this one response, wherever a player's history is opened from —
     // no separate leaderboard fetch needed just to get it.
     standing: { ...history.standing, name: player.name, membershipType: player.membershipType },
+    // Public-safe personal info for the player profile page — deliberately
+    // excludes duesStatus and notes, neither of which is meant for a
+    // logged-out visitor even though this endpoint has no auth gate.
+    gender: player.gender,
+    knsbId: player.knsbId,
+    federation: player.federation,
+    externalTeam: player.externalTeam ? { id: player.externalTeam.id, name: player.externalTeam.name, netstandUrl: player.externalTeam.netstandUrl } : null,
   };
 }
 

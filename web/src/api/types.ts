@@ -104,6 +104,13 @@ export interface PlayerHistory {
    * replay as `entries`, so every caller shows the same thing without
    * needing a separate leaderboard fetch. */
   standing: Standing;
+  /** Public-safe personal info (no auth gate on this endpoint) — deliberately
+   * excludes membershipType's siblings duesStatus and notes, neither of
+   * which belongs in front of a logged-out visitor. */
+  gender: Gender | null;
+  knsbId: string | null;
+  federation: string | null;
+  externalTeam: ExternalTeam | null;
 }
 
 export interface RoundEntry {
