@@ -100,6 +100,10 @@ export interface PlayerHistory {
   startingValue: number;
   /** Oldest round first. */
   entries: PlayerHistoryEntry[];
+  /** The record/Played/Win/Color/Odd summary — always present, from the same
+   * replay as `entries`, so every caller shows the same thing without
+   * needing a separate leaderboard fetch. */
+  standing: Standing;
 }
 
 export interface RoundEntry {

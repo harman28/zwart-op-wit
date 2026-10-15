@@ -7,6 +7,7 @@ import AddUnregisteredPlayerForm from '../components/AddUnregisteredPlayerForm.j
 import CustomSelect from '../components/CustomSelect.js';
 import ExternalSection from '../components/ExternalSection.js';
 import PlayerAutocomplete from '../components/PlayerAutocomplete.js';
+import PlayerHistoryModal from '../components/PlayerHistoryModal.js';
 import ResultToggle from '../components/ResultToggle.js';
 import UnpairedCallout from '../components/UnpairedCallout.js';
 import { useAdmin } from '../context/AdminContext.js';
@@ -59,6 +60,9 @@ export default function RoundsPage() {
   const [addMatchupState, setAddMatchupState] = useState<Map<number, MatchupParticipant | null>>(new Map());
   // roundIds where the "+ Add an unregistered player" form is open for whichever slot is currently being picked.
   const [addMatchupUnregisteredFor, setAddMatchupUnregisteredFor] = useState<Set<number>>(new Set());
+  // Visitor-view only (see the name rendering below) — admin mode's click on
+  // a name already does something else (swap player).
+  const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!season) {
@@ -370,6 +374,10 @@ export default function RoundsPage() {
                             <button className="editable-name" onClick={() => setEditingCell({ entryId: g.id, side: 'white' })}>
                               {g.whitePlayer?.name}
                             </button>
+                          ) : g.whitePlayerId != null ? (
+                            <button className="editable-name" onClick={() => setSelectedPlayerId(g.whitePlayerId)}>
+                              {g.whitePlayer?.name}
+                            </button>
                           ) : (
                             g.whitePlayer?.name
                           )}
@@ -394,6 +402,10 @@ export default function RoundsPage() {
                             />
                           ) : adminMode ? (
                             <button className="editable-name" onClick={() => setEditingCell({ entryId: g.id, side: 'black' })}>
+                              {g.blackPlayer?.name}
+                            </button>
+                          ) : g.blackPlayerId != null ? (
+                            <button className="editable-name" onClick={() => setSelectedPlayerId(g.blackPlayerId)}>
                               {g.blackPlayer?.name}
                             </button>
                           ) : (
@@ -549,6 +561,10 @@ export default function RoundsPage() {
           </div>
         );
       })}
+
+      {selectedPlayerId != null && (
+        <PlayerHistoryModal seasonId={season.id} playerId={selectedPlayerId} onClose={() => setSelectedPlayerId(null)} />
+      )}
     </div>
   );
 }

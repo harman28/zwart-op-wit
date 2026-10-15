@@ -129,6 +129,12 @@ export interface PlayerGameHistory {
   startingValue: number;
   /** Oldest round first. */
   entries: PlayerHistoryEntry[];
+  /** This player's row from the same replay (as of the same cutoff round, if
+   * any) that produced `entries` — the record/Played/Win/Color/Odd summary
+   * shown above the round-by-round table, computed once here rather than
+   * requiring a second, separate standings fetch wherever this history is
+   * shown. */
+  standing: PlayerStanding;
 }
 
 export interface PairingCandidate {

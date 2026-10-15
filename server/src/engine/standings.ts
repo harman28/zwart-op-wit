@@ -354,7 +354,7 @@ export function replaySeason(input: SeasonReplayInput): SeasonReplayResult {
  * score exactly.
  */
 export function playerGameHistory(input: SeasonReplayInput, playerId: number): PlayerGameHistory {
-  const { ledger, ownValues } = runReplay(input);
+  const { ledger, ownValues, current } = runReplay(input);
   const entries = ledger
     .filter((row) => row.playerId === playerId)
     .map((row): PlayerHistoryEntry => {
@@ -385,5 +385,9 @@ export function playerGameHistory(input: SeasonReplayInput, playerId: number): P
     })
     .sort((a, b) => a.roundNumber - b.roundNumber);
 
-  return { startingValue: ownValues.get(playerId) ?? 0, entries };
+  // Every baseline player gets a standings row regardless of whether they've
+  // played (see runReplay's zero-rounds branch and the per-round build-up
+  // below it) — this player is always present.
+  const standing = current.standings.find((s) => s.playerId === playerId)!;
+  return { startingValue: ownValues.get(playerId) ?? 0, entries, standing };
 }

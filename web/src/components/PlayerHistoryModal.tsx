@@ -1,60 +1,15 @@
-import { useEffect, useState } from 'react';
-import * as seasonsApi from '../api/seasons.js';
-import type { GameResult, PlayerHistory, PlayerHistoryEntry, Standing } from '../api/types.js';
-import { errorMessage } from '../lib/format.js';
+import { useState } from 'react';
 import Modal from './Modal.js';
-import { RecordLine, SecondaryStatsLine } from './StandingStats.js';
-
-function formatNumber(n: number): string {
-  return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, '');
-}
-
-/** Win/draw/loss from this player's own side of the board — the shared
- * white/black-perspective resultLabel in lib/format.ts isn't what you want
- * when you're looking at one player's personal history. */
-function outcomeFor(entry: PlayerHistoryEntry): 'W' | 'D' | 'L' | null {
-  if (entry.kind === 'GAME' && entry.result) {
-    if (entry.result === 'DRAW') return 'D';
-    const whiteWon: GameResult[] = ['WHITE_WIN', 'WHITE_WIN_FORFEIT'];
-    const playerWon = whiteWon.includes(entry.result) === (entry.color === 'WHITE');
-    return playerWon ? 'W' : 'L';
-  }
-  if (entry.kind === 'EXTERNAL_BYE' && entry.externalOutcome) {
-    return entry.externalOutcome === 'WIN' ? 'W' : entry.externalOutcome === 'LOSS' ? 'L' : 'D';
-  }
-  return null;
-}
-
-function describeEntry(entry: PlayerHistoryEntry): string {
-  switch (entry.kind) {
-    case 'GAME':
-      return entry.opponentName ? `vs ${entry.opponentName}` : 'vs —';
-    case 'PAIRING_BYE':
-      return 'Pairing bye';
-    case 'REGULAR_BYE':
-      return 'Regular bye (absent)';
-    case 'EXTERNAL_BYE':
-      return 'External result';
-  }
-}
-
-const OUTCOME_CLASS: Record<'W' | 'D' | 'L', string> = { W: 'win', D: 'draw', L: 'loss' };
+import PlayerHistoryPanel from './PlayerHistoryPanel.js';
 
 export default function PlayerHistoryModal({
   seasonId,
   playerId,
-  standing,
   afterRound,
   onClose,
 }: {
   seasonId: number;
   playerId: number;
-  /** The player's current-season standing, if the caller already has it
-   * (e.g. from the leaderboard it was opened from) — shows the same
-   * record/Played/Win/Color/Odd summary as the leaderboard card, above the
-   * round-by-round breakdown. Omit if unavailable; the modal still works,
-   * just without that summary. */
-  standing?: Standing;
   /** Rebase the history under standings as they stood right after this
    * published round, instead of the season's current state — matches
    * whatever round the leaderboard this modal was opened from is showing.
@@ -62,86 +17,14 @@ export default function PlayerHistoryModal({
   afterRound?: number;
   onClose: () => void;
 }) {
-  const [history, setHistory] = useState<PlayerHistory | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setHistory(null);
-    seasonsApi
-      .getPlayerHistory(seasonId, playerId, afterRound)
-      .then(setHistory)
-      .catch((err: unknown) => setError(errorMessage(err)));
-  }, [seasonId, playerId, afterRound]);
-
-  const title = history ? history.name : 'Player history';
+  // PlayerHistoryPanel owns the fetch (and the record/summary line that
+  // comes with it); it reports the name back up once loaded so the modal
+  // chrome (owned here, not by the panel) can title itself.
+  const [title, setTitle] = useState('Player history');
 
   return (
     <Modal title={title} onClose={onClose}>
-      {standing && (
-        <div className="modal-player-summary">
-          <RecordLine standing={standing} />
-          <SecondaryStatsLine standing={standing} />
-        </div>
-      )}
-      {error && <div className="error-banner">{error}</div>}
-      {!history && !error && <p style={{ color: 'var(--muted)' }}>Loading…</p>}
-      {history && (
-        <>
-          {history.entries.length === 0 ? (
-            <p style={{ color: 'var(--muted)' }}>No published rounds played yet this season.</p>
-          ) : (
-            <div className="board-wrap">
-              <table className="board">
-                <thead>
-                  <tr>
-                    <th style={{ width: 22 }}>Rnd</th>
-                    <th>Opponent</th>
-                    <th style={{ textAlign: 'center' }}>Res</th>
-                    <th style={{ textAlign: 'right' }}>Pts</th>
-                    <th style={{ textAlign: 'right' }}>Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td colSpan={2} className="num score-cell" style={{ whiteSpace: 'nowrap' }}>
-                      <span className="modal-starting-value-label">Starting value</span>{' '}
-                      {formatNumber(history.startingValue)}
-                    </td>
-                  </tr>
-                  {(() => {
-                    let running = history.startingValue;
-                    return history.entries.map((entry, idx) => {
-                      running += entry.points;
-                      const outcome = outcomeFor(entry);
-                      return (
-                        <tr key={idx}>
-                          <td className="rank-num">{entry.roundNumber}</td>
-                          <td className="player-name">{describeEntry(entry)}</td>
-                          <td style={{ textAlign: 'center' }}>
-                            {outcome ? (
-                              <span className={`outcome-pill ${OUTCOME_CLASS[outcome]}`}>{outcome}</span>
-                            ) : (
-                              <span style={{ color: 'var(--muted)' }}>–</span>
-                            )}
-                          </td>
-                          <td className="num value-cell">
-                            {entry.points > 0 ? '+' : ''}
-                            {formatNumber(entry.points)}
-                          </td>
-                          <td className="num score-cell">{formatNumber(running)}</td>
-                        </tr>
-                      );
-                    });
-                  })()}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </>
-      )}
+      <PlayerHistoryPanel seasonId={seasonId} playerId={playerId} afterRound={afterRound} onNameLoaded={setTitle} />
     </Modal>
   );
 }

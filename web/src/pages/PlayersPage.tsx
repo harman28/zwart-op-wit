@@ -4,6 +4,7 @@ import * as seasonsApi from '../api/seasons.js';
 import type { DuesStatus, Gender, MembershipType, Player } from '../api/types.js';
 import CustomSelect from '../components/CustomSelect.js';
 import Modal from '../components/Modal.js';
+import PlayerHistoryPanel from '../components/PlayerHistoryPanel.js';
 import { errorMessage } from '../lib/format.js';
 import { MEMBERSHIP_OPTIONS } from '../lib/membership.js';
 
@@ -163,6 +164,7 @@ export default function PlayersPage() {
   const [importText, setImportText] = useState('');
 
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
+  const [editTab, setEditTab] = useState<'edit' | 'results'>('edit');
   const [draft, setDraft] = useState<EditDraft | null>(null);
   const [saving, setSaving] = useState(false);
   const [archiving, setArchiving] = useState(false);
@@ -255,6 +257,7 @@ export default function PlayersPage() {
 
   function openEdit(player: Player) {
     setEditingPlayer(player);
+    setEditTab('edit');
     setDraft(draftFor(player));
     setModalError(null);
   }
@@ -462,77 +465,97 @@ export default function PlayersPage() {
       )}
 
       {editingPlayer && draft && (
-        <Modal title="Edit player" onClose={closeEdit}>
-          {modalError && <div className="error-banner">{modalError}</div>}
-          <div className="field">
-            <label htmlFor="edit-name">Name</label>
-            <input id="edit-name" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-          </div>
-          <div className="field">
-            <label>Membership</label>
-            <CustomSelect
-              value={draft.membershipType}
-              options={MEMBERSHIP_OPTIONS}
-              onChange={(v) => setDraft({ ...draft, membershipType: v as MembershipType })}
-              triggerClassName="roster-select"
-            />
-          </div>
-          <div className="field">
-            <label>Dues</label>
-            <CustomSelect
-              value={draft.duesStatus}
-              options={DUES_OPTIONS}
-              onChange={(v) => setDraft({ ...draft, duesStatus: v as DuesStatus })}
-              triggerClassName="roster-select"
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="edit-notes">Notes</label>
-            <input id="edit-notes" value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />
-          </div>
-          <div className="field-row" style={{ marginBottom: 0 }}>
-            <div className="field">
-              <label htmlFor="edit-federation">Federation</label>
-              <input
-                id="edit-federation"
-                style={{ width: 80 }}
-                value={draft.federation}
-                placeholder="unset"
-                onChange={(e) => setDraft({ ...draft, federation: e.target.value })}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="edit-knsb-id">KNSB ID</label>
-              <input
-                id="edit-knsb-id"
-                value={draft.knsbId}
-                placeholder="unknown"
-                onChange={(e) => setDraft({ ...draft, knsbId: e.target.value })}
-              />
-            </div>
-            <div className="field">
-              <label>Gender</label>
-              <CustomSelect
-                value={draft.gender}
-                options={GENDER_OPTIONS}
-                onChange={(v) => setDraft({ ...draft, gender: v })}
-                triggerClassName="roster-select"
-              />
-            </div>
-          </div>
-          <div className="btn-row" style={{ marginTop: 4, justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn btn-ghost" onClick={handleToggleArchive} disabled={archiving}>
-                {archiving ? 'Saving…' : editingPlayer.archivedAt ? 'Restore player' : 'Archive player'}
-              </button>
-              <button className="btn btn-ghost" onClick={handleDeletePlayer} disabled={deleting}>
-                {deleting ? 'Deleting…' : 'Delete player'}
-              </button>
-            </div>
-            <button className="btn btn-primary" onClick={handleSaveEdit} disabled={saving}>
-              {saving ? 'Saving…' : 'Save'}
+        <Modal title={editingPlayer.name} onClose={closeEdit}>
+          <div className="modal-tabs">
+            <button className={editTab === 'edit' ? 'modal-tab current' : 'modal-tab'} onClick={() => setEditTab('edit')}>
+              Edit
+            </button>
+            <button
+              className={editTab === 'results' ? 'modal-tab current' : 'modal-tab'}
+              onClick={() => setEditTab('results')}
+            >
+              Results
             </button>
           </div>
+
+          {editTab === 'edit' ? (
+            <>
+              {modalError && <div className="error-banner">{modalError}</div>}
+              <div className="field">
+                <label htmlFor="edit-name">Name</label>
+                <input id="edit-name" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+              </div>
+              <div className="field">
+                <label>Membership</label>
+                <CustomSelect
+                  value={draft.membershipType}
+                  options={MEMBERSHIP_OPTIONS}
+                  onChange={(v) => setDraft({ ...draft, membershipType: v as MembershipType })}
+                  triggerClassName="roster-select"
+                />
+              </div>
+              <div className="field">
+                <label>Dues</label>
+                <CustomSelect
+                  value={draft.duesStatus}
+                  options={DUES_OPTIONS}
+                  onChange={(v) => setDraft({ ...draft, duesStatus: v as DuesStatus })}
+                  triggerClassName="roster-select"
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="edit-notes">Notes</label>
+                <input id="edit-notes" value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />
+              </div>
+              <div className="field-row" style={{ marginBottom: 0 }}>
+                <div className="field">
+                  <label htmlFor="edit-federation">Federation</label>
+                  <input
+                    id="edit-federation"
+                    style={{ width: 80 }}
+                    value={draft.federation}
+                    placeholder="unset"
+                    onChange={(e) => setDraft({ ...draft, federation: e.target.value })}
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="edit-knsb-id">KNSB ID</label>
+                  <input
+                    id="edit-knsb-id"
+                    value={draft.knsbId}
+                    placeholder="unknown"
+                    onChange={(e) => setDraft({ ...draft, knsbId: e.target.value })}
+                  />
+                </div>
+                <div className="field">
+                  <label>Gender</label>
+                  <CustomSelect
+                    value={draft.gender}
+                    options={GENDER_OPTIONS}
+                    onChange={(v) => setDraft({ ...draft, gender: v })}
+                    triggerClassName="roster-select"
+                  />
+                </div>
+              </div>
+              <div className="btn-row" style={{ marginTop: 4, justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="btn btn-ghost" onClick={handleToggleArchive} disabled={archiving}>
+                    {archiving ? 'Saving…' : editingPlayer.archivedAt ? 'Restore player' : 'Archive player'}
+                  </button>
+                  <button className="btn btn-ghost" onClick={handleDeletePlayer} disabled={deleting}>
+                    {deleting ? 'Deleting…' : 'Delete player'}
+                  </button>
+                </div>
+                <button className="btn btn-primary" onClick={handleSaveEdit} disabled={saving}>
+                  {saving ? 'Saving…' : 'Save'}
+                </button>
+              </div>
+            </>
+          ) : currentSeasonId != null ? (
+            <PlayerHistoryPanel seasonId={currentSeasonId} playerId={editingPlayer.id} />
+          ) : (
+            <p style={{ color: 'var(--muted)' }}>No active season.</p>
+          )}
         </Modal>
       )}
     </div>
