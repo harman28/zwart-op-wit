@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { usePlayerHistory } from '../hooks/usePlayerHistory.js';
 import Modal from './Modal.js';
 import PlayerHistoryPanel from './PlayerHistoryPanel.js';
+import PlayerValueChart from './PlayerValueChart.js';
 
 export default function PlayerHistoryModal({
   seasonId,
@@ -12,19 +14,31 @@ export default function PlayerHistoryModal({
   playerId: number;
   /** Rebase the history under standings as they stood right after this
    * published round, instead of the season's current state — matches
-   * whatever round the leaderboard this modal was opened from is showing.
-   * Omit (or leave undefined) to show the full season to date. */
+   * whatever round the leaderboard this modal was opened from is showing. */
   afterRound?: number;
   onClose: () => void;
 }) {
-  // PlayerHistoryPanel owns the fetch (and the record/summary line that
-  // comes with it); it reports the name back up once loaded so the modal
-  // chrome (owned here, not by the panel) can title itself.
-  const [title, setTitle] = useState('Player history');
+  const { history, error } = usePlayerHistory(seasonId, playerId, afterRound);
+  const [tab, setTab] = useState<'results' | 'graph'>('results');
 
   return (
-    <Modal title={title} onClose={onClose}>
-      <PlayerHistoryPanel seasonId={seasonId} playerId={playerId} afterRound={afterRound} onNameLoaded={setTitle} />
+    <Modal title={history?.name ?? 'Player history'} onClose={onClose} wide={tab === 'graph'}>
+      <div className="modal-tabs">
+        <button className={tab === 'results' ? 'modal-tab current' : 'modal-tab'} onClick={() => setTab('results')}>
+          Results
+        </button>
+        <button className={tab === 'graph' ? 'modal-tab current' : 'modal-tab'} onClick={() => setTab('graph')}>
+          Graph
+        </button>
+      </div>
+      {error && <div className="error-banner">{error}</div>}
+      {!history && !error && <p style={{ color: 'var(--muted)' }}>Loading…</p>}
+      {history &&
+        (tab === 'results' ? (
+          <PlayerHistoryPanel history={history} />
+        ) : (
+          <PlayerValueChart history={history} seasonId={seasonId} afterRound={afterRound} />
+        ))}
     </Modal>
   );
 }

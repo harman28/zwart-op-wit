@@ -5,7 +5,20 @@ import { useEffect, type ReactNode } from 'react';
  * with everything else out of the way" should reuse this rather than growing
  * its own bespoke overlay. Closes on Escape or a backdrop click.
  */
-export default function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+export default function Modal({
+  title,
+  onClose,
+  children,
+  wide,
+}: {
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+  /** The default 460px panel is a cramped fit for a chart with a readable
+   * hover tooltip — pass true (e.g. while the Graph tab is active) for more
+   * room. Still capped and still centers/scrolls the same way. */
+  wide?: boolean;
+}) {
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose();
@@ -16,7 +29,7 @@ export default function Modal({ title, onClose, children }: { title: string; onC
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
+      <div className={wide ? 'modal-panel modal-panel-wide' : 'modal-panel'} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <span className="modal-title">{title}</span>
           <button className="modal-close" onClick={onClose} aria-label="Close">
