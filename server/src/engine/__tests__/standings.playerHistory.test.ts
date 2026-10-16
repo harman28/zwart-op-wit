@@ -67,4 +67,9 @@ describe('playerGameHistory — same worked example as the golden-master standin
     const history = playerGameHistory(workedExampleInput, JOPPE);
     expect(history.standing).toEqual(result.current.standings.find((s) => s.playerId === JOPPE));
   });
+
+  it('fieldSize is the current ranked field size (all 6 baseline players), even before any round has been played', () => {
+    expect(playerGameHistory(workedExampleInput, JOPPE).fieldSize).toBe(6);
+    expect(playerGameHistory({ ...workedExampleInput, rounds: [] }, JOPPE).fieldSize).toBe(6);
+  });
 });
