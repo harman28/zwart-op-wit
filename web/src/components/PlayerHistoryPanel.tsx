@@ -1,7 +1,23 @@
-import type { PlayerHistory } from '../api/types.js';
+import { Link } from 'react-router';
+import type { PlayerHistory, PlayerHistoryEntry } from '../api/types.js';
 import { formatNumber } from '../lib/format.js';
 import { describeEntry, OUTCOME_CLASS, outcomeFor, valueSeries } from '../lib/playerHistory.js';
 import { RecordLine, SecondaryStatsLine } from './StandingStats.js';
+
+/** Same "vs Name" / "Pairing bye" text as describeEntry, except a GAME
+ * opponent is a link straight to their own profile — matching every other
+ * "click a player name" spot on the site (the modal title, the snapshot
+ * tiles) instead of being the one dead end left in the round-by-round list. */
+function OpponentCell({ entry }: { entry: PlayerHistoryEntry }) {
+  if (entry.kind === 'GAME' && entry.opponentId != null) {
+    return (
+      <>
+        vs <Link to={`/players/${entry.opponentId}`}>{entry.opponentName}</Link>
+      </>
+    );
+  }
+  return <>{describeEntry(entry)}</>;
+}
 
 /**
  * One player's round-by-round results for a season, plus the same
@@ -47,7 +63,9 @@ export default function PlayerHistoryPanel({ history }: { history: PlayerHistory
                 return (
                   <tr key={idx}>
                     <td className="rank-num">{entry.roundNumber}</td>
-                    <td className="player-name">{describeEntry(entry)}</td>
+                    <td className="player-name">
+                      <OpponentCell entry={entry} />
+                    </td>
                     <td style={{ textAlign: 'center' }}>
                       {outcome ? (
                         <span className={`outcome-pill ${OUTCOME_CLASS[outcome]}`}>{outcome}</span>
