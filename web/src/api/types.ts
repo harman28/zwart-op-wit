@@ -112,6 +112,9 @@ export interface PlayerHistory {
   /** The best (lowest-numbered) rank this player held after any published
    * round this season — null if they haven't played a published round yet. */
   peakRank: { rank: number; roundNumber: number; ofCount: number } | null;
+  /** The current size of the ranked field — pairs with standing.rank for
+   * "#4 of 6". */
+  fieldSize: number;
   /** Public-safe personal info (no auth gate on this endpoint) — deliberately
    * excludes gender and membershipType's siblings duesStatus and notes, none
    * of which belongs in front of a logged-out visitor. */

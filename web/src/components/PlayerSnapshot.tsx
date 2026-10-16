@@ -15,32 +15,32 @@ function ColorPill({ color, winPercent, played }: { color: 'WHITE' | 'BLACK'; wi
 /**
  * The "headline stats" panel at the top of a player's profile page, above
  * the full Results/Graph tabs — deliberately only stats that mean something
- * from a handful of games (best win, worst loss, peak rank, win rate by
+ * from a handful of games (current rank, best win, worst loss, win rate by
  * color). No streaks or head-to-head records: this club doesn't have the
  * game volume for those to be meaningful rather than noise.
  */
 export default function PlayerSnapshot({ history }: { history: PlayerHistory }) {
   const { bestWin, worstLoss, colorRecord } = snapshotStats(history);
-  const { peakRank } = history;
+  const { peakRank, standing, fieldSize } = history;
+
+  // Current rank is always defined — even with zero published rounds, the
+  // replay still ranks everyone by starting value (see runReplay). Peak only
+  // exists once at least one round has been published, and is worth a
+  // separate line only when it actually differs from right now.
+  let rankDetail = 'No published rounds yet';
+  if (peakRank) {
+    rankDetail = peakRank.rank === standing.rank ? 'Best so far' : `Peak #${peakRank.rank} · Round ${peakRank.roundNumber}`;
+  }
 
   return (
     <div className="card profile-snapshot">
       <div className="profile-snapshot-grid">
         <div className="profile-snapshot-tile">
-          <div className="profile-snapshot-label">Peak rank</div>
-          {peakRank ? (
-            <>
-              <div className="profile-snapshot-value">
-                #{peakRank.rank} <span style={{ color: 'var(--muted)', fontWeight: 400 }}>of {peakRank.ofCount}</span>
-              </div>
-              <div className="profile-snapshot-detail">Round {peakRank.roundNumber}</div>
-            </>
-          ) : (
-            <>
-              <div className="profile-snapshot-value muted">—</div>
-              <div className="profile-snapshot-detail">No published rounds yet</div>
-            </>
-          )}
+          <div className="profile-snapshot-label">Rank</div>
+          <div className="profile-snapshot-value">
+            #{standing.rank} <span style={{ color: 'var(--muted)', fontWeight: 400 }}>of {fieldSize}</span>
+          </div>
+          <div className="profile-snapshot-detail">{rankDetail}</div>
         </div>
 
         <div className="profile-snapshot-tile">

@@ -148,6 +148,10 @@ export interface PlayerGameHistory {
    * field at that round (for "reached #1 of 6") — null if they haven't
    * played a published round yet. */
   peakRank: { rank: number; roundNumber: number; ofCount: number } | null;
+  /** The current size of the ranked field — pairs with standing.rank for
+   * "#4 of 6". Not assumed to equal peakRank.ofCount: the field can grow or
+   * shrink over a season. */
+  fieldSize: number;
 }
 
 export interface PairingCandidate {
