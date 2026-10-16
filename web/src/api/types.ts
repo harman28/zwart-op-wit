@@ -105,9 +105,8 @@ export interface PlayerHistory {
    * needing a separate leaderboard fetch. */
   standing: Standing;
   /** Public-safe personal info (no auth gate on this endpoint) — deliberately
-   * excludes membershipType's siblings duesStatus and notes, neither of
-   * which belongs in front of a logged-out visitor. */
-  gender: Gender | null;
+   * excludes gender and membershipType's siblings duesStatus and notes, none
+   * of which belongs in front of a logged-out visitor. */
   knsbId: string | null;
   federation: string | null;
   externalTeam: ExternalTeam | null;
