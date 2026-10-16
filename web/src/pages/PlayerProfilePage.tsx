@@ -1,12 +1,11 @@
 import { Fragment, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router';
 import PlayerHistoryPanel from '../components/PlayerHistoryPanel.js';
+import PlayerSnapshot from '../components/PlayerSnapshot.js';
 import PlayerValueChart from '../components/PlayerValueChart.js';
 import { usePlayerHistory } from '../hooks/usePlayerHistory.js';
 import { useLatestSeason } from '../hooks/useSeason.js';
 import { errorMessage } from '../lib/format.js';
-
-const GENDER_LABEL: Record<string, string> = { M: 'Male', V: 'Female', X: 'Other' };
 
 /** List 193 on ratingviewer.nl is the KNSB's own rating list — e.g.
  * https://ratingviewer.nl/lists/193/players/9029889/statistics. Confirmed
@@ -70,7 +69,6 @@ export default function PlayerProfilePage() {
       </span>,
     );
   }
-  if (history.gender) metaItems.push(<span key="gender">{GENDER_LABEL[history.gender] ?? history.gender}</span>);
   if (history.externalTeam) {
     metaItems.push(
       <span key="team">
@@ -99,6 +97,8 @@ export default function PlayerProfilePage() {
           ))}
         </div>
       )}
+
+      <PlayerSnapshot history={history} />
 
       <div className="modal-tabs" style={{ marginTop: 20 }}>
         <button className={tab === 'results' ? 'modal-tab current' : 'modal-tab'} onClick={() => setTab('results')}>

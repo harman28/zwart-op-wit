@@ -659,6 +659,76 @@ table.board td.winpct-cell .lb-card-tiny-bar {
   color: var(--muted);
   font-family: var(--font-mono);
 }
+.profile-snapshot {
+  margin-top: 18px;
+  padding: 18px 20px;
+}
+.profile-snapshot-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px 16px;
+}
+@media (min-width: 640px) {
+  .profile-snapshot-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+.profile-snapshot-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.profile-snapshot-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.profile-snapshot-value {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.profile-snapshot-value.win {
+  color: var(--win);
+}
+.profile-snapshot-value.loss {
+  color: var(--loss);
+}
+.profile-snapshot-value.muted {
+  color: var(--muted);
+  font-weight: 400;
+}
+.profile-snapshot-value a {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px dotted currentColor;
+}
+.profile-snapshot-value a:hover {
+  opacity: 0.8;
+}
+.profile-snapshot-detail {
+  font-size: 11.5px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  line-height: 1.4;
+}
+.profile-snapshot-color-row {
+  display: flex;
+  gap: 14px;
+}
+.profile-snapshot-color-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 17px;
+  font-weight: 700;
+}
 .modal-close {
   background: transparent;
   border: none;

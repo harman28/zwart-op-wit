@@ -354,17 +354,41 @@ export function replaySeason(input: SeasonReplayInput): SeasonReplayResult {
  * score exactly.
  */
 export function playerGameHistory(input: SeasonReplayInput, playerId: number): PlayerGameHistory {
-  const { ledger, ownValues, current } = runReplay(input);
+  const { byRound, ledger, ownValues, current } = runReplay(input);
+
+  // Round -> playerId -> rank AT THAT ROUND — built once from byRound, used
+  // both for each GAME entry's opponentRank and this player's own peakRank
+  // below. Deliberately not `current.standings`, which only has the latest
+  // rank, not the historical one a past game should be judged against.
+  const rankByRound = new Map<number, Map<number, number>>();
+  const fieldSizeByRound = new Map<number, number>();
+  for (const snapshot of byRound) {
+    rankByRound.set(snapshot.roundNumber, new Map(snapshot.standings.map((s) => [s.playerId, s.rank])));
+    fieldSizeByRound.set(snapshot.roundNumber, snapshot.standings.length);
+  }
+
+  let peakRank: { rank: number; roundNumber: number; ofCount: number } | null = null;
+  for (const snapshot of byRound) {
+    const rank = rankByRound.get(snapshot.roundNumber)!.get(playerId);
+    if (rank == null) continue;
+    if (peakRank == null || rank < peakRank.rank) {
+      peakRank = { rank, roundNumber: snapshot.roundNumber, ofCount: snapshot.standings.length };
+    }
+  }
+
   const entries = ledger
     .filter((row) => row.playerId === playerId)
     .map((row): PlayerHistoryEntry => {
       const { entry } = row;
       if (entry.kind === 'GAME') {
         const isWhite = entry.whitePlayerId === playerId;
+        const opponentId = isWhite ? entry.blackPlayerId : entry.whitePlayerId;
         return {
           roundNumber: row.roundNumber,
           kind: 'GAME',
-          opponentId: isWhite ? entry.blackPlayerId : entry.whitePlayerId,
+          opponentId,
+          opponentRank: rankByRound.get(row.roundNumber)?.get(opponentId) ?? null,
+          opponentOfCount: fieldSizeByRound.get(row.roundNumber) ?? null,
           color: isWhite ? 'WHITE' : 'BLACK',
           result: entry.result,
           externalOutcome: null,
@@ -376,6 +400,8 @@ export function playerGameHistory(input: SeasonReplayInput, playerId: number): P
         roundNumber: row.roundNumber,
         kind: entry.kind,
         opponentId: null,
+        opponentRank: null,
+        opponentOfCount: null,
         color: null,
         result: null,
         externalOutcome: entry.kind === 'EXTERNAL_BYE' ? entry.outcome : null,
@@ -389,5 +415,5 @@ export function playerGameHistory(input: SeasonReplayInput, playerId: number): P
   // played (see runReplay's zero-rounds branch and the per-round build-up
   // below it) — this player is always present.
   const standing = current.standings.find((s) => s.playerId === playerId)!;
-  return { startingValue: ownValues.get(playerId) ?? 0, entries, standing };
+  return { startingValue: ownValues.get(playerId) ?? 0, entries, standing, peakRank };
 }
