@@ -415,5 +415,15 @@ export function playerGameHistory(input: SeasonReplayInput, playerId: number): P
   // played (see runReplay's zero-rounds branch and the per-round build-up
   // below it) — this player is always present.
   const standing = current.standings.find((s) => s.playerId === playerId)!;
-  return { startingValue: ownValues.get(playerId) ?? 0, entries, standing, peakRank };
+  return {
+    startingValue: ownValues.get(playerId) ?? 0,
+    entries,
+    standing,
+    peakRank,
+    // Current field size, pairing with standing.rank — "#4 of 6" needs both.
+    // Same number peakRank.ofCount would be if the peak happened to be the
+    // current round, but not assumed to match it in general (the field can
+    // grow or shrink over a season).
+    fieldSize: current.standings.length,
+  };
 }
