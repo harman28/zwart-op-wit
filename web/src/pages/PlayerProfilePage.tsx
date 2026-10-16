@@ -1,6 +1,7 @@
 import { Fragment, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router';
 import PlayerHistoryPanel from '../components/PlayerHistoryPanel.js';
+import PlayerSnapshot from '../components/PlayerSnapshot.js';
 import PlayerValueChart from '../components/PlayerValueChart.js';
 import { usePlayerHistory } from '../hooks/usePlayerHistory.js';
 import { useLatestSeason } from '../hooks/useSeason.js';
@@ -99,6 +100,8 @@ export default function PlayerProfilePage() {
           ))}
         </div>
       )}
+
+      <PlayerSnapshot history={history} />
 
       <div className="modal-tabs" style={{ marginTop: 20 }}>
         <button className={tab === 'results' ? 'modal-tab current' : 'modal-tab'} onClick={() => setTab('results')}>

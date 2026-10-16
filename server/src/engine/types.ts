@@ -111,6 +111,14 @@ export interface PlayerHistoryEntry {
   kind: RoundEntryInput['kind'];
   /** GAME only. */
   opponentId: number | null;
+  /** GAME only — the opponent's rank in the standings AT THIS ROUND (not
+   * their current rank) — what "best win" / "worst loss" are judged against,
+   * so a loss to someone who has since climbed the standings doesn't read as
+   * worse than it was at the time. */
+  opponentRank: number | null;
+  /** GAME only — the size of the field opponentRank was ranked within, same
+   * round (for "ranked #6 of 6"). */
+  opponentOfCount: number | null;
   /** GAME only. */
   color: 'WHITE' | 'BLACK' | null;
   /** GAME only, null until a result is entered. */
@@ -135,6 +143,11 @@ export interface PlayerGameHistory {
    * requiring a second, separate standings fetch wherever this history is
    * shown. */
   standing: PlayerStanding;
+  /** The best (lowest-numbered) rank this player held after any published
+   * round this season, which round that first happened, and the size of the
+   * field at that round (for "reached #1 of 6") — null if they haven't
+   * played a published round yet. */
+  peakRank: { rank: number; roundNumber: number; ofCount: number } | null;
 }
 
 export interface PairingCandidate {

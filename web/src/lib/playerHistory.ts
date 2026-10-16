@@ -55,3 +55,62 @@ export function describeEntry(entry: PlayerHistoryEntry): string {
 }
 
 export const OUTCOME_CLASS: Record<'W' | 'D' | 'L', string> = { W: 'win', D: 'draw', L: 'loss' };
+
+interface ColorRecord {
+  played: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  /** (wins + 0.5*draws) / played * 100 — same formula as the season-wide
+   * winPercent. 0 (never NaN) when played is 0. */
+  winPercent: number;
+}
+
+export interface SnapshotStats {
+  /** The single GAME win with the most points — in the Keizer system, points
+   * gained on a win equals the opponent's value that round, so this is
+   * exactly "beat the best-ranked opponent" too, no separate stat needed. */
+  bestWin: PlayerHistoryEntry | null;
+  /** The GAME loss to the opponent ranked worst (highest rank number) that
+   * round. Every loss scores 0 regardless of opponent, so unlike bestWin
+   * this can't be ranked by points — opponentRank is the only signal. */
+  worstLoss: PlayerHistoryEntry | null;
+  colorRecord: { WHITE: ColorRecord; BLACK: ColorRecord };
+}
+
+function emptyColorRecord(): ColorRecord {
+  return { played: 0, wins: 0, draws: 0, losses: 0, winPercent: 0 };
+}
+
+/** Sample-size-independent snapshot stats for the player profile page — see
+ * colorRecord's caveat below. Deliberately excludes streaks/rivalries: a
+ * club running a few dozen games a season doesn't have enough volume for
+ * those to mean anything. */
+export function snapshotStats(history: PlayerHistory): SnapshotStats {
+  let bestWin: PlayerHistoryEntry | null = null;
+  let worstLoss: PlayerHistoryEntry | null = null;
+  const byColor = { WHITE: emptyColorRecord(), BLACK: emptyColorRecord() };
+
+  for (const entry of history.entries) {
+    if (entry.kind !== 'GAME' || !entry.result) continue;
+    const outcome = outcomeFor(entry);
+    if (!outcome) continue;
+
+    const record = byColor[entry.color!];
+    record.played += 1;
+    if (outcome === 'W') record.wins += 1;
+    else if (outcome === 'D') record.draws += 1;
+    else record.losses += 1;
+
+    if (outcome === 'W' && (bestWin == null || entry.points > bestWin.points)) bestWin = entry;
+    if (outcome === 'L' && entry.opponentRank != null && (worstLoss?.opponentRank ?? -Infinity) < entry.opponentRank) {
+      worstLoss = entry;
+    }
+  }
+
+  for (const record of Object.values(byColor)) {
+    record.winPercent = record.played === 0 ? 0 : ((record.wins + 0.5 * record.draws) / record.played) * 100;
+  }
+
+  return { bestWin, worstLoss, colorRecord: byColor };
+}
