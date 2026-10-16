@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router';
 import NavBar from './components/NavBar.js';
 import { AdminProvider, useAdmin } from './context/AdminContext.js';
 import { ThemeProvider } from './context/ThemeContext.js';
 import ActivityLogPage from './pages/ActivityLogPage.js';
+import EmbedLeaderboardPage from './pages/EmbedLeaderboardPage.js';
 import LeaderboardPage from './pages/LeaderboardPage.js';
 import LoginPage from './pages/LoginPage.js';
 import NewRoundPage from './pages/NewRoundPage.js';
@@ -21,14 +22,17 @@ function RequireAdmin({ children }: { children: ReactNode }) {
 }
 
 function AppRoutes() {
+  const { pathname } = useLocation();
+  const isEmbed = pathname.startsWith('/embed/');
   return (
     <>
-      <NavBar />
+      {!isEmbed && <NavBar />}
       <Routes>
         <Route path="/" element={<RoundsPage />} />
         <Route path="/round/:number" element={<RoundsPage />} />
         <Route path="/leaderboard" element={<LeaderboardPage />} />
         <Route path="/players/:id" element={<PlayerProfilePage />} />
+        <Route path="/embed/leaderboard" element={<EmbedLeaderboardPage />} />
         <Route path="/admin/login" element={<LoginPage />} />
         <Route
           path="/admin/new-round"

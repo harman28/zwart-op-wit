@@ -42,6 +42,14 @@ button {
   margin: 0 auto;
   padding: 0 20px 80px;
 }
+/* The iframe-embed leaderboard: no masthead above it, no footer below it in
+   the embedding page's own layout, so .app's normal 80px of bottom breathing
+   room (sized for a full page with site chrome around it) just wastes
+   iframe height — a few rows of standings shouldn't need to scroll for it. */
+.embed-app {
+  padding-top: 16px;
+  padding-bottom: 16px;
+}
 
 /* ---- masthead + nav ---- */
 .masthead {
