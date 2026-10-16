@@ -7,8 +7,6 @@ import { usePlayerHistory } from '../hooks/usePlayerHistory.js';
 import { useLatestSeason } from '../hooks/useSeason.js';
 import { errorMessage } from '../lib/format.js';
 
-const GENDER_LABEL: Record<string, string> = { M: 'Male', V: 'Female', X: 'Other' };
-
 /** List 193 on ratingviewer.nl is the KNSB's own rating list — e.g.
  * https://ratingviewer.nl/lists/193/players/9029889/statistics. Confirmed
  * against a real club member's profile; not guessed. */
@@ -71,7 +69,6 @@ export default function PlayerProfilePage() {
       </span>,
     );
   }
-  if (history.gender) metaItems.push(<span key="gender">{GENDER_LABEL[history.gender] ?? history.gender}</span>);
   if (history.externalTeam) {
     metaItems.push(
       <span key="team">

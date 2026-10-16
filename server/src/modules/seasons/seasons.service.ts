@@ -468,9 +468,8 @@ export async function getPlayerHistory(seasonId: number, playerId: number, after
     standing: { ...history.standing, name: player.name, membershipType: player.membershipType },
     peakRank: history.peakRank,
     // Public-safe personal info for the player profile page — deliberately
-    // excludes duesStatus and notes, neither of which is meant for a
+    // excludes gender, duesStatus and notes, none of which is meant for a
     // logged-out visitor even though this endpoint has no auth gate.
-    gender: player.gender,
     knsbId: player.knsbId,
     federation: player.federation,
     externalTeam: player.externalTeam ? { id: player.externalTeam.id, name: player.externalTeam.name, netstandUrl: player.externalTeam.netstandUrl } : null,

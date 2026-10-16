@@ -113,9 +113,8 @@ export interface PlayerHistory {
    * round this season — null if they haven't played a published round yet. */
   peakRank: { rank: number; roundNumber: number; ofCount: number } | null;
   /** Public-safe personal info (no auth gate on this endpoint) — deliberately
-   * excludes membershipType's siblings duesStatus and notes, neither of
-   * which belongs in front of a logged-out visitor. */
-  gender: Gender | null;
+   * excludes gender and membershipType's siblings duesStatus and notes, none
+   * of which belongs in front of a logged-out visitor. */
   knsbId: string | null;
   federation: string | null;
   externalTeam: ExternalTeam | null;
