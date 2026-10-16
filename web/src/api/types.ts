@@ -80,6 +80,11 @@ export interface PlayerHistoryEntry {
   opponentId: number | null;
   /** GAME only. */
   opponentName: string | null;
+  /** GAME only — the opponent's rank in the standings AT THIS ROUND, not
+   * their current rank. */
+  opponentRank: number | null;
+  /** GAME only — the size of the field opponentRank was ranked within. */
+  opponentOfCount: number | null;
   /** GAME only. */
   color: 'WHITE' | 'BLACK' | null;
   /** GAME only, null until a result is entered. */
@@ -104,6 +109,9 @@ export interface PlayerHistory {
    * replay as `entries`, so every caller shows the same thing without
    * needing a separate leaderboard fetch. */
   standing: Standing;
+  /** The best (lowest-numbered) rank this player held after any published
+   * round this season — null if they haven't played a published round yet. */
+  peakRank: { rank: number; roundNumber: number; ofCount: number } | null;
   /** Public-safe personal info (no auth gate on this endpoint) — deliberately
    * excludes membershipType's siblings duesStatus and notes, neither of
    * which belongs in front of a logged-out visitor. */

@@ -466,6 +466,7 @@ export async function getPlayerHistory(seasonId: number, playerId: number, after
     // from this one response, wherever a player's history is opened from —
     // no separate leaderboard fetch needed just to get it.
     standing: { ...history.standing, name: player.name, membershipType: player.membershipType },
+    peakRank: history.peakRank,
     // Public-safe personal info for the player profile page — deliberately
     // excludes duesStatus and notes, neither of which is meant for a
     // logged-out visitor even though this endpoint has no auth gate.

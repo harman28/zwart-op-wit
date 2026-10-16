@@ -27,33 +27,40 @@ describe('playerGameHistory — same worked example as the golden-master standin
     const history = playerGameHistory(workedExampleInput, JOPPE);
     expect(history.startingValue).toBe(90);
     expect(history.entries).toEqual([
-      { roundNumber: 1, kind: 'GAME', opponentId: JIM, color: 'WHITE', result: 'WHITE_WIN', externalOutcome: null, isSelfArranged: false, points: 86 },
-      { roundNumber: 2, kind: 'GAME', opponentId: WIEBE, color: 'WHITE', result: 'BLACK_WIN', externalOutcome: null, isSelfArranged: false, points: 0 },
+      { roundNumber: 1, kind: 'GAME', opponentId: JIM, opponentRank: 5, opponentOfCount: 6, color: 'WHITE', result: 'WHITE_WIN', externalOutcome: null, isSelfArranged: false, points: 86 },
+      { roundNumber: 2, kind: 'GAME', opponentId: WIEBE, opponentRank: 1, opponentOfCount: 6, color: 'WHITE', result: 'BLACK_WIN', externalOutcome: null, isSelfArranged: false, points: 0 },
     ]);
+    // Joppe was rank 1 after round 1 (his best), dropped to 4 after round 2.
+    expect(history.peakRank).toEqual({ rank: 1, roundNumber: 1, ofCount: 6 });
   });
 
   it("Sebastian's history: starts from his round-1 ending value (87), round 1 draw vs Maurice as Black (rebased to 44), round 2 pairing bye (58)", () => {
     const history = playerGameHistory(workedExampleInput, SEBASTIAN);
     expect(history.startingValue).toBe(87);
     expect(history.entries).toEqual([
-      { roundNumber: 1, kind: 'GAME', opponentId: MAURICE, color: 'BLACK', result: 'DRAW', externalOutcome: null, isSelfArranged: false, points: 44 },
-      { roundNumber: 2, kind: 'PAIRING_BYE', opponentId: null, color: null, result: null, externalOutcome: null, isSelfArranged: false, points: 58 },
+      { roundNumber: 1, kind: 'GAME', opponentId: MAURICE, opponentRank: 3, opponentOfCount: 6, color: 'BLACK', result: 'DRAW', externalOutcome: null, isSelfArranged: false, points: 44 },
+      { roundNumber: 2, kind: 'PAIRING_BYE', opponentId: null, opponentRank: null, opponentOfCount: null, color: null, result: null, externalOutcome: null, isSelfArranged: false, points: 58 },
     ]);
+    // Sebastian was rank 4 after round 1, improved to rank 3 (his best) after round 2.
+    expect(history.peakRank).toEqual({ rank: 3, roundNumber: 2, ofCount: 6 });
   });
 
   it("Robbert's history: starts from his round-1 ending value (85), round 1 loss vs Wiebe as Black (0), round 2 regular bye (85/3)", () => {
     const history = playerGameHistory(workedExampleInput, ROBBERT);
     expect(history.startingValue).toBe(85);
     expect(history.entries).toEqual([
-      { roundNumber: 1, kind: 'GAME', opponentId: WIEBE, color: 'BLACK', result: 'WHITE_WIN', externalOutcome: null, isSelfArranged: false, points: 0 },
-      { roundNumber: 2, kind: 'REGULAR_BYE', opponentId: null, color: null, result: null, externalOutcome: null, isSelfArranged: false, points: 85 / 3 },
+      { roundNumber: 1, kind: 'GAME', opponentId: WIEBE, opponentRank: 2, opponentOfCount: 6, color: 'BLACK', result: 'WHITE_WIN', externalOutcome: null, isSelfArranged: false, points: 0 },
+      { roundNumber: 2, kind: 'REGULAR_BYE', opponentId: null, opponentRank: null, opponentOfCount: null, color: null, result: null, externalOutcome: null, isSelfArranged: false, points: 85 / 3 },
     ]);
+    // Robbert was rank 6 after round 1, improved to rank 5 (his best) after round 2.
+    expect(history.peakRank).toEqual({ rank: 5, roundNumber: 2, ofCount: 6 });
   });
 
-  it('a player with no rounds played yet gets an empty history and their raw baseline as startingValue', () => {
+  it('a player with no rounds played yet gets an empty history, their raw baseline as startingValue, and no peak rank', () => {
     const history = playerGameHistory({ ...workedExampleInput, rounds: [] }, JOPPE);
     expect(history.startingValue).toBe(90);
     expect(history.entries).toEqual([]);
+    expect(history.peakRank).toBeNull();
   });
 
   it("includes the player's own standing row from the same replay — the record/summary shown above the round-by-round table", () => {
