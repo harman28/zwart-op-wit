@@ -171,6 +171,15 @@ Data model (`server/prisma/schema.prisma`) worth knowing up front:
     to. Treat that as the session's own branch, not a home for every feature —
     still cut real topic branches for actual work and PR them in; only fall back
     to the assigned branch if the session setup leaves no other option.
+  - **Never leave the working tree checked out on that session branch between
+    tasks** — it drifts further from `main` with every promotion and becomes a
+    trap: editing on it by habit (e.g. after "return to the session's own
+    branch" following a merge) silently loses whatever's landed on `main`
+    since, and the resulting diff looks like real work got lost. This has
+    actually happened twice in one session. Before writing a single line for
+    a *new* task, run `git fetch origin main && git checkout -b <topic>
+    origin/main` first — every time, no exceptions — and only touch the
+    session branch for the one push it's actually required for.
 - PR the topic branch into `staging` to deploy it for review.
 - Only promote `staging` → `main` (production) on explicit user approval — never
   on your own initiative.
