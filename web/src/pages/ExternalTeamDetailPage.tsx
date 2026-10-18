@@ -115,9 +115,13 @@ export default function ExternalTeamDetailPage() {
               {details.roster.map((p) => (
                 <tr key={p.playerUrl || p.name}>
                   <td className="player-name">
-                    <a href={p.playerUrl} target="_blank" rel="noopener noreferrer">
-                      {p.name}
-                    </a>
+                    {p.playerId != null ? (
+                      <Link to={`/players/${p.playerId}`}>{p.name}</Link>
+                    ) : (
+                      <a href={p.playerUrl} target="_blank" rel="noopener noreferrer">
+                        {p.name}
+                      </a>
+                    )}
                   </td>
                   <td className="num value-cell">{p.rating}</td>
                   <td className="num value-cell">{p.played}</td>

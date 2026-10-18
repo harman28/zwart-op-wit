@@ -1,6 +1,7 @@
 import { prisma } from '../../db/client.js';
+import { matchRosterNamesToPlayers } from './netstandScrape.js';
 import { fetchDivisionStandings, type DivisionStandings } from './netstandDivisionScrape.js';
-import { fetchTeamDetails, type TeamDetails } from './netstandTeamScrape.js';
+import { fetchTeamDetails, type TeamDetails, type TeamRosterPlayer } from './netstandTeamScrape.js';
 
 /**
  * The two Zwart op Wit external teams' own division pages, for the public
@@ -50,14 +51,25 @@ export async function getExternalDivisionStandings(): Promise<ExternalDivisionSt
   return value;
 }
 
-const teamDetailsCache = new Map<number, { expires: number; value: TeamDetails }>();
+export interface EnrichedTeamDetails extends TeamDetails {
+  roster: (TeamRosterPlayer & { playerId: number | null })[];
+}
 
-export async function getTeamDetails(id: number): Promise<TeamDetails | null> {
+const teamDetailsCache = new Map<number, { expires: number; value: EnrichedTeamDetails }>();
+
+export async function getTeamDetails(id: number): Promise<EnrichedTeamDetails | null> {
   const cached = teamDetailsCache.get(id);
   if (cached && cached.expires > Date.now()) return cached.value;
   const team = await prisma.externalTeam.findUnique({ where: { id } });
   if (!team) return null;
-  const value = await fetchTeamDetails(team.netstandUrl);
+  const details = await fetchTeamDetails(team.netstandUrl);
+  // Scoped to players already linked to this ExternalTeam (an admin-managed
+  // signal elsewhere in the app) rather than a blind name search across the
+  // whole club, so a shared first name on a different team can't cause a
+  // wrong match.
+  const candidates = await prisma.player.findMany({ where: { externalTeamId: id } });
+  const roster = matchRosterNamesToPlayers(details.roster, candidates);
+  const value: EnrichedTeamDetails = { ...details, roster };
   teamDetailsCache.set(id, { value, expires: Date.now() + CACHE_TTL_MS });
   return value;
 }
