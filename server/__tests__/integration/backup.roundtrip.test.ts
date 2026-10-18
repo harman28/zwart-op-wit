@@ -30,6 +30,7 @@ describe('full-instance backup export -> wipe -> import round-trip (real Postgre
     // so later test files don't inherit this test's data.
     await prisma.season.deleteMany({});
     await prisma.player.deleteMany({});
+    await prisma.externalTeam.deleteMany({});
     await prisma.clubSettings.update({
       where: { id: 1 },
       data: {
@@ -72,6 +73,22 @@ describe('full-instance backup export -> wipe -> import round-trip (real Postgre
         payload: { name: 'BackupArchivedPlayer' },
       });
       const archivedPlayerId = archivedPlayerRes.json().id;
+
+      // An external team, with the rich player linked to it — this and the
+      // player's own externalTeamName must both survive the round-trip.
+      const teamRes = await app.inject({
+        method: 'POST',
+        url: '/api/admin/external-teams',
+        headers: { cookie },
+        payload: { name: 'Backup External Team', netstandUrl: 'https://sga.netstand.nl/teams/view/999' },
+      });
+      const teamId = teamRes.json().id;
+      await app.inject({
+        method: 'PATCH',
+        url: `/api/admin/players/${richPlayerId}`,
+        headers: { cookie },
+        payload: { externalTeamId: teamId },
+      });
       await app.inject({
         method: 'POST',
         url: `/api/admin/players/${archivedPlayerId}/archive`,
@@ -182,7 +199,17 @@ describe('full-instance backup export -> wipe -> import round-trip (real Postgre
       expect(backup.formatVersion).toBe(2);
 
       const richBefore = backup.players.find((p: { name: string }) => p.name === 'BackupRichPlayer');
-      expect(richBefore).toMatchObject({ gender: 'M', knsbId: '12345678', federation: 'NED', notes: 'plays on Tuesdays' });
+      expect(richBefore).toMatchObject({
+        gender: 'M',
+        knsbId: '12345678',
+        federation: 'NED',
+        notes: 'plays on Tuesdays',
+        externalTeamName: 'Backup External Team',
+      });
+      expect(backup.externalTeams).toContainEqual({
+        name: 'Backup External Team',
+        netstandUrl: 'https://sga.netstand.nl/teams/view/999',
+      });
       const archivedBefore = backup.players.find((p: { name: string }) => p.name === 'BackupArchivedPlayer');
       expect(archivedBefore.archivedAt).not.toBeNull();
       expect(backup.seasons).toHaveLength(2);
@@ -221,6 +248,13 @@ describe('full-instance backup export -> wipe -> import round-trip (real Postgre
       expect(afterPlayers.json()).toHaveLength(beforePlayers.json().length);
       const richAfter = afterPlayers.json().find((p: { name: string }) => p.name === 'BackupRichPlayer');
       expect(richAfter).toMatchObject({ gender: 'M', knsbId: '12345678', federation: 'NED', notes: 'plays on Tuesdays' });
+
+      // The team's own id changes on reimport (freshly assigned, same as
+      // seasons) — resolve the new one by name, same pattern as above.
+      const teamsAfter = await app.inject({ method: 'GET', url: '/api/admin/external-teams', headers: { cookie } });
+      const teamAfter = teamsAfter.json().find((t: { name: string }) => t.name === 'Backup External Team');
+      expect(teamAfter).toMatchObject({ netstandUrl: 'https://sga.netstand.nl/teams/view/999' });
+      expect(richAfter.externalTeamId).toBe(teamAfter.id);
       const archivedAfter = afterPlayers.json().find((p: { name: string }) => p.name === 'BackupArchivedPlayer');
       expect(archivedAfter.archivedAt).not.toBeNull();
 

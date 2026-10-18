@@ -45,6 +45,19 @@ const backupPlayerSchema = z.object({
   // backup file exported before duesStatus existed still restores cleanly.
   duesPaid: z.boolean().optional(),
   duesStatus: duesStatusSchema.optional(),
+  // References externalTeams below by name, same "name not opaque ID"
+  // convention as everywhere else in this file. Optional so a file exported
+  // before this field existed still restores cleanly.
+  externalTeamName: z.string().nullable().optional(),
+});
+
+// A small, manually-curated list (see ExternalTeam's own schema comment) —
+// referenced by name from backupPlayerSchema above, not by its DB id, same
+// reason every other cross-reference in this file is by name: the id is
+// meaningless once restored into a fresh database.
+const backupExternalTeamSchema = z.object({
+  name: z.string(),
+  netstandUrl: z.string(),
 });
 
 const backupSeasonSchema = z.object({
@@ -82,6 +95,9 @@ export const backupFileSchema = z.object({
   clubSettings: backupClubSettingsSchema,
   players: z.array(backupPlayerSchema),
   seasons: z.array(backupSeasonSchema),
+  // Optional/defaulted so a file exported before this field existed still
+  // restores cleanly — it just carries no external teams, same as before.
+  externalTeams: z.array(backupExternalTeamSchema).default([]),
 });
 
 export type BackupFile = z.infer<typeof backupFileSchema>;

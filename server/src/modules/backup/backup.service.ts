@@ -11,8 +11,8 @@ import type { BackupFile } from './backup.schema.js';
  * state, not club data.
  */
 export async function exportFullBackup(): Promise<BackupFile> {
-  const [players, seasons, clubSettings] = await Promise.all([
-    prisma.player.findMany({ orderBy: { id: 'asc' } }),
+  const [players, seasons, clubSettings, externalTeams] = await Promise.all([
+    prisma.player.findMany({ orderBy: { id: 'asc' }, include: { externalTeam: true } }),
     prisma.season.findMany({
       orderBy: { id: 'asc' },
       include: {
@@ -27,6 +27,7 @@ export async function exportFullBackup(): Promise<BackupFile> {
       },
     }),
     prisma.clubSettings.findUniqueOrThrow({ where: { id: 1 } }),
+    prisma.externalTeam.findMany({ orderBy: { id: 'asc' } }),
   ]);
 
   return {
@@ -50,7 +51,9 @@ export async function exportFullBackup(): Promise<BackupFile> {
       knsbId: p.knsbId,
       federation: p.federation,
       duesStatus: p.duesStatus,
+      externalTeamName: p.externalTeam?.name ?? null,
     })),
+    externalTeams: externalTeams.map((t) => ({ name: t.name, netstandUrl: t.netstandUrl })),
     seasons: seasons.map((season) => ({
       name: season.name,
       topValue: season.topValue,
@@ -113,15 +116,24 @@ export async function importFullBackup(data: BackupFile) {
     if (seen.has(key)) throw new HttpError(409, `"${p.name}" appears more than once in the players list`);
     seen.add(key);
   }
+  const seenTeams = new Set<string>();
+  for (const t of data.externalTeams) {
+    const key = t.name.trim().toLowerCase();
+    if (seenTeams.has(key)) throw new HttpError(409, `"${t.name}" appears more than once in the externalTeams list`);
+    seenTeams.add(key);
+  }
 
   return prisma.$transaction(
     async (tx) => {
       // Seasons cascade away their own enrollments/rounds/signups/entries —
       // see the onDelete: Cascade relations in schema.prisma. Players have
       // to go second: nothing references them anymore once every season
-      // (and everything under it) is gone.
+      // (and everything under it) is gone. ExternalTeam has no onDelete
+      // rule (Restrict by default), so it goes last — once every Player row
+      // that could reference one is gone too.
       await tx.season.deleteMany({});
       await tx.player.deleteMany({});
+      await tx.externalTeam.deleteMany({});
 
       await tx.clubSettings.update({
         where: { id: 1 },
@@ -138,6 +150,22 @@ export async function importFullBackup(data: BackupFile) {
         },
       });
 
+      // Created before players — player creation below needs to resolve
+      // externalTeamName to an id, same reason seasons are created after
+      // players (enrollments need a playerId to resolve).
+      if (data.externalTeams.length > 0) {
+        await tx.externalTeam.createMany({
+          data: data.externalTeams.map((t) => ({ name: t.name, netstandUrl: t.netstandUrl })),
+        });
+      }
+      const allExternalTeams = await tx.externalTeam.findMany();
+      const externalTeamIdByName = new Map(allExternalTeams.map((t) => [t.name, t.id]));
+      const resolveExternalTeamId = (name: string): number => {
+        const id = externalTeamIdByName.get(name);
+        if (id == null) throw new HttpError(400, `Backup references an external team not listed in "externalTeams": "${name}"`);
+        return id;
+      };
+
       if (data.players.length > 0) {
         await tx.player.createMany({
           data: data.players.map((p) => ({
@@ -151,6 +179,7 @@ export async function importFullBackup(data: BackupFile) {
             // New files carry duesStatus directly; an older file only has
             // duesPaid (or neither, for a file predating both).
             duesStatus: p.duesStatus ?? (p.duesPaid ? 'PAID' : 'UNPAID'),
+            externalTeamId: p.externalTeamName ? resolveExternalTeamId(p.externalTeamName) : null,
           })),
         });
       }
