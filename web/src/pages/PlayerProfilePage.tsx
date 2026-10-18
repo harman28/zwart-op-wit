@@ -72,10 +72,7 @@ export default function PlayerProfilePage() {
   if (history.externalTeam) {
     metaItems.push(
       <span key="team">
-        Plays for{' '}
-        <a href={history.externalTeam.netstandUrl} target="_blank" rel="noopener noreferrer">
-          {history.externalTeam.name}
-        </a>
+        Plays for <Link to={`/external-teams/${history.externalTeam.id}`}>{history.externalTeam.name}</Link>
       </span>,
     );
   }
