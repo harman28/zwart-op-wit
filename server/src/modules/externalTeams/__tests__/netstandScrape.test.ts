@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { findPairingUrlInTeamPageHtml, parseBoardNumbersFromPairingHtml } from '../netstandScrape.js';
+import { findPairingUrlInTeamPageHtml, matchRosterNamesToPlayers, parseBoardNumbersFromPairingHtml } from '../netstandScrape.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const fixture = (name: string) => readFileSync(path.join(__dirname, 'fixtures', name), 'utf-8');
@@ -129,5 +129,49 @@ describe('parseBoardNumbersFromPairingHtml (our team as the away/"Uit" side)', (
     expect(boards.get('freerk')).toBe(2);
     expect(boards.has('opponent')).toBe(false);
     expect(boards.has('second')).toBe(false);
+  });
+});
+
+describe('matchRosterNamesToPlayers', () => {
+  it('matches a netstand roster name to the one candidate with the same first name', () => {
+    const roster = [{ name: 'Bolderman, J. (Joppe)' }, { name: 'Reitsma, F. (Freerk)' }];
+    const candidates = [
+      { id: 101, name: 'Joppe' },
+      { id: 102, name: 'Freerk' },
+    ];
+    const result = matchRosterNamesToPlayers(roster, candidates);
+    expect(result).toEqual([
+      { name: 'Bolderman, J. (Joppe)', playerId: 101 },
+      { name: 'Reitsma, F. (Freerk)', playerId: 102 },
+    ]);
+  });
+
+  it('matches case-insensitively', () => {
+    const result = matchRosterNamesToPlayers([{ name: 'Bolderman, J. (joppe)' }], [{ id: 101, name: 'JOPPE' }]);
+    expect(result[0]!.playerId).toBe(101);
+  });
+
+  it('leaves a name unmatched when no candidate shares that first name', () => {
+    const result = matchRosterNamesToPlayers([{ name: 'Bolderman, J. (Joppe)' }], [{ id: 102, name: 'Freerk' }]);
+    expect(result[0]!.playerId).toBeNull();
+  });
+
+  it('leaves a name unmatched rather than guessing when two candidates share the first name', () => {
+    const result = matchRosterNamesToPlayers(
+      [{ name: 'Bolderman, J. (Joppe)' }],
+      [
+        { id: 101, name: 'Joppe' },
+        { id: 103, name: 'Joppe' },
+      ],
+    );
+    expect(result[0]!.playerId).toBeNull();
+  });
+
+  it('preserves every other field on the roster entry untouched', () => {
+    const result = matchRosterNamesToPlayers(
+      [{ name: 'Bolderman, J. (Joppe)', rating: 1941, played: 1, points: 0 }],
+      [{ id: 101, name: 'Joppe' }],
+    );
+    expect(result[0]).toEqual({ name: 'Bolderman, J. (Joppe)', rating: 1941, played: 1, points: 0, playerId: 101 });
   });
 });

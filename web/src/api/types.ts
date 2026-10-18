@@ -206,6 +206,10 @@ export interface TeamRosterPlayer {
   rating: number;
   played: number;
   points: number;
+  /** This site's own Player.id, when the name could be unambiguously
+   * matched to one of our players linked to this external team — null
+   * falls back to the netstand link (see playerUrl). */
+  playerId: number | null;
 }
 
 export interface TeamDetails {

@@ -17,9 +17,35 @@ function toDutchDate(date: Date): string {
 /** "Bolderman, J. (Joppe)" -> "Joppe" — every player link on netstand (team
  * roster and pairing pages alike) uses this "Last, Initials (First)" format;
  * our own Player.name only ever stores the first name. */
-function extractFirstName(linkText: string): string | null {
+export function extractFirstName(linkText: string): string | null {
   const match = linkText.match(/\(([^)]+)\)\s*$/);
   return match?.[1]?.trim() ?? null;
+}
+
+/**
+ * Matches each roster entry's netstand name to one of our own Player rows,
+ * so a team page can link a name straight to its profile instead of out to
+ * netstand. `candidates` is the caller's job to narrow first (e.g. to
+ * players already linked to this ExternalTeam) — matching here is by first
+ * name alone, which would be far too loose across the whole club, but is
+ * safe once scoped to one team's own small roster. A name that still
+ * resolves to more than one candidate (two teammates sharing a first name)
+ * is left unmatched rather than guessing.
+ */
+export function matchRosterNamesToPlayers<T extends { name: string }>(
+  roster: T[],
+  candidates: { id: number; name: string }[],
+): (T & { playerId: number | null })[] {
+  const byFirstName = new Map<string, number[]>();
+  for (const p of candidates) {
+    const key = p.name.trim().toLowerCase();
+    byFirstName.set(key, [...(byFirstName.get(key) ?? []), p.id]);
+  }
+  return roster.map((entry) => {
+    const firstName = extractFirstName(entry.name)?.toLowerCase();
+    const matches = firstName ? (byFirstName.get(firstName) ?? []) : [];
+    return { ...entry, playerId: matches.length === 1 ? matches[0]! : null };
+  });
 }
 
 /**
