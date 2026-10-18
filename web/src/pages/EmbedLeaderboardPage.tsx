@@ -11,12 +11,15 @@ const CURRENT = 'current';
 
 /**
  * A bare leaderboard, meant to be iframed into the club's own site (e.g.
- * zwartopwit.org) — no masthead, no nav tabs, no admin affordances, just the
- * standings. Deliberately ignores admin login state entirely (not just
- * hiding admin buttons): an embed showing "Log out" / "+ New Round" because
- * whoever copied the iframe URL happened to be logged in elsewhere is
- * exactly the bug this page exists to avoid. App.tsx skips <NavBar/> for
- * every /embed/* route.
+ * zwartopwit.org) — no masthead, no nav tabs, no admin affordances, just a
+ * small "Leaderboard" header (the same .page-title style every other public
+ * page uses) plus the standings themselves — the embedding page's own
+ * surrounding content supplies its own heading, so this stays minimal.
+ * Deliberately ignores admin login state entirely (not just hiding admin
+ * buttons): an embed showing "Log out" / "+ New Round" because whoever
+ * copied the iframe URL happened to be logged in elsewhere is exactly the
+ * bug this page exists to avoid. App.tsx skips <NavBar/> for every /embed/*
+ * route.
  */
 export default function EmbedLeaderboardPage() {
   const { season, loading: seasonLoading } = useLatestSeason();
@@ -48,6 +51,7 @@ export default function EmbedLeaderboardPage() {
   if (seasonLoading || (loading && !leaderboard)) {
     return (
       <div className="app embed-app">
+        <h1 className="page-title">Leaderboard</h1>
         <p style={{ color: 'var(--muted)' }}>Loading…</p>
       </div>
     );
@@ -55,6 +59,7 @@ export default function EmbedLeaderboardPage() {
   if (!season) {
     return (
       <div className="app embed-app">
+        <h1 className="page-title">Leaderboard</h1>
         <p style={{ color: 'var(--muted)' }}>No season yet.</p>
       </div>
     );
@@ -73,6 +78,7 @@ export default function EmbedLeaderboardPage() {
 
   return (
     <div className="app embed-app">
+      <h1 className="page-title">Leaderboard</h1>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
         <input
           className="leaderboard-search"
