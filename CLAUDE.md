@@ -187,6 +187,17 @@ Data model (`server/prisma/schema.prisma`) worth knowing up front:
   to `main` — `git push origin origin/main:staging --force-with-lease` — and
   retry the merge.
 
+## Chat conventions
+
+- **Every URL in a chat reply is a markdown link, no exceptions** — not a bare
+  URL, not backticked, not "see X at the URL below." This applies to every
+  single one in a message, not just the first: a reply with a staging link
+  and a production link needs both as links, not one link followed by a bare
+  URL out of habit two sentences later. This has been pointed out multiple
+  times in one session and still slipped — treat it as a hard formatting
+  rule to check before sending any message that contains a URL, not a
+  "remember to be nice about it" guideline.
+
 ## Backup / restore
 
 The whole instance — every season, every player (active and archived, every
