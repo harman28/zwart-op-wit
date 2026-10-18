@@ -4,7 +4,10 @@ import NavBar from './components/NavBar.js';
 import { AdminProvider, useAdmin } from './context/AdminContext.js';
 import { ThemeProvider } from './context/ThemeContext.js';
 import ActivityLogPage from './pages/ActivityLogPage.js';
+import EmbedExternalTeamsPage from './pages/EmbedExternalTeamsPage.js';
 import EmbedLeaderboardPage from './pages/EmbedLeaderboardPage.js';
+import ExternalTeamDetailPage from './pages/ExternalTeamDetailPage.js';
+import ExternalTeamsPage from './pages/ExternalTeamsPage.js';
 import LeaderboardPage from './pages/LeaderboardPage.js';
 import LoginPage from './pages/LoginPage.js';
 import NewRoundPage from './pages/NewRoundPage.js';
@@ -31,8 +34,11 @@ function AppRoutes() {
         <Route path="/" element={<RoundsPage />} />
         <Route path="/round/:number" element={<RoundsPage />} />
         <Route path="/leaderboard" element={<LeaderboardPage />} />
+        <Route path="/external-teams" element={<ExternalTeamsPage />} />
+        <Route path="/external-teams/:id" element={<ExternalTeamDetailPage />} />
         <Route path="/players/:id" element={<PlayerProfilePage />} />
         <Route path="/embed/leaderboard" element={<EmbedLeaderboardPage />} />
+        <Route path="/embed/external-teams" element={<EmbedExternalTeamsPage />} />
         <Route path="/admin/login" element={<LoginPage />} />
         <Route
           path="/admin/new-round"

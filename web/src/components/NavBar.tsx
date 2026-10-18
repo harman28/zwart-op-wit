@@ -45,6 +45,9 @@ export default function NavBar() {
           <Link to="/leaderboard" className={linkClass('/leaderboard')}>
             Leaderboard
           </Link>
+          <Link to="/external-teams" className={linkClass('/external-teams')}>
+            External Teams
+          </Link>
           {isAdmin && (
             <>
               <Link to="/admin/players" className={linkClass('/admin/players')}>

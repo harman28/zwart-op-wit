@@ -166,3 +166,58 @@ export interface ClubSettings {
   defaultKnsbArbiterEmail: string | null;
   defaultKnsbExportFilename: string;
 }
+
+export interface DivisionTeamStanding {
+  rank: number;
+  name: string;
+  teamUrl: string;
+  matchPoints: number;
+  boardPoints: number;
+  played: number;
+  wins: number;
+  draws: number;
+  losses: number;
+}
+
+export interface ExternalDivisionStandings {
+  ourTeamName: string;
+  ourTeamId: number | null;
+  divisionName: string;
+  teams: DivisionTeamStanding[];
+}
+
+export interface TeamMatch {
+  round: number;
+  date: string;
+  homeTeam: string;
+  homeTeamUrl: string;
+  awayTeam: string;
+  awayTeamUrl: string;
+  isHome: boolean;
+  ownScore: number | null;
+  opponentScore: number | null;
+  outcome: 'WIN' | 'DRAW' | 'LOSS' | null;
+  pairingUrl: string;
+}
+
+export interface TeamRosterPlayer {
+  name: string;
+  playerUrl: string;
+  rating: number;
+  played: number;
+  points: number;
+  /** This site's own Player.id, when the name could be unambiguously
+   * matched to one of our players linked to this external team — null
+   * falls back to the netstand link (see playerUrl). */
+  playerId: number | null;
+}
+
+export interface TeamDetails {
+  teamName: string;
+  matchPoints: number;
+  boardPoints: number;
+  divisionName: string;
+  divisionUrl: string;
+  matches: TeamMatch[];
+  roster: TeamRosterPlayer[];
+}
