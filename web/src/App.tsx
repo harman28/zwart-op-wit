@@ -6,6 +6,7 @@ import { ThemeProvider } from './context/ThemeContext.js';
 import ActivityLogPage from './pages/ActivityLogPage.js';
 import EmbedExternalTeamsPage from './pages/EmbedExternalTeamsPage.js';
 import EmbedLeaderboardPage from './pages/EmbedLeaderboardPage.js';
+import ExternalTeamsPage from './pages/ExternalTeamsPage.js';
 import LeaderboardPage from './pages/LeaderboardPage.js';
 import LoginPage from './pages/LoginPage.js';
 import NewRoundPage from './pages/NewRoundPage.js';
@@ -32,6 +33,7 @@ function AppRoutes() {
         <Route path="/" element={<RoundsPage />} />
         <Route path="/round/:number" element={<RoundsPage />} />
         <Route path="/leaderboard" element={<LeaderboardPage />} />
+        <Route path="/external-teams" element={<ExternalTeamsPage />} />
         <Route path="/players/:id" element={<PlayerProfilePage />} />
         <Route path="/embed/leaderboard" element={<EmbedLeaderboardPage />} />
         <Route path="/embed/external-teams" element={<EmbedExternalTeamsPage />} />
