@@ -166,3 +166,21 @@ export interface ClubSettings {
   defaultKnsbArbiterEmail: string | null;
   defaultKnsbExportFilename: string;
 }
+
+export interface DivisionTeamStanding {
+  rank: number;
+  name: string;
+  teamUrl: string;
+  matchPoints: number;
+  boardPoints: number;
+  played: number;
+  wins: number;
+  draws: number;
+  losses: number;
+}
+
+export interface ExternalDivisionStandings {
+  ourTeamName: string;
+  divisionName: string;
+  teams: DivisionTeamStanding[];
+}
