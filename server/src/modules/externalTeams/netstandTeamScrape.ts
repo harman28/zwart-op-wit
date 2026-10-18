@@ -50,13 +50,20 @@ export interface TeamDetails {
  * needed because "Spelers" and "Opgegeven Spelers" render two structurally
  * identical tables (same headers, and in practice the same rows too, since a
  * club rarely fields someone who isn't registered); proximity to the right
- * heading is the only way to tell them apart. */
+ * heading is the only way to tell them apart.
+ *
+ * The table netstand actually serves (before any JS runs — all this ever
+ * sees, since this is a plain HTTP fetch) is a *direct* sibling of the
+ * heading, not wrapped in a container div the way a browser's live DOM
+ * shows it after DataTables.js initializes. `.find()` alone only searches
+ * descendants and would miss it, so this checks the sibling set itself too. */
 function tableAfterHeading($: cheerio.CheerioAPI, headingText: string) {
   const heading = $('h2')
     .filter((_, el) => $(el).text().trim() === headingText)
     .first();
   if (heading.length === 0) return null;
-  const table = heading.nextUntil('h2').find('table').first();
+  const siblings = heading.nextUntil('h2');
+  const table = siblings.filter('table').add(siblings.find('table')).first();
   return table.length > 0 ? table : null;
 }
 
@@ -81,7 +88,12 @@ export function parseTeamPageHtml(html: string, pageUrl: string): TeamDetails {
   const divisionHref = divisionLink.attr('href') ?? '';
   const divisionUrl = divisionHref ? new URL(divisionHref, pageUrl).href : '';
 
-  const matches: TeamMatch[] = $('table.table-striped.table-bordered:not(.dataTable) tbody tr')
+  // The "Spelers"/"Opgegeven Spelers" tables also carry table-striped +
+  // table-bordered on the raw page (they only pick up the `dataTable` class
+  // once DataTables.js hydrates them client-side, which this fetch never
+  // sees) — data-toggle="datatable" is the one marker present on the raw
+  // page itself, so that's what actually distinguishes them.
+  const matches: TeamMatch[] = $('table.table-striped.table-bordered:not([data-toggle="datatable"]) tbody tr')
     .toArray()
     .map((row) => {
       const cells = $(row).find('td');
