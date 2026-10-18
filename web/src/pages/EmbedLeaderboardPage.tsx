@@ -12,9 +12,9 @@ const CURRENT = 'current';
 /**
  * A bare leaderboard, meant to be iframed into the club's own site (e.g.
  * zwartopwit.org) — no masthead, no nav tabs, no admin affordances, just a
- * small "Leaderboard" header (the same .page-title style every other public
- * page uses) plus the standings themselves — the embedding page's own
- * surrounding content supplies its own heading, so this stays minimal.
+ * "Leaderboard" header (.embed-title — bolder than the site's usual .page-title
+ * eyebrow-label style, since here it's the only heading on the page, not one
+ * sitting above louder content) plus the standings themselves.
  * Deliberately ignores admin login state entirely (not just hiding admin
  * buttons): an embed showing "Log out" / "+ New Round" because whoever
  * copied the iframe URL happened to be logged in elsewhere is exactly the
@@ -51,7 +51,7 @@ export default function EmbedLeaderboardPage() {
   if (seasonLoading || (loading && !leaderboard)) {
     return (
       <div className="app embed-app">
-        <h1 className="page-title">Leaderboard</h1>
+        <h1 className="embed-title">Leaderboard</h1>
         <p style={{ color: 'var(--muted)' }}>Loading…</p>
       </div>
     );
@@ -59,7 +59,7 @@ export default function EmbedLeaderboardPage() {
   if (!season) {
     return (
       <div className="app embed-app">
-        <h1 className="page-title">Leaderboard</h1>
+        <h1 className="embed-title">Leaderboard</h1>
         <p style={{ color: 'var(--muted)' }}>No season yet.</p>
       </div>
     );
@@ -78,7 +78,7 @@ export default function EmbedLeaderboardPage() {
 
   return (
     <div className="app embed-app">
-      <h1 className="page-title">Leaderboard</h1>
+      <h1 className="embed-title">Leaderboard</h1>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
         <input
           className="leaderboard-search"

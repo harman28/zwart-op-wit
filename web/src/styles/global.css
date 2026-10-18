@@ -50,6 +50,16 @@ button {
   padding-top: 16px;
   padding-bottom: 16px;
 }
+/* .page-title (used elsewhere) is a muted uppercase eyebrow label, meant to
+   sit above other, louder page content — too subtle once it's the only
+   heading on the page, which is the embed's situation once the host page's
+   own "Current standings" heading is removed. This reads as an actual title. */
+.embed-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 16px;
+}
 
 /* ---- masthead + nav ---- */
 .masthead {
