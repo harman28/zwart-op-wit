@@ -5,6 +5,7 @@ import {
   createExternalTeam,
   deleteExternalTeam,
   getExternalDivisionStandings,
+  getTeamDetails,
   listExternalTeams,
   updateExternalTeam,
 } from './externalTeams.service.js';
@@ -20,6 +21,17 @@ export async function externalTeamsRoutes(app: FastifyInstance): Promise<void> {
   // Public — feeds the /embed/external-teams page, same unauthenticated
   // access as the rest of the public leaderboard/round views.
   app.get('/api/external-teams/standings', async () => getExternalDivisionStandings());
+
+  // Public — our own team's schedule/results/roster page (/external-teams/:id).
+  app.get('/api/external-teams/:id/details', async (request, reply) => {
+    const params = idParams.parse(request.params);
+    const details = await getTeamDetails(params.id);
+    if (!details) {
+      reply.code(404);
+      return { error: 'Team not found' };
+    }
+    return details;
+  });
 
   app.get('/api/admin/external-teams', { preHandler: requireAdmin }, async () => listExternalTeams());
 
