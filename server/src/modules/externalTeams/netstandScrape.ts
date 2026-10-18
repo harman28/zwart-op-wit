@@ -39,9 +39,12 @@ export function findPairingUrlInTeamPageHtml(html: string, date: Date, pageUrl: 
   const targetDate = toDutchDate(date);
   let pairingUrl: string | null = null;
   // "Wedstrijden" is the only table with both classes but not also a
-  // DataTables-managed one — the roster tables below it are `.dataTable` too
-  // and would otherwise collide with this selector.
-  $('table.table-striped.table-bordered:not(.dataTable) tbody tr').each((_, row) => {
+  // DataTables-managed one — the roster tables below it get the `dataTable`
+  // class and wrapper markup only once DataTables.js hydrates them client
+  // side, which this (a plain HTTP fetch, never JS) never sees; on the raw
+  // page itself they're already marked with data-toggle="datatable", which
+  // is what actually distinguishes them here.
+  $('table.table-striped.table-bordered:not([data-toggle="datatable"]) tbody tr').each((_, row) => {
     const cells = $(row).find('td');
     const rowDate = $(cells.get(1)).text().trim();
     if (rowDate === targetDate) {
