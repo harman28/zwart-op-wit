@@ -1,5 +1,6 @@
 import { prisma } from '../../db/client.js';
 import { fetchDivisionStandings, type DivisionStandings } from './netstandDivisionScrape.js';
+import { fetchTeamDetails, type TeamDetails } from './netstandTeamScrape.js';
 
 /**
  * The two Zwart op Wit external teams' own division pages, for the public
@@ -18,6 +19,13 @@ const EXTERNAL_DIVISIONS: { teamName: string; divisionUrl: string }[] = [
 
 export interface ExternalDivisionStandings extends DivisionStandings {
   ourTeamName: string;
+  /** The matching ExternalTeam.id, looked up by name — null if no such row
+   * exists (e.g. the name in EXTERNAL_DIVISIONS and the admin-managed
+   * ExternalTeam table have drifted apart). Lets the standings table link
+   * our own team's name to its own /external-teams/:id page, same id the
+   * admin-only CRUD endpoints below already use — single source of truth
+   * for "which id is this team", rather than inventing a second one here. */
+  ourTeamId: number | null;
 }
 
 /** Standings rarely change (at most once a week, when a round's results get
@@ -30,12 +38,27 @@ let cache: { expires: number; value: ExternalDivisionStandings[] } | null = null
 export async function getExternalDivisionStandings(): Promise<ExternalDivisionStandings[]> {
   if (cache && cache.expires > Date.now()) return cache.value;
   const value = await Promise.all(
-    EXTERNAL_DIVISIONS.map(async ({ teamName, divisionUrl }) => ({
-      ourTeamName: teamName,
-      ...(await fetchDivisionStandings(divisionUrl)),
-    })),
+    EXTERNAL_DIVISIONS.map(async ({ teamName, divisionUrl }) => {
+      const [standings, ourTeam] = await Promise.all([
+        fetchDivisionStandings(divisionUrl),
+        prisma.externalTeam.findFirst({ where: { name: teamName } }),
+      ]);
+      return { ourTeamName: teamName, ourTeamId: ourTeam?.id ?? null, ...standings };
+    }),
   );
   cache = { value, expires: Date.now() + CACHE_TTL_MS };
+  return value;
+}
+
+const teamDetailsCache = new Map<number, { expires: number; value: TeamDetails }>();
+
+export async function getTeamDetails(id: number): Promise<TeamDetails | null> {
+  const cached = teamDetailsCache.get(id);
+  if (cached && cached.expires > Date.now()) return cached.value;
+  const team = await prisma.externalTeam.findUnique({ where: { id } });
+  if (!team) return null;
+  const value = await fetchTeamDetails(team.netstandUrl);
+  teamDetailsCache.set(id, { value, expires: Date.now() + CACHE_TTL_MS });
   return value;
 }
 

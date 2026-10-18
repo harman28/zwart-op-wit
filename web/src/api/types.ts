@@ -181,6 +181,39 @@ export interface DivisionTeamStanding {
 
 export interface ExternalDivisionStandings {
   ourTeamName: string;
+  ourTeamId: number | null;
   divisionName: string;
   teams: DivisionTeamStanding[];
+}
+
+export interface TeamMatch {
+  round: number;
+  date: string;
+  homeTeam: string;
+  homeTeamUrl: string;
+  awayTeam: string;
+  awayTeamUrl: string;
+  isHome: boolean;
+  ownScore: number | null;
+  opponentScore: number | null;
+  outcome: 'WIN' | 'DRAW' | 'LOSS' | null;
+  pairingUrl: string;
+}
+
+export interface TeamRosterPlayer {
+  name: string;
+  playerUrl: string;
+  rating: number;
+  played: number;
+  points: number;
+}
+
+export interface TeamDetails {
+  teamName: string;
+  matchPoints: number;
+  boardPoints: number;
+  divisionName: string;
+  divisionUrl: string;
+  matches: TeamMatch[];
+  roster: TeamRosterPlayer[];
 }
