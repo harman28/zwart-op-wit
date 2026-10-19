@@ -64,6 +64,25 @@ button {
   margin: 0 0 16px;
 }
 
+/* The external-division standings table's "this is our team" row — a 1px
+   outline alone read as too subtle against the zebra striping. A background
+   tint + a thicker border make it findable at a glance; the ★ marker on the
+   name itself means the signal doesn't depend on noticing a color/border at
+   all (useful at a glance, and for anyone who can't rely on color contrast). */
+table.board tbody tr.ext-ours-row {
+  background: color-mix(in srgb, var(--accent) 14%, var(--card));
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.ext-ours-card {
+  background: color-mix(in srgb, var(--accent) 14%, var(--card));
+  outline: 2px solid var(--accent);
+}
+.ext-ours-marker {
+  color: var(--accent);
+  margin-right: 2px;
+}
+
 /* ---- masthead + nav ---- */
 .masthead {
   display: flex;

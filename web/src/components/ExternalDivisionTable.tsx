@@ -17,9 +17,16 @@ function TeamNameCell({ team, ourTeamId, wrap }: { team: DivisionTeamStanding; o
   const style = wrap ? { whiteSpace: 'normal' as const, overflow: 'visible' as const, textOverflow: 'clip' as const } : undefined;
   if (ourTeamId != null) {
     return (
-      <Link to={`/external-teams/${ourTeamId}`} className="player-name" style={style}>
-        {team.name}
-      </Link>
+      <>
+        {/* Marks "this is our team" independent of the row's background
+            tint/border — a signal that doesn't rely on noticing a color. */}
+        <span className="ext-ours-marker" aria-hidden="true">
+          ★
+        </span>
+        <Link to={`/external-teams/${ourTeamId}`} className="player-name" style={style}>
+          {team.name}
+        </Link>
+      </>
     );
   }
   return (
@@ -56,7 +63,7 @@ export default function ExternalDivisionTable({ division }: { division: External
           </thead>
           <tbody>
             {division.teams.map((t) => (
-              <tr key={t.teamUrl || t.name} style={isOurs(t) ? { outline: '1px solid var(--accent)', outlineOffset: -1 } : undefined}>
+              <tr key={t.teamUrl || t.name} className={isOurs(t) ? 'ext-ours-row' : undefined}>
                 <td className={rankClass(t.rank)}>{t.rank}</td>
                 <td>
                   <TeamNameCell team={t} ourTeamId={ourTeamIdFor(t)} />
@@ -75,7 +82,7 @@ export default function ExternalDivisionTable({ division }: { division: External
 
       <div className="lb-cards">
         {division.teams.map((t) => (
-          <div className="lb-card" key={t.teamUrl || t.name} style={isOurs(t) ? { outline: '1px solid var(--accent)' } : undefined}>
+          <div className={isOurs(t) ? 'lb-card ext-ours-card' : 'lb-card'} key={t.teamUrl || t.name}>
             <div className="lb-card-top">
               <div className="lb-card-left">
                 <span className={rankClass(t.rank)}>{t.rank}</span>
