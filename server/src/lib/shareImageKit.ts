@@ -41,6 +41,21 @@ export function el(type: string, style: Record<string, unknown>, children?: unkn
   return { type, props: { style, ...(children !== undefined ? { children } : {}) } };
 }
 
+/** A labeled number — "WIN" over a big colored "4" — used identically by
+ * the player card's Win/Draw/Loss row and the team card's MP/BP/Win/Draw/
+ * Loss rows. */
+export function statTile(label: string, value: string, color: string): SatoriNode {
+  return el('div', { display: 'flex', flexDirection: 'column' }, [
+    el('div', { display: 'flex', fontSize: 20, lineHeight: 1.3, color: COLORS.muted, letterSpacing: 1 }, [label.toUpperCase()]),
+    el('div', { display: 'flex', fontSize: 72, lineHeight: 1.1, fontWeight: 700, color }, [value]),
+  ]);
+}
+
+/** A fixed-width horizontal gap between stat tiles in a row. */
+export function statGap(width = 48): SatoriNode {
+  return el('div', { display: 'flex', width }, []);
+}
+
 /** The fixed WIDTH/HEIGHT canvas every card shares — background, padding,
  * and vertical centering of whatever `children` it's given. Without the
  * centering, a card with only a few short lines (the player/team cards)
@@ -78,6 +93,25 @@ export function kicker(): SatoriNode {
     { display: 'flex', flexShrink: 0, fontSize: 20, lineHeight: 1.3, letterSpacing: 3, color: COLORS.accent, fontWeight: 700 },
     ['ZWART OP WIT'],
   );
+}
+
+/** Two fixed-width columns, centered as one block within the canvas — used
+ * by the player and team cards to separate "static identity" (left: name,
+ * and whatever else doesn't change from one season/division to the next)
+ * from "current standing" (right: season/division, rank, record). A fixed
+ * width rather than flex:1 for the right column matters here: a flexed box
+ * stretches to fill the remaining row space, but its *content* (a few short
+ * lines) stays left-aligned within that box regardless, so flexing it just
+ * hides unused space inside the box instead of removing it — a matching
+ * fixed width keeps the row's actual visible content close to the left
+ * column's own width, which centering the row then balances against the
+ * canvas as a whole. */
+export function twoColumnCard(left: SatoriNode[], right: SatoriNode[]): SatoriNode {
+  const COLUMN_WIDTH = 460;
+  const leftColumn = el('div', { display: 'flex', flexDirection: 'column', flexShrink: 0, width: COLUMN_WIDTH }, left);
+  const rightColumn = el('div', { display: 'flex', flexDirection: 'column', flexShrink: 0, width: COLUMN_WIDTH, marginLeft: 72 }, right);
+  const row = el('div', { display: 'flex', flexDirection: 'row' }, [leftColumn, rightColumn]);
+  return canvas([el('div', { display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }, [row])]);
 }
 
 /** "<Title>" is deliberately small (40px, not a hero title) — whatever the

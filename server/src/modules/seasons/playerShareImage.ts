@@ -7,15 +7,8 @@
 // size, so this renders on read with a short TTL cache rather than
 // persisting a row anywhere — same tradeoff externalTeams.service.ts makes
 // for its own standings.
-import { canvas, COLORS, el, kicker, toPng, withTtlCache, type SatoriNode } from '../../lib/shareImageKit.js';
+import { COLORS, el, kicker, statGap, statTile, toPng, twoColumnCard, withTtlCache } from '../../lib/shareImageKit.js';
 import { getPlayerHistory, getSeason } from './seasons.service.js';
-
-function recordStat(label: string, value: number, color: string): SatoriNode {
-  return el('div', { display: 'flex', flexDirection: 'column' }, [
-    el('div', { display: 'flex', fontSize: 20, lineHeight: 1.3, color: COLORS.muted, letterSpacing: 1 }, [label.toUpperCase()]),
-    el('div', { display: 'flex', fontSize: 72, lineHeight: 1.1, fontWeight: 700, color }, [String(value)]),
-  ]);
-}
 
 /** Two columns, not the generic kicker/title/subtitle/body `frame` the
  * round and team cards use: the left side is this player's own static
@@ -40,7 +33,7 @@ async function renderPlayerShareImagePng(input: {
    * own meta line. Null if not linked to an external team. */
   teamLine: string | null;
 }): Promise<Buffer> {
-  const identityColumn = el('div', { display: 'flex', flexDirection: 'column', flexShrink: 0, width: 460 }, [
+  const left = [
     kicker(),
     el('div', { display: 'flex', fontSize: 40, lineHeight: 1.25, fontWeight: 700, color: COLORS.accent, marginTop: 12 }, [input.name]),
     ...(input.knsbLine
@@ -49,34 +42,23 @@ async function renderPlayerShareImagePng(input: {
     ...(input.teamLine
       ? [el('div', { display: 'flex', fontSize: 22, lineHeight: 1.4, color: COLORS.muted, marginTop: input.knsbLine ? 6 : 18 }, [input.teamLine])]
       : []),
-  ]);
+  ];
 
-  // Fixed width, not flex:1 — a flexed box stretches to fill the remaining
-  // row space, but its *content* (short lines of text) stays left-aligned
-  // within that box regardless, so flexing it just hides unused space
-  // inside the box instead of removing it. A matching fixed width keeps the
-  // row's actual visible content close to the identity column's own width,
-  // which centering below then balances against the canvas as a whole.
-  const seasonColumn = el('div', { display: 'flex', flexDirection: 'column', flexShrink: 0, width: 460, marginLeft: 72 }, [
+  const right = [
     el('div', { display: 'flex', fontSize: 24, lineHeight: 1.3, color: COLORS.muted }, [
       `${input.seasonName} · Rank #${input.rank} of ${input.fieldSize}`,
     ]),
     el('div', { display: 'flex', flexDirection: 'row', alignItems: 'flex-end', marginTop: 28 }, [
-      recordStat('Win', input.wins, COLORS.win),
-      el('div', { display: 'flex', width: 48 }, []),
-      recordStat('Draw', input.draws, COLORS.draw),
-      el('div', { display: 'flex', width: 48 }, []),
-      recordStat('Loss', input.losses, COLORS.loss),
+      statTile('Win', String(input.wins), COLORS.win),
+      statGap(),
+      statTile('Draw', String(input.draws), COLORS.draw),
+      statGap(),
+      statTile('Loss', String(input.losses), COLORS.loss),
     ]),
     el('div', { display: 'flex', fontSize: 22, lineHeight: 1.3, color: COLORS.muted, marginTop: 20 }, [`${input.played} played`]),
-  ]);
+  ];
 
-  const row = el('div', { display: 'flex', flexDirection: 'row' }, [identityColumn, seasonColumn]);
-  // Centers the (now fixed-width) row horizontally within the canvas, so
-  // leftover space splits evenly on both sides instead of all piling up on
-  // the right — the same "don't leave it all in one corner" fix as the
-  // vertical centering above, just on the other axis.
-  return toPng(canvas([el('div', { display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }, [row])]));
+  return toPng(twoColumnCard(left, right));
 }
 
 const cached = withTtlCache<Buffer>(5 * 60 * 1000);
