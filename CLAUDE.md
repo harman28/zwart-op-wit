@@ -190,9 +190,15 @@ Data model (`server/prisma/schema.prisma`) worth knowing up front:
   then report bogus conflicts against the stale common ancestor. Rebuilding
   `staging` from `main` fresh every time removes the second long-lived branch
   entirely, so there's nothing left for `main` to drift against.)
-- Once a feature is verified on `staging`, merge the **topic branch itself**
-  (not `staging`) into `main` via a GitHub PR — a regular merge (not squash,
-  not rebase), preserving the branch's own commits as-is.
+- **Merging a topic branch into `main` is a production deploy** — `main` auto-
+  deploys to Railway (see Deploy & environments below), and there's no
+  separate "promote" step left in this workflow the way there was when
+  `staging` was its own branch. So the old rule still applies, just one step
+  earlier: only merge a topic branch into `main` on explicit user approval —
+  never on your own initiative, even once it looks good on `staging`.
+- Once approved, merge the **topic branch itself** (not `staging`) into
+  `main` via a GitHub PR — a regular merge (not squash, not rebase),
+  preserving the branch's own commits as-is.
 - After merging, `staging` is stale (still pointing at the now-merged
   feature) — don't try to keep it in sync; just rebuild it fresh from `main`
   next time it's needed, same recipe as above.
