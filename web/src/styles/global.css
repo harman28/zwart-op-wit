@@ -809,6 +809,36 @@ table.board td.winpct-cell .lb-card-tiny-bar {
   color: var(--text);
   border-bottom-color: var(--accent);
 }
+/* A compact segmented control (Value / Rank) — deliberately smaller and
+   less prominent than .modal-tabs, which this sits underneath (it's a
+   secondary toggle within the Graph tab, not another top-level tab). */
+.chart-mode-toggle {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+.chart-mode-toggle button {
+  background: transparent;
+  border: none;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 5px 12px;
+  cursor: pointer;
+}
+.chart-mode-toggle button + button {
+  border-left: 1px solid var(--border);
+}
+.chart-mode-toggle button:hover {
+  color: var(--text);
+}
+.chart-mode-toggle button.current {
+  background: var(--accent);
+  color: var(--accent-text);
+}
 .chart-axis-label {
   font-family: var(--font-mono);
   font-size: 9px;

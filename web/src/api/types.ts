@@ -85,6 +85,11 @@ export interface PlayerHistoryEntry {
   opponentRank: number | null;
   /** GAME only — the size of the field opponentRank was ranked within. */
   opponentOfCount: number | null;
+  /** This player's own rank in the standings AFTER this round — any entry
+   * kind, not just GAME. */
+  ownRank: number | null;
+  /** The size of the field ownRank was ranked within, same round. */
+  ownFieldSize: number | null;
   /** GAME only. */
   color: 'WHITE' | 'BLACK' | null;
   /** GAME only, null until a result is entered. */
@@ -112,6 +117,9 @@ export interface PlayerHistory {
   /** The best (lowest-numbered) rank this player held after any published
    * round this season — null if they haven't played a published round yet. */
   peakRank: { rank: number; roundNumber: number; ofCount: number } | null;
+  /** This player's rank among the season's baselines, before any round was
+   * played — the rank-mode graph's round-0 point. */
+  startingRank: { rank: number; ofCount: number } | null;
   /** The current size of the ranked field — pairs with standing.rank for
    * "#4 of 6". */
   fieldSize: number;

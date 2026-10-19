@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import type { PlayerHistory } from '../api/types.js';
+import type { PlayerHistory, PlayerHistoryEntry } from '../api/types.js';
 import { usePlayerHistories } from '../hooks/usePlayerHistories.js';
 import { useSeasonRoster } from '../hooks/useSeasonRoster.js';
 import { formatNumber } from '../lib/format.js';
-import { describeEntry, OUTCOME_CLASS, outcomeFor, valueSeries, type ValuePoint } from '../lib/playerHistory.js';
+import { describeEntry, OUTCOME_CLASS, outcomeFor, rankSeries, valueSeries } from '../lib/playerHistory.js';
 import PlayerAutocomplete from './PlayerAutocomplete.js';
 
 const WIDTH = 640;
@@ -30,11 +30,35 @@ function niceStep(roughStep: number): number {
   return niceFraction * pow;
 }
 
+type ChartMode = 'value' | 'rank';
+
+/** Unifies ValuePoint/RankPoint into one shape the rest of this component
+ * draws from, so the path/marker/tooltip code doesn't need two parallel
+ * versions of itself — only `pointsFor` and the few mode-aware bits
+ * (yScale's direction, the axis caption, formatMetric) know which mode
+ * they're in. */
+interface ChartPoint {
+  roundNumber: number;
+  metric: number;
+  /** Rank mode only — the field size that round, for "#5 of 42". */
+  ofCount?: number;
+  entry?: PlayerHistoryEntry;
+}
+
+function pointsFor(h: PlayerHistory, mode: ChartMode): ChartPoint[] {
+  if (mode === 'value') return valueSeries(h).map((p) => ({ roundNumber: p.roundNumber, metric: p.value, entry: p.entry }));
+  return rankSeries(h).map((p) => ({ roundNumber: p.roundNumber, metric: p.rank, ofCount: p.ofCount, entry: p.entry }));
+}
+
+function formatMetric(mode: ChartMode, metric: number): string {
+  return mode === 'rank' ? `#${metric}` : formatNumber(metric);
+}
+
 interface Series {
   playerId: number;
   name: string;
   color: string;
-  points: ValuePoint[];
+  points: ChartPoint[];
 }
 
 export default function PlayerValueChart({
@@ -48,15 +72,16 @@ export default function PlayerValueChart({
 }) {
   const [compareIds, setCompareIds] = useState<number[]>([]);
   const [activeRound, setActiveRound] = useState<number | null>(null);
+  const [mode, setMode] = useState<ChartMode>('value');
 
   const roster = useSeasonRoster(seasonId);
   const compareHistories = usePlayerHistories(seasonId, compareIds, afterRound);
 
-  const primarySeries: Series = { playerId: history.playerId, name: history.name, color: 'var(--accent)', points: valueSeries(history) };
+  const primarySeries: Series = { playerId: history.playerId, name: history.name, color: 'var(--accent)', points: pointsFor(history, mode) };
   const compareSeries: Series[] = compareIds
     .map((id, i) => {
       const h = compareHistories.get(id);
-      return h ? { playerId: id, name: h.name, color: COMPARE_COLOR_VARS[i]!, points: valueSeries(h) } : null;
+      return h ? { playerId: id, name: h.name, color: COMPARE_COLOR_VARS[i]!, points: pointsFor(h, mode) } : null;
     })
     .filter((s): s is Series => s != null);
   const series = [primarySeries, ...compareSeries];
@@ -69,7 +94,7 @@ export default function PlayerValueChart({
   const allRounds = Array.from(new Set(series.flatMap((s) => s.points.map((p) => p.roundNumber)))).sort((a, b) => a - b);
   const minRound = allRounds[0]!;
   const maxRound = allRounds[allRounds.length - 1]!;
-  const allValues = series.flatMap((s) => s.points.map((p) => p.value));
+  const allValues = series.flatMap((s) => s.points.map((p) => p.metric));
   const rawMin = Math.min(...allValues);
   const rawMax = Math.max(...allValues);
 
@@ -93,15 +118,20 @@ export default function PlayerValueChart({
     maxRound === minRound
       ? (PAD_LEFT + WIDTH - PAD_RIGHT) / 2
       : PAD_LEFT + ((round - minRound) / (maxRound - minRound)) * (WIDTH - PAD_LEFT - PAD_RIGHT);
-  const yScale = (value: number) =>
-    PAD_TOP + (1 - (value - plotMin) / (plotMax - plotMin)) * (HEIGHT - PAD_TOP - PAD_BOTTOM);
+  // Value: higher is better, so a higher number plots higher (toward
+  // PAD_TOP) — the default direction. Rank: lower is better (#1 beats #5),
+  // so that direction flips — the plotted "up = doing better" convention
+  // stays the same across both modes even though the raw numbers invert.
+  const invertY = mode === 'rank';
+  const yScale = (metric: number) =>
+    PAD_TOP + (invertY ? (metric - plotMin) / (plotMax - plotMin) : 1 - (metric - plotMin) / (plotMax - plotMin)) * (HEIGHT - PAD_TOP - PAD_BOTTOM);
 
   const ticks: number[] = [];
   for (let v = domainMin; v <= domainMax + step * 0.001; v += step) ticks.push(Math.round(v * 100) / 100);
 
   const labelEvery = Math.max(1, Math.ceil((allRounds.length - 1) / 9));
 
-  function markerColor(s: Series, point: ValuePoint): string {
+  function markerColor(s: Series, point: ChartPoint): string {
     if (comparing) return s.color; // identity, once there's more than one entity to tell apart
     if (!point.entry) return 'var(--muted)'; // the starting point — not a result
     const outcome = outcomeFor(point.entry);
@@ -141,12 +171,22 @@ export default function PlayerValueChart({
 
   return (
     <div>
-      <p style={{ color: 'var(--muted)', fontSize: 13, margin: '0 0 10px' }}>Value after each published round this season.</p>
+      <div className="chart-mode-toggle" role="group" aria-label="Chart mode">
+        <button className={mode === 'value' ? 'current' : undefined} onClick={() => setMode('value')}>
+          Value
+        </button>
+        <button className={mode === 'rank' ? 'current' : undefined} onClick={() => setMode('rank')}>
+          Rank
+        </button>
+      </div>
+      <p style={{ color: 'var(--muted)', fontSize: 13, margin: '0 0 10px' }}>
+        {mode === 'value' ? 'Value' : 'Rank'} after each published round this season.
+      </p>
       <div style={{ position: 'relative' }}>
         <svg
           viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
           role="img"
-          aria-label={`Value by round this season for ${series.map((s) => s.name).join(', ')}`}
+          aria-label={`${mode === 'value' ? 'Value' : 'Rank'} by round this season for ${series.map((s) => s.name).join(', ')}`}
           tabIndex={0}
           style={{ width: '100%', height: 'auto', aspectRatio: `${WIDTH} / ${HEIGHT}`, display: 'block', outline: 'none' }}
           onPointerMove={(e) => {
@@ -208,7 +248,7 @@ export default function PlayerValueChart({
           {series.map((s) => (
             <path
               key={s.playerId}
-              d={s.points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${xScale(p.roundNumber)} ${yScale(p.value)}`).join(' ')}
+              d={s.points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${xScale(p.roundNumber)} ${yScale(p.metric)}`).join(' ')}
               fill="none"
               stroke={s.color}
               strokeWidth={2}
@@ -222,7 +262,7 @@ export default function PlayerValueChart({
               <circle
                 key={`${s.playerId}-${i}`}
                 cx={xScale(p.roundNumber)}
-                cy={yScale(p.value)}
+                cy={yScale(p.metric)}
                 r={activeRound === p.roundNumber ? 6 : 5}
                 fill={markerColor(s, p)}
                 stroke="var(--card-raised)"
@@ -232,8 +272,8 @@ export default function PlayerValueChart({
           )}
 
           {activeRound !== last.roundNumber && (
-            <text x={xScale(last.roundNumber)} y={yScale(last.value) - 12} textAnchor="end" className="chart-end-label">
-              {formatNumber(last.value)}
+            <text x={xScale(last.roundNumber)} y={yScale(last.metric) - 12} textAnchor="end" className="chart-end-label">
+              {formatMetric(mode, last.metric)}
             </text>
           )}
         </svg>
@@ -241,7 +281,7 @@ export default function PlayerValueChart({
         {activeRows.length > 0 &&
           (() => {
             const leftPct = (xScale(activeRound!) / WIDTH) * 100;
-            const topPct = (yScale(activeRows[0]!.point!.value) / HEIGHT) * 100;
+            const topPct = (yScale(activeRows[0]!.point!.metric) / HEIGHT) * 100;
             const flip = leftPct > 60;
             return (
               <div
@@ -252,7 +292,9 @@ export default function PlayerValueChart({
                   transform: `translate(${flip ? '-100%' : '0%'}, -50%) translateX(${flip ? '-14px' : '14px'})`,
                 }}
               >
-                <div className="chart-tooltip-round">{activeRound === 0 ? 'Starting value' : `Round ${activeRound}`}</div>
+                <div className="chart-tooltip-round">
+                  {activeRound === 0 ? (mode === 'value' ? 'Starting value' : 'Starting rank') : `Round ${activeRound}`}
+                </div>
                 {activeRows.map(({ s, point }) => {
                   const p = point!;
                   const outcome = p.entry ? outcomeFor(p.entry) : null;
@@ -272,7 +314,7 @@ export default function PlayerValueChart({
                           )}
                         </div>
                       </div>
-                      <div className="chart-tooltip-value">{formatNumber(p.value)}</div>
+                      <div className="chart-tooltip-value">{formatMetric(mode, p.metric)}</div>
                     </div>
                   );
                 })}

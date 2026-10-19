@@ -380,6 +380,8 @@ export function playerGameHistory(input: SeasonReplayInput, playerId: number): P
     .filter((row) => row.playerId === playerId)
     .map((row): PlayerHistoryEntry => {
       const { entry } = row;
+      const ownRank = rankByRound.get(row.roundNumber)?.get(playerId) ?? null;
+      const ownFieldSize = fieldSizeByRound.get(row.roundNumber) ?? null;
       if (entry.kind === 'GAME') {
         const isWhite = entry.whitePlayerId === playerId;
         const opponentId = isWhite ? entry.blackPlayerId : entry.whitePlayerId;
@@ -389,6 +391,8 @@ export function playerGameHistory(input: SeasonReplayInput, playerId: number): P
           opponentId,
           opponentRank: rankByRound.get(row.roundNumber)?.get(opponentId) ?? null,
           opponentOfCount: fieldSizeByRound.get(row.roundNumber) ?? null,
+          ownRank,
+          ownFieldSize,
           color: isWhite ? 'WHITE' : 'BLACK',
           result: entry.result,
           externalOutcome: null,
@@ -402,6 +406,8 @@ export function playerGameHistory(input: SeasonReplayInput, playerId: number): P
         opponentId: null,
         opponentRank: null,
         opponentOfCount: null,
+        ownRank,
+        ownFieldSize,
         color: null,
         result: null,
         externalOutcome: entry.kind === 'EXTERNAL_BYE' ? entry.outcome : null,
@@ -410,6 +416,13 @@ export function playerGameHistory(input: SeasonReplayInput, playerId: number): P
       };
     })
     .sort((a, b) => a.roundNumber - b.roundNumber);
+
+  // Same ordering runReplay's own zero-round branch uses for baseline
+  // standings — rank 1 is the highest starting value, ties broken by
+  // baseline array order.
+  const baselineOrder = [...input.baselines].sort((a, b) => b.startingValue - a.startingValue);
+  const startRankIdx = baselineOrder.findIndex((b) => b.playerId === playerId);
+  const startingRank = startRankIdx === -1 ? null : { rank: startRankIdx + 1, ofCount: baselineOrder.length };
 
   // Every baseline player gets a standings row regardless of whether they've
   // played (see runReplay's zero-rounds branch and the per-round build-up
@@ -420,6 +433,7 @@ export function playerGameHistory(input: SeasonReplayInput, playerId: number): P
     entries,
     standing,
     peakRank,
+    startingRank,
     // Current field size, pairing with standing.rank — "#4 of 6" needs both.
     // Same number peakRank.ofCount would be if the peak happened to be the
     // current round, but not assumed to match it in general (the field can
