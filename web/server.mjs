@@ -53,6 +53,36 @@ async function findRound(number) {
   return round ? { round, season } : null;
 }
 
+/** Scoped to the latest season, same as findRound above and the player
+ * profile page itself (see web's own PlayerProfilePage.tsx) — there's no
+ * career-wide view to point a share image at. */
+async function findPlayerHistory(id) {
+  const season = await getLatestSeason();
+  if (!season) return null;
+  try {
+    const history = await apiGet(`/seasons/${season.id}/players/${id}/history`);
+    return { history, season };
+  } catch {
+    // 404 — unknown player, or not enrolled in the latest season.
+    return null;
+  }
+}
+
+/** Our own external teams only (see ExternalTeamDetailPage.tsx) — pairs the
+ * team's own name/division with its standing row from the division
+ * standings fetch, same as the backend's own teamShareImage.ts does. */
+async function findTeamStanding(id) {
+  try {
+    const details = await apiGet(`/external-teams/${id}/details`);
+    const divisions = await apiGet('/external-teams/standings');
+    const division = divisions.find((d) => d.ourTeamId === id);
+    const standing = division?.teams.find((t) => t.name === details.teamName);
+    return division && standing ? { details, division, standing } : null;
+  } catch {
+    return null;
+  }
+}
+
 /** A short TTL absorbs a burst of near-simultaneous fetches from the same
  * share (WhatsApp/Slack/Twitter's crawlers commonly fetch a link 2-3 times
  * while building their own preview) without needing anything fancier — this
@@ -68,6 +98,8 @@ function withCache(ttlMs) {
   };
 }
 const cachedRound = withCache(30_000);
+const cachedPlayer = withCache(30_000);
+const cachedTeam = withCache(30_000);
 
 function formatDate(iso) {
   return new Date(iso).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
@@ -87,11 +119,16 @@ function renderIndexHtml(req, { title, description, image, url } = {}) {
 }
 
 // path-to-regexp v8 (Express 5) dropped inline regex param constraints, so
-// non-numeric round numbers are rejected in the handler instead — falling
-// through to the SPA catch-all, same as any other unmatched route.
+// non-numeric ids are rejected in each handler instead — falling through to
+// the SPA catch-all, same as any other unmatched route.
+function parsePositiveInt(value) {
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 1 ? n : null;
+}
+
 function parseRoundNumber(req, res, next) {
-  const number = Number(req.params.number);
-  if (!Number.isInteger(number) || number < 1) return next('route');
+  const number = parsePositiveInt(req.params.number);
+  if (number == null) return next('route');
   req.roundNumber = number;
   next();
 }
@@ -116,6 +153,51 @@ app.get('/round/:number', parseRoundNumber, async (req, res, next) => {
     );
   } catch (err) {
     console.error('round meta render failed:', err);
+    next();
+  }
+});
+
+app.get('/players/:id', async (req, res, next) => {
+  const id = parsePositiveInt(req.params.id);
+  if (id == null) return next();
+  try {
+    const found = await cachedPlayer(id, () => findPlayerHistory(id));
+    if (!found) return next();
+    const { history, season } = found;
+    const origin = `${req.protocol}://${req.get('host')}`;
+    const s = history.standing;
+    res.send(
+      renderIndexHtml(req, {
+        title: `${history.name} — ${season.name}`,
+        description: `Rank #${s.rank} of ${history.fieldSize} · Value ${s.value} · ${s.wins}W ${s.draws}D ${s.losses}L — Zwart op Wit internal competition.`,
+        image: `${origin}/api/seasons/${season.id}/players/${id}/share-image.png`,
+        url: `${origin}${req.originalUrl}`,
+      }),
+    );
+  } catch (err) {
+    console.error('player meta render failed:', err);
+    next();
+  }
+});
+
+app.get('/external-teams/:id', async (req, res, next) => {
+  const id = parsePositiveInt(req.params.id);
+  if (id == null) return next();
+  try {
+    const found = await cachedTeam(id, () => findTeamStanding(id));
+    if (!found) return next();
+    const { details, division, standing } = found;
+    const origin = `${req.protocol}://${req.get('host')}`;
+    res.send(
+      renderIndexHtml(req, {
+        title: `${details.teamName} — ${division.divisionName}`,
+        description: `Rank #${standing.rank} of ${division.teams.length} · ${standing.matchPoints} MP, ${standing.boardPoints} BP — Zwart op Wit.`,
+        image: `${origin}/api/external-teams/${id}/share-image.png`,
+        url: `${origin}${req.originalUrl}`,
+      }),
+    );
+  } catch (err) {
+    console.error('team meta render failed:', err);
     next();
   }
 });
