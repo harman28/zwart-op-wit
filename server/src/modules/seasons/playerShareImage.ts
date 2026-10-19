@@ -51,7 +51,13 @@ async function renderPlayerShareImagePng(input: {
       : []),
   ]);
 
-  const seasonColumn = el('div', { display: 'flex', flexDirection: 'column', flex: 1, marginLeft: 64 }, [
+  // Fixed width, not flex:1 — a flexed box stretches to fill the remaining
+  // row space, but its *content* (short lines of text) stays left-aligned
+  // within that box regardless, so flexing it just hides unused space
+  // inside the box instead of removing it. A matching fixed width keeps the
+  // row's actual visible content close to the identity column's own width,
+  // which centering below then balances against the canvas as a whole.
+  const seasonColumn = el('div', { display: 'flex', flexDirection: 'column', flexShrink: 0, width: 460, marginLeft: 72 }, [
     el('div', { display: 'flex', fontSize: 24, lineHeight: 1.3, color: COLORS.muted }, [
       `${input.seasonName} · Rank #${input.rank} of ${input.fieldSize}`,
     ]),
@@ -65,7 +71,12 @@ async function renderPlayerShareImagePng(input: {
     el('div', { display: 'flex', fontSize: 22, lineHeight: 1.3, color: COLORS.muted, marginTop: 20 }, [`${input.played} played`]),
   ]);
 
-  return toPng(canvas([el('div', { display: 'flex', flexDirection: 'row', width: '100%' }, [identityColumn, seasonColumn])]));
+  const row = el('div', { display: 'flex', flexDirection: 'row' }, [identityColumn, seasonColumn]);
+  // Centers the (now fixed-width) row horizontally within the canvas, so
+  // leftover space splits evenly on both sides instead of all piling up on
+  // the right — the same "don't leave it all in one corner" fix as the
+  // vertical centering above, just on the other axis.
+  return toPng(canvas([el('div', { display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }, [row])]));
 }
 
 const cached = withTtlCache<Buffer>(5 * 60 * 1000);
