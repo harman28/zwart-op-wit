@@ -13,14 +13,10 @@ function formatNumber(n: number): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(1);
 }
 
-function stat(label: string, value: string, opts: { big?: boolean } = {}): SatoriNode {
+function stat(label: string, value: string, color: string, opts: { big?: boolean } = {}): SatoriNode {
   return el('div', { display: 'flex', flexDirection: 'column' }, [
     el('div', { display: 'flex', fontSize: 20, lineHeight: 1.3, color: COLORS.muted, letterSpacing: 1 }, [label.toUpperCase()]),
-    el(
-      'div',
-      { display: 'flex', fontSize: opts.big ? 110 : 54, lineHeight: 1.1, fontWeight: 700, color: opts.big ? COLORS.accent : COLORS.text, marginTop: 6 },
-      [value],
-    ),
+    el('div', { display: 'flex', fontSize: opts.big ? 110 : 54, lineHeight: 1.1, fontWeight: 700, color }, [value]),
   ]);
 }
 
@@ -36,15 +32,24 @@ async function renderTeamShareImagePng(input: {
   draws: number;
   losses: number;
 }): Promise<Buffer> {
+  // MP/BP lead (same emphasis as before) with a colored Win/Draw/Loss row
+  // underneath — same color language as the player card's own record row
+  // (COLORS.win/draw/loss), rather than folding the record into a single
+  // small text line.
   const body: SatoriNode[] = [
     el('div', { display: 'flex', flexDirection: 'row', alignItems: 'flex-end' }, [
-      stat('MP', formatNumber(input.matchPoints), { big: true }),
+      stat('MP', formatNumber(input.matchPoints), COLORS.accent, { big: true }),
       el('div', { display: 'flex', width: 56 }, []),
-      stat('BP', formatNumber(input.boardPoints)),
+      stat('BP', formatNumber(input.boardPoints), COLORS.text),
     ]),
-    el('div', { display: 'flex', fontSize: 24, lineHeight: 1.3, color: COLORS.muted, marginTop: 36 }, [
-      `${input.played} played · ${input.wins}W ${input.draws}D ${input.losses}L`,
+    el('div', { display: 'flex', flexDirection: 'row', alignItems: 'flex-end', marginTop: 32 }, [
+      stat('Win', String(input.wins), COLORS.win),
+      el('div', { display: 'flex', width: 48 }, []),
+      stat('Draw', String(input.draws), COLORS.draw),
+      el('div', { display: 'flex', width: 48 }, []),
+      stat('Loss', String(input.losses), COLORS.loss),
     ]),
+    el('div', { display: 'flex', fontSize: 22, lineHeight: 1.3, color: COLORS.muted, marginTop: 20 }, [`${input.played} played`]),
   ];
 
   return toPng(frame(input.teamName, `${input.divisionName} · Rank #${input.rank} of ${input.teamCount}`, body));
