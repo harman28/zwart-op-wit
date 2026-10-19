@@ -52,6 +52,13 @@ export function frame(title: string, subtitle: string, body: SatoriNode[]): Sato
       flexDirection: 'column',
       width: WIDTH,
       height: HEIGHT,
+      // Centers the whole card (kicker/title/subtitle/body) vertically
+      // within the frame — without this, a body with only a few short lines
+      // (the player/team cards) stacks flush against the top, leaving the
+      // bottom half of the canvas empty and everything crammed into one
+      // corner. The round card's own dense pairing grid nearly fills the
+      // frame regardless, so this has little visible effect there.
+      justifyContent: 'center',
       // Safety net, not the primary control — each caller's own row-count
       // limit is what's meant to keep content within HEIGHT. This just makes
       // sure that if that math is ever off, content gets clipped cleanly
