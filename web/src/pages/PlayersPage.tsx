@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router';
 import * as playersApi from '../api/players.js';
 import * as seasonsApi from '../api/seasons.js';
 import type { DuesStatus, Gender, MembershipType, Player } from '../api/types.js';
@@ -474,7 +475,15 @@ export default function PlayersPage() {
       )}
 
       {editingPlayer && draft && (
-        <Modal title={editingPlayer.name} onClose={closeEdit} wide={editTab === 'graph'}>
+        <Modal
+          title={
+            <Link to={`/players/${editingPlayer.id}`} className="modal-title-link">
+              {editingPlayer.name}
+            </Link>
+          }
+          onClose={closeEdit}
+          wide={editTab === 'graph'}
+        >
           <div className="modal-tabs">
             <button className={editTab === 'edit' ? 'modal-tab current' : 'modal-tab'} onClick={() => setEditTab('edit')}>
               Edit
