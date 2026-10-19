@@ -7,7 +7,19 @@
 // getTeamDetails() (for its roster) — both already cached independently, so
 // this doesn't add a second live netstand fetch of its own.
 import { prisma } from '../../db/client.js';
-import { COLORS, el, frame, inlineStat, toPng, truncateText, twoColumnGrid, withTtlCache, type SatoriNode } from '../../lib/shareImageKit.js';
+import {
+  canvas,
+  COLORS,
+  el,
+  kicker,
+  statGap,
+  statTile,
+  toPng,
+  truncateText,
+  twoColumnGrid,
+  withTtlCache,
+  type SatoriNode,
+} from '../../lib/shareImageKit.js';
 import { getExternalDivisionStandings, getTeamDetails } from './externalTeams.service.js';
 
 function formatNumber(n: number): string {
@@ -43,15 +55,13 @@ function rosterRow(p: { name: string; rating: number }): SatoriNode {
   );
 }
 
-/** Same kicker/title/subtitle masthead the round card uses (via `frame`),
- * not a two-column identity/standing split like the player card — a team
- * has only one season-independent field (its name), and the roster below
- * is this card's actual point, the same way a round's pairing grid is.
- * Giving the roster the *full* card width, not half of it, is what fixes
- * the "huge gap before the list" an earlier two-column version had: a
- * compact one-line standing summary (inlineStat, not the big stacked
- * statTile the player card uses) keeps the masthead short, so the roster
- * starts right after it instead of after a tall, mostly-empty header. */
+/** Top area: identity (left — kicker, team name, division/rank, the only
+ * season-independent block) beside the division standing (right — the
+ * MP/BP/W/D/L stat tiles, the same size/style the player card's own record
+ * row uses). Below that, the roster spans the card's *full* width, not
+ * confined under either column — it's this card's actual point, the same
+ * way a round's pairing grid is, so it gets the most room rather than
+ * being squeezed into a half-width column like an earlier version did. */
 async function renderTeamShareImagePng(input: {
   teamName: string;
   divisionName: string;
@@ -64,24 +74,35 @@ async function renderTeamShareImagePng(input: {
   losses: number;
   roster: { name: string; rating: number }[];
 }): Promise<Buffer> {
-  const standingLine = el('div', { display: 'flex', flexDirection: 'row', flexShrink: 0, marginTop: 4 }, [
-    inlineStat('MP', formatNumber(input.matchPoints), COLORS.accent),
-    el('div', { display: 'flex', width: 28 }, []),
-    inlineStat('BP', formatNumber(input.boardPoints), COLORS.text),
-    el('div', { display: 'flex', width: 28 }, []),
-    inlineStat('W', String(input.wins), COLORS.win),
-    el('div', { display: 'flex', width: 20 }, []),
-    inlineStat('D', String(input.draws), COLORS.draw),
-    el('div', { display: 'flex', width: 20 }, []),
-    inlineStat('L', String(input.losses), COLORS.loss),
+  const identityColumn = el('div', { display: 'flex', flexDirection: 'column', flexShrink: 0, width: 460 }, [
+    kicker(),
+    el('div', { display: 'flex', fontSize: 40, lineHeight: 1.25, fontWeight: 700, color: COLORS.accent, marginTop: 12 }, [input.teamName]),
+    el('div', { display: 'flex', fontSize: 24, lineHeight: 1.3, color: COLORS.muted, marginTop: 6 }, [
+      `${input.divisionName} · Rank #${input.rank} of ${input.teamCount}`,
+    ]),
   ]);
+
+  const standingColumn = el('div', { display: 'flex', flexDirection: 'column', flexShrink: 0, width: 460, marginLeft: 72, marginTop: 24 }, [
+    el('div', { display: 'flex', flexDirection: 'row', alignItems: 'flex-end' }, [
+      statTile('MP', formatNumber(input.matchPoints), COLORS.accent, 56),
+      statGap(28),
+      statTile('BP', formatNumber(input.boardPoints), COLORS.text, 56),
+      statGap(28),
+      statTile('W', String(input.wins), COLORS.win, 56),
+      statGap(20),
+      statTile('D', String(input.draws), COLORS.draw, 56),
+      statGap(20),
+      statTile('L', String(input.losses), COLORS.loss, 56),
+    ]),
+  ]);
+
+  const header = el('div', { display: 'flex', flexDirection: 'row' }, [identityColumn, standingColumn]);
 
   const shownRoster = input.roster.slice(0, MAX_ROSTER_ROWS);
   const rosterOverflow = input.roster.length - shownRoster.length;
 
-  const body: SatoriNode[] = [
-    standingLine,
-    ...(shownRoster.length > 0
+  const rosterSection: SatoriNode[] =
+    shownRoster.length > 0
       ? [
           el('div', { display: 'flex', fontSize: 18, lineHeight: 1.3, color: COLORS.muted, letterSpacing: 1, marginTop: 26 }, [
             'PLAYERS',
@@ -97,10 +118,9 @@ async function renderTeamShareImagePng(input: {
               : []),
           ]),
         ]
-      : []),
-  ];
+      : [];
 
-  return toPng(frame(input.teamName, `${input.divisionName} · Rank #${input.rank} of ${input.teamCount}`, body));
+  return toPng(canvas([el('div', { display: 'flex', flexDirection: 'column', width: '100%' }, [header, ...rosterSection])]));
 }
 
 const cached = withTtlCache<Buffer | null>(5 * 60 * 1000);
