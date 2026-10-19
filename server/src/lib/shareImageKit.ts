@@ -27,6 +27,12 @@ export const COLORS = {
   accent: '#d4a853',
   muted: '#b89b6c',
   text: '#f8f0dd',
+  // Same --win/--loss/--draw dark-theme values as tokens.css's :root —
+  // generic status colors (not the chess-result white/black colors, which
+  // are fixed regardless of theme and don't apply to a player's own record).
+  win: '#7c9a6b',
+  loss: '#b0524a',
+  draw: '#a89566',
 };
 
 export type SatoriNode = { type: string; props: { style: Record<string, unknown>; children?: unknown } };
