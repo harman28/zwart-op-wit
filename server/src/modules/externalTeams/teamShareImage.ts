@@ -84,10 +84,13 @@ async function renderTeamShareImagePng(input: {
 
   const standingColumn = el('div', { display: 'flex', flexDirection: 'column', flexShrink: 0, width: 460, marginLeft: 72, marginTop: 24 }, [
     el('div', { display: 'flex', flexDirection: 'row', alignItems: 'flex-end' }, [
+      // Wider gap between the two groups (match result vs. game record) than
+      // within each one, so the row reads as two clusters, not five evenly-
+      // spaced numbers.
       statTile('MP', formatNumber(input.matchPoints), COLORS.accent, 56),
-      statGap(28),
+      statGap(20),
       statTile('BP', formatNumber(input.boardPoints), COLORS.text, 56),
-      statGap(28),
+      statGap(52),
       statTile('W', String(input.wins), COLORS.win, 56),
       statGap(20),
       statTile('D', String(input.draws), COLORS.draw, 56),
