@@ -7,7 +7,7 @@
 // size, so this renders on read with a short TTL cache rather than
 // persisting a row anywhere — same tradeoff externalTeams.service.ts makes
 // for its own standings.
-import { COLORS, el, frame, toPng, withTtlCache, type SatoriNode } from '../../lib/shareImageKit.js';
+import { canvas, COLORS, el, kicker, toPng, withTtlCache, type SatoriNode } from '../../lib/shareImageKit.js';
 import { getPlayerHistory, getSeason } from './seasons.service.js';
 
 function recordStat(label: string, value: number, color: string): SatoriNode {
@@ -17,6 +17,13 @@ function recordStat(label: string, value: number, color: string): SatoriNode {
   ]);
 }
 
+/** Two columns, not the generic kicker/title/subtitle/body `frame` the
+ * round and team cards use: the left side is this player's own static
+ * identity (who they are, independent of any one season — name, KNSB id,
+ * external team), the right side is this-season data (season, rank,
+ * record). Grouping by "does this change season to season" rather than by
+ * importance reads more logically than interleaving the two, per feedback
+ * on an earlier single-column version of this card. */
 async function renderPlayerShareImagePng(input: {
   name: string;
   seasonName: string;
@@ -33,13 +40,22 @@ async function renderPlayerShareImagePng(input: {
    * own meta line. Null if not linked to an external team. */
   teamLine: string | null;
 }): Promise<Buffer> {
-  // Same " · " join PlayerProfilePage.tsx uses for its metaItems row —
-  // only the pieces that actually exist, nothing shown as a blank dash.
-  const metaLine = [input.knsbLine, input.teamLine].filter((s): s is string => s != null).join(' · ');
+  const identityColumn = el('div', { display: 'flex', flexDirection: 'column', flexShrink: 0, width: 460 }, [
+    kicker(),
+    el('div', { display: 'flex', fontSize: 40, lineHeight: 1.25, fontWeight: 700, color: COLORS.accent, marginTop: 12 }, [input.name]),
+    ...(input.knsbLine
+      ? [el('div', { display: 'flex', fontSize: 22, lineHeight: 1.4, color: COLORS.muted, marginTop: 18 }, [input.knsbLine])]
+      : []),
+    ...(input.teamLine
+      ? [el('div', { display: 'flex', fontSize: 22, lineHeight: 1.4, color: COLORS.muted, marginTop: input.knsbLine ? 6 : 18 }, [input.teamLine])]
+      : []),
+  ]);
 
-  const body: SatoriNode[] = [
-    ...(metaLine ? [el('div', { display: 'flex', fontSize: 24, lineHeight: 1.3, color: COLORS.muted }, [metaLine])] : []),
-    el('div', { display: 'flex', flexDirection: 'row', alignItems: 'flex-end', marginTop: metaLine ? 28 : 6 }, [
+  const seasonColumn = el('div', { display: 'flex', flexDirection: 'column', flex: 1, marginLeft: 64 }, [
+    el('div', { display: 'flex', fontSize: 24, lineHeight: 1.3, color: COLORS.muted }, [
+      `${input.seasonName} · Rank #${input.rank} of ${input.fieldSize}`,
+    ]),
+    el('div', { display: 'flex', flexDirection: 'row', alignItems: 'flex-end', marginTop: 28 }, [
       recordStat('Win', input.wins, COLORS.win),
       el('div', { display: 'flex', width: 48 }, []),
       recordStat('Draw', input.draws, COLORS.draw),
@@ -47,9 +63,9 @@ async function renderPlayerShareImagePng(input: {
       recordStat('Loss', input.losses, COLORS.loss),
     ]),
     el('div', { display: 'flex', fontSize: 22, lineHeight: 1.3, color: COLORS.muted, marginTop: 20 }, [`${input.played} played`]),
-  ];
+  ]);
 
-  return toPng(frame(input.name, `${input.seasonName} · Rank #${input.rank} of ${input.fieldSize}`, body));
+  return toPng(canvas([el('div', { display: 'flex', flexDirection: 'row', width: '100%' }, [identityColumn, seasonColumn])]));
 }
 
 const cached = withTtlCache<Buffer>(5 * 60 * 1000);

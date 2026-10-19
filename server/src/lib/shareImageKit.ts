@@ -41,10 +41,16 @@ export function el(type: string, style: Record<string, unknown>, children?: unkn
   return { type, props: { style, ...(children !== undefined ? { children } : {}) } };
 }
 
-/** "<Title>" is deliberately small (40px, not a hero title) — whatever the
- * card's own body highlights is why someone opens the image, so the title
- * shouldn't out-rank it. */
-export function frame(title: string, subtitle: string, body: SatoriNode[]): SatoriNode {
+/** The fixed WIDTH/HEIGHT canvas every card shares — background, padding,
+ * and vertical centering of whatever `children` it's given. Without the
+ * centering, a card with only a few short lines (the player/team cards)
+ * stacks flush against the top, leaving the bottom half of the canvas empty
+ * and everything crammed into one corner. The round card's own dense
+ * pairing grid already nearly fills the frame, so this has little visible
+ * effect there. Exposed directly (not just through `frame` below) for a
+ * card whose content isn't a simple kicker/title/subtitle/body column —
+ * see playerShareImage.ts's two-column identity/season layout. */
+export function canvas(children: SatoriNode[]): SatoriNode {
   return el(
     'div',
     {
@@ -52,12 +58,6 @@ export function frame(title: string, subtitle: string, body: SatoriNode[]): Sato
       flexDirection: 'column',
       width: WIDTH,
       height: HEIGHT,
-      // Centers the whole card (kicker/title/subtitle/body) vertically
-      // within the frame — without this, a body with only a few short lines
-      // (the player/team cards) stacks flush against the top, leaving the
-      // bottom half of the canvas empty and everything crammed into one
-      // corner. The round card's own dense pairing grid nearly fills the
-      // frame regardless, so this has little visible effect there.
       justifyContent: 'center',
       // Safety net, not the primary control — each caller's own row-count
       // limit is what's meant to keep content within HEIGHT. This just makes
@@ -68,19 +68,30 @@ export function frame(title: string, subtitle: string, body: SatoriNode[]): Sato
       padding: '56px 64px',
       fontFamily: 'Roboto',
     },
-    [
-      el(
-        'div',
-        { display: 'flex', flexShrink: 0, fontSize: 20, lineHeight: 1.3, letterSpacing: 3, color: COLORS.accent, fontWeight: 700 },
-        ['ZWART OP WIT'],
-      ),
-      el('div', { display: 'flex', flexShrink: 0, fontSize: 40, lineHeight: 1.25, fontWeight: 700, color: COLORS.accent, marginTop: 12 }, [
-        title,
-      ]),
-      el('div', { display: 'flex', flexShrink: 0, fontSize: 20, lineHeight: 1.3, color: COLORS.muted, marginTop: 6 }, [subtitle]),
-      el('div', { display: 'flex', flexShrink: 0, flexDirection: 'column', width: '100%', marginTop: 22 }, body),
-    ],
+    children,
   );
+}
+
+export function kicker(): SatoriNode {
+  return el(
+    'div',
+    { display: 'flex', flexShrink: 0, fontSize: 20, lineHeight: 1.3, letterSpacing: 3, color: COLORS.accent, fontWeight: 700 },
+    ['ZWART OP WIT'],
+  );
+}
+
+/** "<Title>" is deliberately small (40px, not a hero title) — whatever the
+ * card's own body highlights is why someone opens the image, so the title
+ * shouldn't out-rank it. */
+export function frame(title: string, subtitle: string, body: SatoriNode[]): SatoriNode {
+  return canvas([
+    kicker(),
+    el('div', { display: 'flex', flexShrink: 0, fontSize: 40, lineHeight: 1.25, fontWeight: 700, color: COLORS.accent, marginTop: 12 }, [
+      title,
+    ]),
+    el('div', { display: 'flex', flexShrink: 0, fontSize: 20, lineHeight: 1.3, color: COLORS.muted, marginTop: 6 }, [subtitle]),
+    el('div', { display: 'flex', flexShrink: 0, flexDirection: 'column', width: '100%', marginTop: 22 }, body),
+  ]);
 }
 
 export async function toPng(tree: SatoriNode): Promise<Buffer> {
