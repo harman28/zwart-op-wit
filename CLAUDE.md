@@ -171,21 +171,40 @@ Data model (`server/prisma/schema.prisma`) worth knowing up front:
     to. Treat that as the session's own branch, not a home for every feature —
     still cut real topic branches for actual work and PR them in; only fall back
     to the assigned branch if the session setup leaves no other option.
-- PR the topic branch into `staging` to deploy it for review.
-- Only promote `staging` → `main` (production) on explicit user approval — never
-  on your own initiative.
-- Promote via a GitHub PR (`staging` → `main`), squash-merged — matches the
-  existing commit history style (`#97`, `#98`, …).
-- After a squash-merge promotion, delete the merged topic branch (its history is
-  now folded into `main`); don't reuse or reset it for the next piece of work.
-- **Squash-merge drift**: once a PR squash-merges into `main`, `staging`'s own
-  pre-squash commits have different SHAs than what's now on `main`, even though
-  the content is identical — GitHub will then report a *later* PR from a fresh
-  topic branch (cut from `main`) into `staging` as having merge conflicts, even
-  when there's no real content conflict. Fix: confirm it's pure drift
-  (`git diff origin/main origin/staging` should be empty), then resync `staging`
-  to `main` — `git push origin origin/main:staging --force-with-lease` — and
-  retry the merge.
+- **`staging` is not a persistent branch — it's rebuilt from `main` on demand,
+  every time it's needed, and never accumulates its own history.** To deploy a
+  topic branch for review:
+  ```
+  git fetch origin main
+  git checkout -B staging origin/main
+  git merge <topic-branch>
+  git push origin staging --force
+  ```
+  Only one topic branch on `staging` at a time — land it (or drop it) before
+  staging the next one; don't merge several features into `staging` together.
+  (This replaces an earlier approach where `staging` was itself a long-lived
+  branch promoted to `main` via squash-merge — that repeatedly caused
+  "squash-merge drift": `main` and `staging` would end up with identical file
+  contents but no shared commit ancestry, since a squash-merge commit isn't
+  any commit that exists on the source branch, and GitHub's PR diff would
+  then report bogus conflicts against the stale common ancestor. Rebuilding
+  `staging` from `main` fresh every time removes the second long-lived branch
+  entirely, so there's nothing left for `main` to drift against.)
+- **Merging a topic branch into `main` is a production deploy** — `main` auto-
+  deploys to Railway (see Deploy & environments below), and there's no
+  separate "promote" step left in this workflow the way there was when
+  `staging` was its own branch. So the old rule still applies, just one step
+  earlier: only merge a topic branch into `main` on explicit user approval —
+  never on your own initiative, even once it looks good on `staging`.
+- Once approved, merge the **topic branch itself** (not `staging`) into
+  `main` via a GitHub PR — a regular merge (not squash, not rebase),
+  preserving the branch's own commits as-is.
+- After merging, `staging` is stale (still pointing at the now-merged
+  feature) — don't try to keep it in sync; just rebuild it fresh from `main`
+  next time it's needed, same recipe as above.
+- Topic branches are left in place after merging rather than deleted — Claude
+  Code sessions in this repo don't have permission to delete remote branches
+  (`git push --delete` returns 403), so don't spend effort attempting it.
 
 ## Chat conventions
 
