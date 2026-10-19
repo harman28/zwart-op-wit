@@ -9,6 +9,7 @@ import {
   listExternalTeams,
   updateExternalTeam,
 } from './externalTeams.service.js';
+import { getTeamShareImagePng } from './teamShareImage.js';
 
 const idParams = z.object({ id: z.coerce.number().int() });
 const createBody = z.object({ name: z.string().min(1), netstandUrl: z.string().min(1) });
@@ -31,6 +32,20 @@ export async function externalTeamsRoutes(app: FastifyInstance): Promise<void> {
       return { error: 'Team not found' };
     }
     return details;
+  });
+
+  // Public — feeds the og:image on a shared /external-teams/:id permalink
+  // (see web/server.mjs). 404s the same way /details does for an unknown id.
+  app.get('/api/external-teams/:id/share-image.png', async (request, reply) => {
+    const params = idParams.parse(request.params);
+    const png = await getTeamShareImagePng(params.id);
+    if (!png) {
+      reply.code(404);
+      return { error: 'Team not found' };
+    }
+    reply.header('Content-Type', 'image/png');
+    reply.header('Cache-Control', 'public, max-age=300');
+    return reply.send(png);
   });
 
   app.get('/api/admin/external-teams', { preHandler: requireAdmin }, async () => listExternalTeams());

@@ -16,6 +16,7 @@ import {
   listSeasons,
   updateSeasonSettings,
 } from './seasons.service.js';
+import { getPlayerShareImagePng } from './playerShareImage.js';
 
 const idParams = z.object({ id: z.coerce.number().int() });
 const playerIdParams = z.object({ id: z.coerce.number().int(), playerId: z.coerce.number().int() });
@@ -69,6 +70,15 @@ export async function seasonsRoutes(app: FastifyInstance): Promise<void> {
     const params = playerIdParams.parse(request.params);
     const query = leaderboardQuery.parse(request.query);
     return getPlayerHistory(params.id, params.playerId, query.afterRound);
+  });
+  // Public — same no-auth visibility as the history endpoint above, feeds
+  // the og:image on a shared /players/:id permalink (see web/server.mjs).
+  app.get('/api/seasons/:id/players/:playerId/share-image.png', async (request, reply) => {
+    const params = playerIdParams.parse(request.params);
+    const png = await getPlayerShareImagePng(params.id, params.playerId);
+    reply.header('Content-Type', 'image/png');
+    reply.header('Cache-Control', 'public, max-age=300');
+    return reply.send(png);
   });
 
   // Admin
