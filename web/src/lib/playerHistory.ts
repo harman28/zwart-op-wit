@@ -25,6 +25,37 @@ export function valueSeries(history: PlayerHistory): ValuePoint[] {
   return points;
 }
 
+export interface RankPoint {
+  /** 0 = starting rank, before any round. */
+  roundNumber: number;
+  rank: number;
+  /** The size of the ranked field this rank was within, same round — not
+   * assumed constant across the series (the field can grow or shrink). */
+  ofCount: number;
+  /** The entry played that round — absent for round 0, same as ValuePoint. */
+  entry?: PlayerHistoryEntry;
+}
+
+/**
+ * The player's own rank after each round — round 0 is startingRank, mirrors
+ * valueSeries exactly except for what it plots. Unlike value, rank isn't
+ * derived by running a delta forward; each round already carries its own
+ * rank directly (ownRank/ownFieldSize), computed from that round's full
+ * standings snapshot — see engine/standings.ts's playerGameHistory.
+ */
+export function rankSeries(history: PlayerHistory): RankPoint[] {
+  const points: RankPoint[] = [];
+  if (history.startingRank) {
+    points.push({ roundNumber: 0, rank: history.startingRank.rank, ofCount: history.startingRank.ofCount });
+  }
+  for (const entry of history.entries) {
+    if (entry.ownRank != null && entry.ownFieldSize != null) {
+      points.push({ roundNumber: entry.roundNumber, rank: entry.ownRank, ofCount: entry.ownFieldSize, entry });
+    }
+  }
+  return points;
+}
+
 /** Win/draw/loss from this player's own side of the board — the shared
  * white/black-perspective resultLabel in lib/format.ts isn't what you want
  * when you're looking at one player's personal history. */
