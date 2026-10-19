@@ -6,7 +6,7 @@
 import type { Player, Round, RoundEntry, Season } from '@prisma/client';
 import { prisma } from '../../db/client.js';
 import { HttpError } from '../../lib/errors.js';
-import { COLORS, el, frame, toPng, type SatoriNode } from '../../lib/shareImageKit.js';
+import { COLORS, el, frame, toPng, truncateText, type SatoriNode } from '../../lib/shareImageKit.js';
 
 // Two columns of 7 — comfortably covers every round this club has actually
 // run (9-14 games); the "+N more" line is a rare safety net, not the normal
@@ -39,19 +39,9 @@ function formatDate(date: Date): string {
   return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-// Truncated manually (not via CSS text-overflow) so it always keeps the
-// start of the name and cuts the end — with the White column right-aligned,
-// satori's own ellipsis handling truncates from an unpredictable point
-// instead. Real names are all well under this in practice; this only
-// matters for the pathological case (nobody in this club has an 18+
-// character name today, but nothing stops one from joining).
-function truncateName(name: string): string {
-  return name.length > 18 ? `${name.slice(0, 17)}…` : name;
-}
-
-// nowrap + overflow:hidden as a fallback only — truncateName above is what's
-// meant to keep a row single-line; this just clips cleanly if that's ever
-// wrong, same reasoning as the frame's own overflow:hidden.
+// nowrap + overflow:hidden as a fallback only — truncateText (shareImageKit)
+// is what's meant to keep a row single-line; this just clips cleanly if
+// that's ever wrong, same reasoning as the frame's own overflow:hidden.
 const NAME_STYLE = {
   display: 'flex',
   flex: 1,
@@ -82,14 +72,14 @@ function pairingRow(entry: EntryWithPlayers): SatoriNode {
         [String(entry.tableNumber ?? '')],
       ),
       el('div', { ...NAME_STYLE, justifyContent: 'flex-end', textAlign: 'right' }, [
-        truncateName(entry.whitePlayer?.name ?? '—'),
+        truncateText(entry.whitePlayer?.name ?? '—'),
       ]),
       el(
         'div',
         { display: 'flex', flexShrink: 0, width: 60, justifyContent: 'center', color: COLORS.muted, fontSize: 16, lineHeight: 1.3 },
         [resultLabel(entry.result)],
       ),
-      el('div', NAME_STYLE, [truncateName(entry.blackPlayer?.name ?? '—')]),
+      el('div', NAME_STYLE, [truncateText(entry.blackPlayer?.name ?? '—')]),
     ],
   );
 }

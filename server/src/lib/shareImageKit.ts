@@ -43,17 +43,26 @@ export function el(type: string, style: Record<string, unknown>, children?: unkn
 
 /** A labeled number — "WIN" over a big colored "4" — used identically by
  * the player card's Win/Draw/Loss row and the team card's MP/BP/Win/Draw/
- * Loss rows. */
-export function statTile(label: string, value: string, color: string): SatoriNode {
+ * Loss rows. `fontSize` defaults to the player card's size; the team card
+ * uses a smaller one to leave room for its roster list below. */
+export function statTile(label: string, value: string, color: string, fontSize = 72): SatoriNode {
   return el('div', { display: 'flex', flexDirection: 'column' }, [
     el('div', { display: 'flex', fontSize: 20, lineHeight: 1.3, color: COLORS.muted, letterSpacing: 1 }, [label.toUpperCase()]),
-    el('div', { display: 'flex', fontSize: 72, lineHeight: 1.1, fontWeight: 700, color }, [value]),
+    el('div', { display: 'flex', fontSize, lineHeight: 1.1, fontWeight: 700, color }, [value]),
   ]);
 }
 
 /** A fixed-width horizontal gap between stat tiles in a row. */
 export function statGap(width = 48): SatoriNode {
   return el('div', { display: 'flex', width }, []);
+}
+
+/** Truncated manually (not via CSS text-overflow) so it always keeps the
+ * start of the text and cuts the end — satori's own ellipsis handling
+ * truncates from an unpredictable point when the container is
+ * right-aligned or has siblings, which several of these cards' rows do. */
+export function truncateText(text: string, maxLength = 18): string {
+  return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text;
 }
 
 /** The fixed WIDTH/HEIGHT canvas every card shares — background, padding,
