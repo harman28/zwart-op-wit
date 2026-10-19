@@ -38,10 +38,13 @@ async function renderPlayerShareImagePng(input: {
   losses: number;
 }): Promise<Buffer> {
   const body: SatoriNode[] = [
+    // Points leads (big/accent) and Value trails, matching the leaderboard's
+    // own column order and emphasis — Points is the primary sort metric
+    // there, Value the quieter companion number (see LeaderboardView.tsx).
     el('div', { display: 'flex', flexDirection: 'row', alignItems: 'flex-end' }, [
-      stat('Value', formatNumber(input.value), { big: true }),
+      stat('Points', formatNumber(input.score), { big: true }),
       el('div', { display: 'flex', width: 56 }, []),
-      stat('Score', formatNumber(input.score)),
+      stat('Value', formatNumber(input.value)),
     ]),
     el('div', { display: 'flex', fontSize: 24, lineHeight: 1.3, color: COLORS.muted, marginTop: 36 }, [
       `${input.played} played · ${input.wins}W ${input.draws}D ${input.losses}L`,
