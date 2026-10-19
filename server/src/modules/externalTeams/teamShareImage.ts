@@ -7,17 +7,17 @@
 // getTeamDetails() (for its roster) — both already cached independently, so
 // this doesn't add a second live netstand fetch of its own.
 import { prisma } from '../../db/client.js';
-import { canvas, COLORS, el, kicker, statGap, statTile, toPng, truncateText, withTtlCache, type SatoriNode } from '../../lib/shareImageKit.js';
+import { COLORS, el, frame, inlineStat, toPng, truncateText, twoColumnGrid, withTtlCache, type SatoriNode } from '../../lib/shareImageKit.js';
 import { getExternalDivisionStandings, getTeamDetails } from './externalTeams.service.js';
-
-// Two columns of 10 — comfortably covers this club's own two team rosters
-// (6-8 players today); the "+N more" line is a rare safety net, not the
-// normal case, same reasoning as rounds/shareImage.ts's own MAX_ROWS.
-const MAX_ROSTER_ROWS = 20;
 
 function formatNumber(n: number): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(1);
 }
+
+// Comfortably covers this club's own two team rosters (6-8 players today)
+// across two columns; the "+N more" line is a rare safety net, not the
+// normal case, same reasoning as rounds/shareImage.ts's own MAX_ROWS.
+const MAX_ROSTER_ROWS = 24;
 
 function rosterRow(p: { name: string; rating: number }): SatoriNode {
   return el(
@@ -28,38 +28,30 @@ function rosterRow(p: { name: string; rating: number }): SatoriNode {
       width: '100%',
       alignItems: 'center',
       justifyContent: 'space-between',
-      padding: '3px 0',
+      padding: '4px 0',
       borderBottom: `1px solid ${COLORS.border}`,
       fontSize: 20,
       lineHeight: 1.3,
     },
     [
       // 18 (truncateText's default) was tuned for the round card's tighter
-      // two-name-per-row pairing layout — this row has only one name
-      // sharing the width with a short rating number, so it can afford more.
-      el('div', { display: 'flex', color: COLORS.text, whiteSpace: 'nowrap', overflow: 'hidden' }, [truncateText(p.name, 28)]),
+      // two-name-per-row pairing layout — one name sharing a full-width
+      // column with a short rating number can afford more.
+      el('div', { display: 'flex', color: COLORS.text, whiteSpace: 'nowrap', overflow: 'hidden' }, [truncateText(p.name, 30)]),
       el('div', { display: 'flex', color: COLORS.muted, fontSize: 16, marginLeft: 12 }, [String(p.rating)]),
     ],
   );
 }
 
-/** Splits roster rows left-then-right (first half in column 1, rest in
- * column 2), same as rounds/shareImage.ts's own twoColumnGrid. */
-function twoColumnRoster(rows: SatoriNode[]): SatoriNode {
-  const mid = Math.ceil(rows.length / 2);
-  return el('div', { display: 'flex', flexDirection: 'row', flexShrink: 0, width: '100%' }, [
-    el('div', { display: 'flex', flexDirection: 'column', width: 460 }, rows.slice(0, mid)),
-    el('div', { display: 'flex', flexDirection: 'column', width: 460, marginLeft: 72 }, rows.slice(mid)),
-  ]);
-}
-
-/** Identity (left) / division standing (right) header, same grouping logic
- * as the player card, then a roster list below spanning both columns — the
- * actual point of this card per user feedback on an earlier stats-only
- * version. The stat rows are sized down from the player card's own 72px
- * (via statTile's fontSize param) to leave room for the roster under them;
- * the now-redundant "X played" line (played = wins+draws+losses) was
- * dropped for the same reason. */
+/** Same kicker/title/subtitle masthead the round card uses (via `frame`),
+ * not a two-column identity/standing split like the player card — a team
+ * has only one season-independent field (its name), and the roster below
+ * is this card's actual point, the same way a round's pairing grid is.
+ * Giving the roster the *full* card width, not half of it, is what fixes
+ * the "huge gap before the list" an earlier two-column version had: a
+ * compact one-line standing summary (inlineStat, not the big stacked
+ * statTile the player card uses) keeps the masthead short, so the roster
+ * starts right after it instead of after a tall, mostly-empty header. */
 async function renderTeamShareImagePng(input: {
   teamName: string;
   divisionName: string;
@@ -72,47 +64,43 @@ async function renderTeamShareImagePng(input: {
   losses: number;
   roster: { name: string; rating: number }[];
 }): Promise<Buffer> {
-  const identityColumn = el('div', { display: 'flex', flexDirection: 'column', flexShrink: 0, width: 460 }, [
-    kicker(),
-    el('div', { display: 'flex', fontSize: 40, lineHeight: 1.25, fontWeight: 700, color: COLORS.accent, marginTop: 12 }, [input.teamName]),
+  const standingLine = el('div', { display: 'flex', flexDirection: 'row', flexShrink: 0, marginTop: 4 }, [
+    inlineStat('MP', formatNumber(input.matchPoints), COLORS.accent),
+    el('div', { display: 'flex', width: 28 }, []),
+    inlineStat('BP', formatNumber(input.boardPoints), COLORS.text),
+    el('div', { display: 'flex', width: 28 }, []),
+    inlineStat('W', String(input.wins), COLORS.win),
+    el('div', { display: 'flex', width: 20 }, []),
+    inlineStat('D', String(input.draws), COLORS.draw),
+    el('div', { display: 'flex', width: 20 }, []),
+    inlineStat('L', String(input.losses), COLORS.loss),
   ]);
-
-  const standingColumn = el('div', { display: 'flex', flexDirection: 'column', flexShrink: 0, width: 460, marginLeft: 72 }, [
-    el('div', { display: 'flex', fontSize: 24, lineHeight: 1.3, color: COLORS.muted }, [
-      `${input.divisionName} · Rank #${input.rank} of ${input.teamCount}`,
-    ]),
-    el('div', { display: 'flex', flexDirection: 'row', alignItems: 'flex-end', marginTop: 18 }, [
-      statTile('MP', formatNumber(input.matchPoints), COLORS.accent, 56),
-      statGap(36),
-      statTile('BP', formatNumber(input.boardPoints), COLORS.text, 56),
-    ]),
-    el('div', { display: 'flex', flexDirection: 'row', alignItems: 'flex-end', marginTop: 14 }, [
-      statTile('Win', String(input.wins), COLORS.win, 56),
-      statGap(36),
-      statTile('Draw', String(input.draws), COLORS.draw, 56),
-      statGap(36),
-      statTile('Loss', String(input.losses), COLORS.loss, 56),
-    ]),
-  ]);
-
-  const header = el('div', { display: 'flex', flexDirection: 'row' }, [identityColumn, standingColumn]);
 
   const shownRoster = input.roster.slice(0, MAX_ROSTER_ROWS);
   const rosterOverflow = input.roster.length - shownRoster.length;
-  const rosterBody: SatoriNode[] =
-    shownRoster.length > 0
+
+  const body: SatoriNode[] = [
+    standingLine,
+    ...(shownRoster.length > 0
       ? [
-          el('div', { display: 'flex', fontSize: 18, lineHeight: 1.3, color: COLORS.muted, letterSpacing: 1, marginTop: 28 }, ['PLAYERS']),
+          el('div', { display: 'flex', fontSize: 18, lineHeight: 1.3, color: COLORS.muted, letterSpacing: 1, marginTop: 26 }, [
+            'PLAYERS',
+          ]),
           el('div', { display: 'flex', flexDirection: 'column', width: '100%', marginTop: 10 }, [
-            twoColumnRoster(shownRoster.map(rosterRow)),
+            twoColumnGrid(shownRoster.map(rosterRow)),
             ...(rosterOverflow > 0
-              ? [el('div', { display: 'flex', marginTop: 8, fontSize: 18, lineHeight: 1.3, color: COLORS.muted }, [`+${rosterOverflow} more`])]
+              ? [
+                  el('div', { display: 'flex', marginTop: 8, fontSize: 18, lineHeight: 1.3, color: COLORS.muted }, [
+                    `+${rosterOverflow} more`,
+                  ]),
+                ]
               : []),
           ]),
         ]
-      : [];
+      : []),
+  ];
 
-  return toPng(canvas([el('div', { display: 'flex', flexDirection: 'column', width: '100%' }, [header, ...rosterBody])]));
+  return toPng(frame(input.teamName, `${input.divisionName} · Rank #${input.rank} of ${input.teamCount}`, body));
 }
 
 const cached = withTtlCache<Buffer | null>(5 * 60 * 1000);

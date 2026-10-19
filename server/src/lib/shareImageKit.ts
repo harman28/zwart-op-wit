@@ -57,6 +57,20 @@ export function statGap(width = 48): SatoriNode {
   return el('div', { display: 'flex', width }, []);
 }
 
+/** A single-line "LABEL value" chip — a label/value pair read in one
+ * glance, compact enough to sit several to a row (unlike statTile, which
+ * stacks the label above a large number and needs its own row). Used for a
+ * card's standing summary line, where several numbers need to read at once
+ * without pushing the card's real content (a list) further down. */
+export function inlineStat(label: string, value: string, color: string): SatoriNode {
+  return el('div', { display: 'flex', flexDirection: 'row', alignItems: 'baseline' }, [
+    el('div', { display: 'flex', fontSize: 16, lineHeight: 1.3, color: COLORS.muted, letterSpacing: 1, marginRight: 6 }, [
+      label.toUpperCase(),
+    ]),
+    el('div', { display: 'flex', fontSize: 22, lineHeight: 1.3, fontWeight: 700, color }, [value]),
+  ]);
+}
+
 /** Truncated manually (not via CSS text-overflow) so it always keeps the
  * start of the text and cuts the end — satori's own ellipsis handling
  * truncates from an unpredictable point when the container is
@@ -121,6 +135,18 @@ export function twoColumnCard(left: SatoriNode[], right: SatoriNode[]): SatoriNo
   const rightColumn = el('div', { display: 'flex', flexDirection: 'column', flexShrink: 0, width: COLUMN_WIDTH, marginLeft: 72 }, right);
   const row = el('div', { display: 'flex', flexDirection: 'row' }, [leftColumn, rightColumn]);
   return canvas([el('div', { display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }, [row])]);
+}
+
+/** Splits a list of rows left-then-right (first half in column 1, rest in
+ * column 2) across the full available width, rather than interleaving —
+ * reads the same way a printed list split into two columns would. Used by
+ * the round card's pairing list and the team card's roster. */
+export function twoColumnGrid(rows: SatoriNode[]): SatoriNode {
+  const mid = Math.ceil(rows.length / 2);
+  return el('div', { display: 'flex', flexDirection: 'row', flexShrink: 0, width: '100%' }, [
+    el('div', { display: 'flex', flexDirection: 'column', flex: 1 }, rows.slice(0, mid)),
+    el('div', { display: 'flex', flexDirection: 'column', flex: 1, marginLeft: 40 }, rows.slice(mid)),
+  ]);
 }
 
 /** "<Title>" is deliberately small (40px, not a hero title) — whatever the

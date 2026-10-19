@@ -6,7 +6,7 @@
 import type { Player, Round, RoundEntry, Season } from '@prisma/client';
 import { prisma } from '../../db/client.js';
 import { HttpError } from '../../lib/errors.js';
-import { COLORS, el, frame, toPng, truncateText, type SatoriNode } from '../../lib/shareImageKit.js';
+import { COLORS, el, frame, toPng, truncateText, twoColumnGrid, type SatoriNode } from '../../lib/shareImageKit.js';
 
 // Two columns of 7 — comfortably covers every round this club has actually
 // run (9-14 games); the "+N more" line is a rare safety net, not the normal
@@ -82,17 +82,6 @@ function pairingRow(entry: EntryWithPlayers): SatoriNode {
       el('div', NAME_STYLE, [truncateText(entry.blackPlayer?.name ?? '—')]),
     ],
   );
-}
-
-/** Splits pairing rows left-then-right (first half in column 1, rest in
- * column 2) rather than interleaving — reads the same way a printed pairing
- * sheet split into two columns would. */
-function twoColumnGrid(rows: SatoriNode[]): SatoriNode {
-  const mid = Math.ceil(rows.length / 2);
-  return el('div', { display: 'flex', flexDirection: 'row', flexShrink: 0, width: '100%' }, [
-    el('div', { display: 'flex', flexDirection: 'column', flex: 1 }, rows.slice(0, mid)),
-    el('div', { display: 'flex', flexDirection: 'column', flex: 1, marginLeft: 40 }, rows.slice(mid)),
-  ]);
 }
 
 type RoundForImage = Round & { season: Season; entries: EntryWithPlayers[] };
