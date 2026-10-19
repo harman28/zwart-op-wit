@@ -2,14 +2,15 @@
 // backend service over Railway's private network, so the browser only ever
 // talks to one origin (no CORS, no cross-site cookie concerns).
 //
-// It also does one bit of light SSR: /round/:number gets its <meta> tags
-// filled in server-side before index.html is sent, with og:image pointing
-// at the backend's own pre-rendered share image for that round (generated
-// on publish/edit — see server/src/modules/rounds/shareImage.ts — and
-// served through the /api proxy above, so this file never renders anything
+// It also does a bit of light SSR: /round/:number, /players/:id, and
+// /external-teams/:id each get their <meta> tags filled in server-side
+// before index.html is sent, with og:image pointing at the backend's own
+// preview image for that page (see server/src/modules/rounds/shareImage.ts,
+// seasons/playerShareImage.ts, externalTeams/teamShareImage.ts — all served
+// through the /api proxy above, so this file never renders anything
 // itself). This is a plain client-rendered SPA otherwise — link crawlers
 // (WhatsApp, Slack, iMessage, ...) don't run JS, so without this a shared
-// round permalink would only ever show the site's generic preview.
+// permalink would only ever show the site's generic preview.
 import express from 'express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import fs from 'node:fs';

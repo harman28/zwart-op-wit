@@ -1,25 +1,13 @@
 // Renders the "share this round" preview image shown when a round permalink
 // is posted in WhatsApp/Slack/etc — see regenerateShareImageIfPublished for
 // when this runs and RoundShareImage in schema.prisma for where the result
-// is kept. Satori lays out a small subset of flexbox CSS into SVG; resvg
-// then rasterizes that to a PNG — no headless browser needed for either step.
-import satori from 'satori';
-import { Resvg } from '@resvg/resvg-js';
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+// is kept. See lib/shareImageKit.ts for the satori/resvg card shell shared
+// with the player and external-team preview images.
 import type { Player, Round, RoundEntry, Season } from '@prisma/client';
 import { prisma } from '../../db/client.js';
 import { HttpError } from '../../lib/errors.js';
+import { COLORS, el, frame, toPng, type SatoriNode } from '../../lib/shareImageKit.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-// dist/modules/rounds -> dist -> server, then into the uncompiled assets/
-// dir that sits alongside src/ and dist/ (see tsconfig's rootDir/outDir).
-const fontRegular = fs.readFileSync(path.join(__dirname, '../../../assets/fonts/Roboto-Regular.ttf'));
-const fontBold = fs.readFileSync(path.join(__dirname, '../../../assets/fonts/Roboto-Bold.ttf'));
-
-const WIDTH = 1200;
-const HEIGHT = 630;
 // Two columns of 7 — comfortably covers every round this club has actually
 // run (9-14 games); the "+N more" line is a rare safety net, not the normal
 // case. Deliberately conservative beyond that: satori/flexbox will silently
@@ -29,23 +17,6 @@ const HEIGHT = 630;
 // Verified by eye at that worst case; if the frame's paddings/font sizes
 // change, recheck it.
 const MAX_ROWS = 14;
-
-// Same palette as web/src/styles/tokens.css's dark theme (:root) — this
-// renders with no access to any viewer's light/dark preference, so it
-// always uses the site's default theme.
-const COLORS = {
-  bg: '#09080a',
-  border: '#3a3018',
-  accent: '#d4a853',
-  muted: '#b89b6c',
-  text: '#f8f0dd',
-};
-
-type SatoriNode = { type: string; props: { style: Record<string, unknown>; children?: unknown } };
-
-function el(type: string, style: Record<string, unknown>, children?: unknown): SatoriNode {
-  return { type, props: { style, ...(children !== undefined ? { children } : {}) } };
-}
 
 function resultLabel(result: RoundEntry['result']): string {
   switch (result) {
@@ -132,53 +103,6 @@ function twoColumnGrid(rows: SatoriNode[]): SatoriNode {
     el('div', { display: 'flex', flexDirection: 'column', flex: 1 }, rows.slice(0, mid)),
     el('div', { display: 'flex', flexDirection: 'column', flex: 1, marginLeft: 40 }, rows.slice(mid)),
   ]);
-}
-
-/** "Round N" is deliberately small (40px, not a hero title) — the pairings
- * are why someone opens the image, so the title shouldn't out-rank them. */
-function frame(title: string, subtitle: string, body: SatoriNode[]): SatoriNode {
-  return el(
-    'div',
-    {
-      display: 'flex',
-      flexDirection: 'column',
-      width: WIDTH,
-      height: HEIGHT,
-      // Safety net, not the primary control — MAX_ROWS below is what's
-      // meant to keep content within HEIGHT. This just makes sure that if
-      // that math is ever off, content gets clipped cleanly instead of
-      // flexbox squashing/overlapping earlier siblings to make room.
-      overflow: 'hidden',
-      background: COLORS.bg,
-      padding: '56px 64px',
-      fontFamily: 'Roboto',
-    },
-    [
-      el(
-        'div',
-        { display: 'flex', flexShrink: 0, fontSize: 20, lineHeight: 1.3, letterSpacing: 3, color: COLORS.accent, fontWeight: 700 },
-        ['ZWART OP WIT'],
-      ),
-      el('div', { display: 'flex', flexShrink: 0, fontSize: 40, lineHeight: 1.25, fontWeight: 700, color: COLORS.accent, marginTop: 12 }, [
-        title,
-      ]),
-      el('div', { display: 'flex', flexShrink: 0, fontSize: 20, lineHeight: 1.3, color: COLORS.muted, marginTop: 6 }, [subtitle]),
-      el('div', { display: 'flex', flexShrink: 0, flexDirection: 'column', width: '100%', marginTop: 22 }, body),
-    ],
-  );
-}
-
-async function toPng(tree: SatoriNode): Promise<Buffer> {
-  const svg = await satori(tree as never, {
-    width: WIDTH,
-    height: HEIGHT,
-    fonts: [
-      { name: 'Roboto', data: fontRegular, weight: 400, style: 'normal' },
-      { name: 'Roboto', data: fontBold, weight: 700, style: 'normal' },
-    ],
-  });
-  const resvg = new Resvg(svg, { fitTo: { mode: 'width', value: WIDTH } });
-  return Buffer.from(resvg.render().asPng());
 }
 
 type RoundForImage = Round & { season: Season; entries: EntryWithPlayers[] };
