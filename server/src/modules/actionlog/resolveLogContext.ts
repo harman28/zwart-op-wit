@@ -10,6 +10,11 @@ export interface LogContext {
   blackName?: string;
   soloName?: string;
   playerName?: string;
+  /** The player's own values *before* this request's mutation — lets
+   * describeAction report only the fields a PATCH actually changes, instead
+   * of every field the frontend's edit form happens to submit (it always
+   * sends the whole form, touched or not). */
+  playerBefore?: { name: string; membershipType: string; notes: string | null };
   seasonName?: string;
   /** Filled in later, in the onResponse hook, once the request body is available. */
   newWhiteName?: string;
@@ -57,7 +62,12 @@ export async function resolveLogContext(path: string): Promise<LogContext> {
     }
     if (segs[0] === 'players' && segs[1] && segs[1] !== 'import') {
       const player = await prisma.player.findUnique({ where: { id: Number(segs[1]) } });
-      if (player) return { playerName: player.name };
+      if (player) {
+        return {
+          playerName: player.name,
+          playerBefore: { name: player.name, membershipType: player.membershipType, notes: player.notes },
+        };
+      }
     }
     if (segs[0] === 'seasons' && segs[1] && segs[1] !== 'current') {
       const season = await prisma.season.findUnique({ where: { id: Number(segs[1]) } });

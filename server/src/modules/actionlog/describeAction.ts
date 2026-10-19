@@ -25,11 +25,18 @@ export function describeAction(method: string, path: string, body: unknown, ctx:
     if (segs[1] === 'import') return 'Imported a roster of players';
     if (segs.length === 2 && method === 'PATCH') {
       const who = ctx.playerName ? `"${ctx.playerName}"` : `#${segs[1]}`;
+      // The edit form submits every field whether or not it was touched, so
+      // only fields that actually differ from the pre-update row are worth
+      // naming here — otherwise every save reads as "renamed to the same
+      // name, notes updated" even when nothing changed.
+      const before = ctx.playerBefore;
       const parts: string[] = [];
-      if (typeof b.name === 'string') parts.push(`renamed to "${b.name}"`);
-      if (typeof b.membershipType === 'string') parts.push(`membership set to ${b.membershipType}`);
-      if ('notes' in b) parts.push('notes updated');
-      return `Updated ${who}${parts.length ? ': ' + parts.join(', ') : ''}`;
+      if (typeof b.name === 'string' && (!before || b.name !== before.name)) parts.push(`renamed to "${b.name}"`);
+      if (typeof b.membershipType === 'string' && (!before || b.membershipType !== before.membershipType)) {
+        parts.push(`membership set to ${b.membershipType}`);
+      }
+      if ('notes' in b && (!before || (b.notes ?? null) !== before.notes)) parts.push('notes updated');
+      return `Updated ${who}${parts.length ? ': ' + parts.join(', ') : ' (no changes)'}`;
     }
   }
 
@@ -39,6 +46,9 @@ export function describeAction(method: string, path: string, body: unknown, ctx:
     if (segs[2] === 'end') return `Ended season ${seasonLabel}`;
     if (segs[2] === 'settings') return `Updated ${seasonLabel} settings`;
     if (segs[2] === 'rounds' && method === 'POST') return `Created Round ${String(b.number ?? '?')}`;
+    if (segs[2] === 'players' && segs.length === 3 && method === 'POST') {
+      return `Enrolled "${String(b.name ?? '?')}" in ${seasonLabel}`;
+    }
   }
 
   if (segs[0] === 'rounds') {
