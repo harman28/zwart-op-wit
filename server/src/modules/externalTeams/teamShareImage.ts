@@ -34,7 +34,10 @@ function rosterRow(p: { name: string; rating: number }): SatoriNode {
       lineHeight: 1.3,
     },
     [
-      el('div', { display: 'flex', color: COLORS.text, whiteSpace: 'nowrap', overflow: 'hidden' }, [truncateText(p.name)]),
+      // 18 (truncateText's default) was tuned for the round card's tighter
+      // two-name-per-row pairing layout — this row has only one name
+      // sharing the width with a short rating number, so it can afford more.
+      el('div', { display: 'flex', color: COLORS.text, whiteSpace: 'nowrap', overflow: 'hidden' }, [truncateText(p.name, 28)]),
       el('div', { display: 'flex', color: COLORS.muted, fontSize: 16, marginLeft: 12 }, [String(p.rating)]),
     ],
   );
