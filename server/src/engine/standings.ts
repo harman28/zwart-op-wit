@@ -356,16 +356,24 @@ export function replaySeason(input: SeasonReplayInput): SeasonReplayResult {
 export function playerGameHistory(input: SeasonReplayInput, playerId: number): PlayerGameHistory {
   const { byRound, ledger, ownValues, current } = runReplay(input);
 
-  // Round -> playerId -> rank AT THAT ROUND — built once from byRound, used
-  // both for each GAME entry's opponentRank and this player's own peakRank
-  // below. Deliberately not `current.standings`, which only has the latest
-  // rank, not the historical one a past game should be judged against.
+  // Round -> playerId -> rank AT THAT ROUND — used for this player's own
+  // ownRank/peakRank (the rank-over-time graph needs the historical
+  // trajectory, not where they ended up).
   const rankByRound = new Map<number, Map<number, number>>();
   const fieldSizeByRound = new Map<number, number>();
   for (const snapshot of byRound) {
     rankByRound.set(snapshot.roundNumber, new Map(snapshot.standings.map((s) => [s.playerId, s.rank])));
     fieldSizeByRound.set(snapshot.roundNumber, snapshot.standings.length);
   }
+
+  // An opponent's CURRENT rank, same cutoff as `points` (every historical
+  // entry is already rebased under the season's final values — see
+  // LedgerRow — so judging "best win" / "worst loss" against the opponent's
+  // rank back when the game was played would be inconsistent with that: a
+  // win against someone who has since fallen to last place should read as
+  // the modest result it turned out to be, not stay frozen as impressive.
+  const currentRankByPlayer = new Map(current.standings.map((s) => [s.playerId, s.rank]));
+  const currentFieldSize = current.standings.length;
 
   let peakRank: { rank: number; roundNumber: number; ofCount: number } | null = null;
   for (const snapshot of byRound) {
@@ -389,8 +397,8 @@ export function playerGameHistory(input: SeasonReplayInput, playerId: number): P
           roundNumber: row.roundNumber,
           kind: 'GAME',
           opponentId,
-          opponentRank: rankByRound.get(row.roundNumber)?.get(opponentId) ?? null,
-          opponentOfCount: fieldSizeByRound.get(row.roundNumber) ?? null,
+          opponentRank: currentRankByPlayer.get(opponentId) ?? null,
+          opponentOfCount: currentFieldSize,
           ownRank,
           ownFieldSize,
           color: isWhite ? 'WHITE' : 'BLACK',

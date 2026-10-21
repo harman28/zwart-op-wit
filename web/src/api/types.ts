@@ -80,10 +80,10 @@ export interface PlayerHistoryEntry {
   opponentId: number | null;
   /** GAME only. */
   opponentName: string | null;
-  /** GAME only — the opponent's rank in the standings AT THIS ROUND, not
-   * their current rank. */
+  /** GAME only — the opponent's CURRENT rank, not their rank back when this
+   * game was played. */
   opponentRank: number | null;
-  /** GAME only — the size of the field opponentRank was ranked within. */
+  /** GAME only — the current size of the ranked field. */
   opponentOfCount: number | null;
   /** This player's own rank in the standings AFTER this round — any entry
    * kind, not just GAME. */

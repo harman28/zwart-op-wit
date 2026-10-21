@@ -111,13 +111,12 @@ export interface PlayerHistoryEntry {
   kind: RoundEntryInput['kind'];
   /** GAME only. */
   opponentId: number | null;
-  /** GAME only — the opponent's rank in the standings AT THIS ROUND (not
-   * their current rank) — what "best win" / "worst loss" are judged against,
-   * so a loss to someone who has since climbed the standings doesn't read as
-   * worse than it was at the time. */
+  /** GAME only — the opponent's CURRENT rank (same cutoff `points` uses, not
+   * their rank back when this game was played) — what "best win" / "worst
+   * loss" are judged against, so a win against someone who has since fallen
+   * to last place reads as the modest result it turned out to be. */
   opponentRank: number | null;
-  /** GAME only — the size of the field opponentRank was ranked within, same
-   * round (for "ranked #6 of 6"). */
+  /** GAME only — the current size of the ranked field (for "ranked #6 of 6"). */
   opponentOfCount: number | null;
   /** This player's own rank in the standings AFTER this round (any entry
    * kind — a bye round still has a rank) — the value-over-time graph's
