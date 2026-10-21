@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**Check `TODO.md` at the repo root before starting unrelated work** — it tracks paused/in-flight work across sessions (a git branch alone is easy to forget about).
+
 ## What this is
 
 Internal competition site for Zwart op Wit, a chess club, replacing their old Windows

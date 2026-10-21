@@ -23,11 +23,11 @@ export taken before vs. after).
 
 The user uploaded `ZoW_Interne.xlsx` — their old Windows Keizer-pairing
 software's own workbook (the thing this whole app replaced — see CLAUDE.md's
-intro). **This file was not committed anywhere** (deliberately — it's
-personal/club data, and partially-verified at that). It only ever existed as
-a session upload, copied into that session's scratchpad directory, which does
-not persist across sessions. **Picking this up again starts with asking the
-user to re-share the file.**
+intro). It's committed at
+`server/scripts/historical-import/source-data/ZoW_Interne.xlsx` (the user's
+own club data, explicitly OK'd to live in the codebase — see TODO.md at the
+repo root, which is what points a future session back here). Covers seasons
+1-9; only seasons 4-8 are in scope for this import.
 
 Relevant sheets (season number N): `S{N} Matchups` (round-by-round game
 results) and `S{N} Final Standings` (S4, S5) / `S{N} Current Standings` (S6,
@@ -166,17 +166,15 @@ than one bye-marked player before trusting this blanket mapping.
 
 ## How to re-run this
 
-From the repo root, once the xlsx has been re-shared and copied into an
-isolated scratch directory (it's an **untrusted upload** — see the
-environment's own file-isolation rule: own empty directory, don't run
-scripts from inside it, pass the path as an argument):
+From the repo root, against the committed source file:
 
 ```bash
 # openpyxl needs python3.13 specifically in this sandbox (not python3/python3.11)
 pip3 install --quiet openpyxl
-python3.13 -I server/scripts/historical-import/inspect.py <path-to-xlsx>   # sanity check sheet list
+XLSX=server/scripts/historical-import/source-data/ZoW_Interne.xlsx
+python3.13 -I server/scripts/historical-import/inspect.py "$XLSX"   # sanity check sheet list
 
-python3.13 -I server/scripts/historical-import/parse_all.py <path-to-xlsx> <out-dir>
+python3.13 -I server/scripts/historical-import/parse_all.py "$XLSX" <out-dir>
 # -> writes season{4..8}_matchups.json, season{4..8}_standings.json, season3_standings.json
 
 # Each season's predecessor arg is a *_standings.json (ground truth from
