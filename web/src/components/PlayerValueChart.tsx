@@ -91,9 +91,14 @@ export default function PlayerValueChart({
     return <p style={{ color: 'var(--muted)' }}>Not enough published rounds yet this season to plot a trend.</p>;
   }
 
-  const allRounds = Array.from(new Set(series.flatMap((s) => s.points.map((p) => p.roundNumber)))).sort((a, b) => a - b);
-  const minRound = allRounds[0]!;
-  const maxRound = allRounds[allRounds.length - 1]!;
+  const roundNumbersWithData = series.flatMap((s) => s.points.map((p) => p.roundNumber));
+  const minRound = Math.min(...roundNumbersWithData);
+  const maxRound = Math.max(...roundNumbersWithData);
+  // Every round number in range gets an axis position, even one this player
+  // (or whoever they're compared to) has no entry for — a round they sat
+  // out past their bye cap still happened, and silently skipping its number
+  // on the axis reads as though the season itself had fewer rounds.
+  const allRounds = Array.from({ length: maxRound - minRound + 1 }, (_, i) => minRound + i);
   const allValues = series.flatMap((s) => s.points.map((p) => p.metric));
   const rawMin = Math.min(...allValues);
   const rawMax = Math.max(...allValues);
