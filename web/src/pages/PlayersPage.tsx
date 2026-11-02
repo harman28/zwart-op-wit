@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
+import * as externalTeamsApi from '../api/externalTeams.js';
 import * as playersApi from '../api/players.js';
 import * as seasonsApi from '../api/seasons.js';
-import type { DuesStatus, Gender, MembershipType, Player } from '../api/types.js';
+import type { DuesStatus, ExternalTeam, Gender, MembershipType, Player } from '../api/types.js';
 import CustomSelect from '../components/CustomSelect.js';
 import Modal from '../components/Modal.js';
 import PlayerHistoryPanel from '../components/PlayerHistoryPanel.js';
@@ -139,6 +140,8 @@ interface EditDraft {
   federation: string;
   knsbId: string;
   gender: string;
+  /** CustomSelect wants a string; '' means "no team" (externalTeamId: null). */
+  externalTeamId: string;
 }
 
 function draftFor(p: Player): EditDraft {
@@ -150,6 +153,7 @@ function draftFor(p: Player): EditDraft {
     federation: p.federation ?? '',
     knsbId: p.knsbId ?? '',
     gender: p.gender ?? '',
+    externalTeamId: p.externalTeamId != null ? String(p.externalTeamId) : '',
   };
 }
 
@@ -165,6 +169,7 @@ export default function PlayersPage() {
   const [newStartingValue, setNewStartingValue] = useState('');
   const [currentSeasonId, setCurrentSeasonId] = useState<number | null>(null);
   const [importText, setImportText] = useState('');
+  const [externalTeams, setExternalTeams] = useState<ExternalTeam[]>([]);
 
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const [editTab, setEditTab] = useState<'edit' | 'results' | 'graph'>('edit');
@@ -200,6 +205,9 @@ export default function PlayersPage() {
       .getCurrentSeason()
       .then((s) => setCurrentSeasonId(s.id))
       .catch(() => setCurrentSeasonId(null));
+  }, []);
+  useEffect(() => {
+    externalTeamsApi.listExternalTeams().then(setExternalTeams).catch(() => setExternalTeams([]));
   }, []);
 
   const query = search.trim().toLowerCase();
@@ -330,6 +338,7 @@ export default function PlayersPage() {
         federation: draft.federation.trim() ? draft.federation.trim().toUpperCase() : undefined,
         knsbId: draft.knsbId.trim() || null,
         gender: (draft.gender || null) as Gender | null,
+        externalTeamId: draft.externalTeamId ? Number(draft.externalTeamId) : null,
       });
       setPlayers((prev) => [...prev.filter((p) => p.id !== updated.id), updated].sort((a, b) => a.name.localeCompare(b.name)));
       closeEdit();
@@ -557,6 +566,15 @@ export default function PlayersPage() {
                     triggerClassName="roster-select"
                   />
                 </div>
+              </div>
+              <div className="field">
+                <label>External team</label>
+                <CustomSelect
+                  value={draft.externalTeamId}
+                  options={[{ value: '', label: 'None' }, ...externalTeams.map((t) => ({ value: String(t.id), label: t.name }))]}
+                  onChange={(v) => setDraft({ ...draft, externalTeamId: v })}
+                  triggerClassName="roster-select"
+                />
               </div>
               <div className="btn-row" style={{ marginTop: 4, justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', gap: 8 }}>
