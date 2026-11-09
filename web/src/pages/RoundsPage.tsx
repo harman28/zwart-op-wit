@@ -5,7 +5,7 @@ import * as seasonsApi from '../api/seasons.js';
 import type { ExternalOutcome, GameResult, MembershipType, Player, Round, RoundEntry, Season } from '../api/types.js';
 import AddUnregisteredPlayerForm from '../components/AddUnregisteredPlayerForm.js';
 import CustomSelect from '../components/CustomSelect.js';
-import ExternalSection from '../components/ExternalSection.js';
+import ExternalSection, { OUTCOME_CLASS, OUTCOME_LETTER } from '../components/ExternalSection.js';
 import PlayerAutocomplete from '../components/PlayerAutocomplete.js';
 import PlayerHistoryModal from '../components/PlayerHistoryModal.js';
 import ResultToggle from '../components/ResultToggle.js';
@@ -330,6 +330,15 @@ export default function RoundsPage() {
         const externalEntries = round.entries
           .filter((e) => e.kind === 'EXTERNAL_BYE')
           .sort((a, b) => (a.tableNumber ?? Infinity) - (b.tableNumber ?? Infinity) || a.id - b.id);
+        // An external match played at the club shares real board numbers with
+        // the internal pairings that same night — always the low end of them,
+        // since the away team plays its boards in order from table 1. Shown
+        // as rows in the same pairings table, above the internal games, in
+        // read view only — admin mode keeps the full add/remove/board-number
+        // editing UI in ExternalSection below rather than juggling two
+        // half-built editors for the same entries in two places at once.
+        const homeExternalEntries = externalEntries.filter((e) => e.tableNumber != null);
+        const sectionExternalEntries = adminMode ? externalEntries : externalEntries.filter((e) => e.tableNumber == null);
         const pairedIds = new Set(games.flatMap((g) => [g.whitePlayerId, g.blackPlayerId]).filter((id): id is number => id != null));
         const externalIds = new Set(externalEntries.map((e) => e.soloPlayerId));
         const externalCandidates = allPlayers.filter((p) => !pairedIds.has(p.id) && !externalIds.has(p.id));
@@ -358,6 +367,31 @@ export default function RoundsPage() {
                     </tr>
                   </thead>
                   <tbody>
+                    {!adminMode &&
+                      homeExternalEntries.map((e) => (
+                        <tr key={`external-${e.id}`}>
+                          <td className="table-no">{e.tableNumber}</td>
+                          <td>
+                            {e.soloPlayerId != null ? (
+                              <button className="editable-name" onClick={() => setSelectedPlayerId(e.soloPlayerId)}>
+                                {e.soloPlayer?.name}
+                              </button>
+                            ) : (
+                              e.soloPlayer?.name
+                            )}
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            {e.externalOutcome ? (
+                              <span className={`outcome-pill ${OUTCOME_CLASS[e.externalOutcome]}`}>
+                                {OUTCOME_LETTER[e.externalOutcome]}
+                              </span>
+                            ) : (
+                              <span style={{ color: 'var(--muted)' }}>–</span>
+                            )}
+                          </td>
+                          <td style={{ color: 'var(--muted)', fontStyle: 'italic' }}>External</td>
+                        </tr>
+                      ))}
                     {games.map((g) => (
                       <tr key={g.id}>
                         <td className="table-no">{g.tableNumber}</td>
@@ -540,7 +574,7 @@ export default function RoundsPage() {
                 )}
                 {season.countExternalMatches && (
                   <ExternalSection
-                    externalEntries={externalEntries}
+                    externalEntries={sectionExternalEntries}
                     candidatePlayers={externalCandidates}
                     adminMode={adminMode}
                     onAdd={(player) => handleAddExternal(round, player)}
