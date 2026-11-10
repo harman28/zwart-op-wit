@@ -41,7 +41,11 @@ const createRoundBody = z.object({
     .optional(),
 });
 
-const updateRoundBody = z.object({ number: z.number().int().optional(), date: z.coerce.date().optional() });
+const updateRoundBody = z.object({
+  number: z.number().int().optional(),
+  date: z.coerce.date().optional(),
+  externalAtHome: z.boolean().optional(),
+});
 
 const updateEntryBody = z.object({
   kind: entryKindSchema.optional(),

@@ -155,6 +155,17 @@ model Round {
   date        DateTime
   // Gates PUBLIC visibility only — never gates whether entries can be edited.
   isPublished Boolean  @default(false)
+  // True when this round's external-team match (if any) was played at the
+  // club itself, sharing the room with the internal pairings that night —
+  // its boards take the low numbers, internal pairings continuing after.
+  // An admin doesn't generally know each external player's own board
+  // number (that's the away team's own numbering on their own scoresheet,
+  // never tracked here) — when this is on, the round view shows every
+  // EXTERNAL_BYE entry as a row above the internal pairings, numbered by
+  // position rather than a real per-player board number. A specific entry's
+  // own RoundEntry.tableNumber, if an admin later learns and sets it, wins
+  // over that auto-numbering (see RoundsPage.tsx).
+  externalAtHome Boolean @default(false)
 
   signups    RoundSignup[]
   entries    RoundEntry[]

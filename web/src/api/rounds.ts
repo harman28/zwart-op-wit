@@ -17,7 +17,7 @@ export function getRoundAdmin(id: number) {
   return api.get<RoundAdmin>(`/admin/rounds/${id}`);
 }
 
-export function updateRound(id: number, data: { number?: number; date?: string }) {
+export function updateRound(id: number, data: { number?: number; date?: string; externalAtHome?: boolean }) {
   return api.patch<RoundAdmin>(`/admin/rounds/${id}`, data);
 }
 
