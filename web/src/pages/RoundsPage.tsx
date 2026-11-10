@@ -5,7 +5,7 @@ import * as seasonsApi from '../api/seasons.js';
 import type { ExternalOutcome, GameResult, MembershipType, Player, Round, RoundEntry, Season } from '../api/types.js';
 import AddUnregisteredPlayerForm from '../components/AddUnregisteredPlayerForm.js';
 import CustomSelect from '../components/CustomSelect.js';
-import ExternalSection from '../components/ExternalSection.js';
+import ExternalSection, { OUTCOME_CLASS, OUTCOME_LETTER } from '../components/ExternalSection.js';
 import PlayerAutocomplete from '../components/PlayerAutocomplete.js';
 import PlayerHistoryModal from '../components/PlayerHistoryModal.js';
 import ResultToggle from '../components/ResultToggle.js';
@@ -152,6 +152,11 @@ export default function RoundsPage() {
 
   async function handleRemoveExternal(round: Round, entry: RoundEntry) {
     await roundsApi.deleteEntry(round.id, entry.id);
+    await refreshRounds();
+  }
+
+  async function handleToggleExternalAtHome(round: Round) {
+    await roundsApi.updateRound(round.id, { externalAtHome: !round.externalAtHome });
     await refreshRounds();
   }
 
@@ -330,6 +335,19 @@ export default function RoundsPage() {
         const externalEntries = round.entries
           .filter((e) => e.kind === 'EXTERNAL_BYE')
           .sort((a, b) => (a.tableNumber ?? Infinity) - (b.tableNumber ?? Infinity) || a.id - b.id);
+        // An external match played at the club (round.externalAtHome, set by
+        // an admin — see handleToggleExternalAtHome) shares the room with the
+        // internal pairings that same night, its boards taking the low
+        // numbers. Shown as rows in the same pairings table, above the
+        // internal games, in read view only — admin mode keeps the full
+        // add/remove/board-number editing UI in ExternalSection below rather
+        // than juggling two half-built editors for the same entries in two
+        // places at once. Nobody generally knows each player's own real board
+        // number from the away team's own scoresheet, so the row shown here
+        // is numbered by position (1, 2, 3…) unless a specific entry's own
+        // tableNumber has actually been set — that one wins instead.
+        const homeExternalEntries = round.externalAtHome ? externalEntries : [];
+        const sectionExternalEntries = adminMode || !round.externalAtHome ? externalEntries : [];
         const pairedIds = new Set(games.flatMap((g) => [g.whitePlayerId, g.blackPlayerId]).filter((id): id is number => id != null));
         const externalIds = new Set(externalEntries.map((e) => e.soloPlayerId));
         const externalCandidates = allPlayers.filter((p) => !pairedIds.has(p.id) && !externalIds.has(p.id));
@@ -358,6 +376,31 @@ export default function RoundsPage() {
                     </tr>
                   </thead>
                   <tbody>
+                    {!adminMode &&
+                      homeExternalEntries.map((e, i) => (
+                        <tr key={`external-${e.id}`}>
+                          <td className="table-no">{e.tableNumber ?? i + 1}</td>
+                          <td>
+                            {e.soloPlayerId != null ? (
+                              <button className="editable-name" onClick={() => setSelectedPlayerId(e.soloPlayerId)}>
+                                {e.soloPlayer?.name}
+                              </button>
+                            ) : (
+                              e.soloPlayer?.name
+                            )}
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            {e.externalOutcome ? (
+                              <span className={`outcome-pill ${OUTCOME_CLASS[e.externalOutcome]}`}>
+                                {OUTCOME_LETTER[e.externalOutcome]}
+                              </span>
+                            ) : (
+                              <span style={{ color: 'var(--muted)' }}>–</span>
+                            )}
+                          </td>
+                          <td style={{ color: 'var(--muted)', fontStyle: 'italic' }}>External</td>
+                        </tr>
+                      ))}
                     {games.map((g) => (
                       <tr key={g.id}>
                         <td className="table-no">{g.tableNumber}</td>
@@ -538,9 +581,29 @@ export default function RoundsPage() {
                     )}
                   </>
                 )}
+                {season.countExternalMatches && adminMode && (
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 7,
+                      fontSize: 13,
+                      color: 'var(--muted)',
+                      marginTop: 10,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={round.externalAtHome}
+                      onChange={() => handleToggleExternalAtHome(round)}
+                    />
+                    External players played at home this round
+                  </label>
+                )}
                 {season.countExternalMatches && (
                   <ExternalSection
-                    externalEntries={externalEntries}
+                    externalEntries={sectionExternalEntries}
                     candidatePlayers={externalCandidates}
                     adminMode={adminMode}
                     onAdd={(player) => handleAddExternal(round, player)}

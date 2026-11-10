@@ -70,6 +70,7 @@ export async function exportFullBackup(): Promise<BackupFile> {
         number: round.number,
         date: round.date,
         isPublished: round.isPublished,
+        externalAtHome: round.externalAtHome,
         signedUp: round.signups.map((s) => s.player.name),
         entries: round.entries.map((entry) => {
           switch (entry.kind) {
@@ -224,6 +225,7 @@ export async function importFullBackup(data: BackupFile) {
               number: round.number,
               date: round.date,
               isPublished: round.isPublished,
+              externalAtHome: round.externalAtHome,
             },
           });
           if (round.signedUp.length > 0) {
