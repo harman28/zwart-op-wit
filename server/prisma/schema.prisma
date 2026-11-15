@@ -165,7 +165,10 @@ model Round {
   // position rather than a real per-player board number. A specific entry's
   // own RoundEntry.tableNumber, if an admin later learns and sets it, wins
   // over that auto-numbering (see RoundsPage.tsx).
-  externalAtHome Boolean @default(false)
+  // Defaults true: an away match is the exception, not the rule, for this
+  // club — an admin unticks the checkbox for the rare round that's actually
+  // away, rather than remembering to tick it on for the common case.
+  externalAtHome Boolean @default(true)
 
   signups    RoundSignup[]
   entries    RoundEntry[]
