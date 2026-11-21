@@ -184,7 +184,7 @@ export async function getRoundAdmin(id: number) {
   return round;
 }
 
-export async function updateRound(id: number, data: { number?: number; date?: Date }) {
+export async function updateRound(id: number, data: { number?: number; date?: Date; externalAtHome?: boolean }) {
   const round = await prisma.round.update({ where: { id }, data });
   await regenerateShareImageIfPublished(id); // date shows in the image's subtitle
   return round;

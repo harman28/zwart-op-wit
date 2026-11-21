@@ -152,6 +152,10 @@ export interface Round {
   number: number;
   date: string;
   isPublished: boolean;
+  /** True when this round's external-team match was played at the club,
+   * sharing the room with the internal pairings — see RoundsPage's own
+   * handling of this for how it affects the external entries' display. */
+  externalAtHome: boolean;
   entries: RoundEntry[];
 }
 

@@ -4,9 +4,11 @@ import ExternalOutcomeToggle from './ExternalOutcomeToggle.js';
 import PlayerAutocomplete from './PlayerAutocomplete.js';
 
 // Same W/D/L convention as PlayerHistoryModal's own outcome-pill — one glance,
-// no "Played external" boilerplate repeated on every row.
-const OUTCOME_LETTER: Record<ExternalOutcome, string> = { WIN: 'W', DRAW: 'D', LOSS: 'L' };
-const OUTCOME_CLASS: Record<ExternalOutcome, string> = { WIN: 'win', DRAW: 'draw', LOSS: 'loss' };
+// no "Played external" boilerplate repeated on every row. Exported so
+// RoundsPage can render the same pill inline for an at-home external game
+// merged into the main pairings table (see RoundsPage's own homeExternal rows).
+export const OUTCOME_LETTER: Record<ExternalOutcome, string> = { WIN: 'W', DRAW: 'D', LOSS: 'L' };
+export const OUTCOME_CLASS: Record<ExternalOutcome, string> = { WIN: 'win', DRAW: 'draw', LOSS: 'loss' };
 
 /** Entries grouped by the team their player usually plays for (set on the
  * Player, not per-entry — a player subbing for a different team occasionally

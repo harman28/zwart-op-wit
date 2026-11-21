@@ -26,6 +26,7 @@ const backupRoundSchema = z.object({
   number: z.number().int(),
   date: z.coerce.date(),
   isPublished: z.boolean().default(false),
+  externalAtHome: z.boolean().default(false),
   signedUp: z.array(z.string()),
   entries: z.array(backupEntrySchema),
 });
